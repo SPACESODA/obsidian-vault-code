@@ -38,7 +38,7 @@
     "@codemirror/search": "^6.7.2",
     "@codemirror/state": "^6.7.6",
     "@codemirror/view": "^6.43.15",
-    "@eslint/js": "^10.0.1",
+    "@eslint/js": "^9.22.0",
     "@eslint/json": "^1.2.0",
     "@lezer/highlight": "^1.2.0",
     "@microsoft/eslint-plugin-sdl": "^1.1.0",
@@ -59,6 +59,8 @@
     "moment": "^2.31.0"
   },
   "dependencies": {
+    "cheerio": "^1.2.0",
+    "mjml-browser": "^5.4.1",
     "obsidian": "latest"
   }
 }

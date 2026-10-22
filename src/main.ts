@@ -86,6 +86,7 @@ import {
 	closeBracketsKeymap,
 } from "@codemirror/autocomplete";
 import { languages } from "@codemirror/language-data";
+import mjml2html from "mjml-browser";
 import { t, setLanguage, SUPPORTED_LANGUAGES } from "./i18n";
 
 /* ── View type constants ───────────────────────────────────── */
@@ -136,7 +137,7 @@ export function openInDefaultBrowser(url: string): void {
 export const VIEW_TYPE_DOTFILE = "vault-code-editor";
 
 /** Formats that support visual live-preview toggling inside the editor. */
-export const PREVIEWABLE_EXTENSIONS = new Set(["svg", "html", "htm"]);
+export const PREVIEWABLE_EXTENSIONS = new Set(["svg", "html", "htm", "mjml"]);
 
 /** All code and data file extensions supported for direct opening and editing. */
 export const SUPPORTED_EXTENSIONS = new Set([
@@ -3191,6 +3192,8 @@ export class DotfileView extends TextFileView {
 			this.renderSvgPreview(rawContent);
 		} else if (ext === "html" || ext === "htm") {
 			this.renderHtmlPreview(rawContent);
+		} else if (ext === "mjml") {
+			void this.renderMjmlPreview(rawContent);
 		}
 	}
 
@@ -3302,6 +3305,61 @@ export class DotfileView extends TextFileView {
 			iframe.srcdoc = htmlContent;
 		} else {
 			iframe.srcdoc = content;
+		}
+	}
+
+	private async renderMjmlPreview(content: string): Promise<void> {
+		if (!this.previewEl) return;
+
+		const trimmed = content.trim();
+		if (!trimmed) {
+			const emptyMsg = this.previewEl.createDiv({
+				cls: "hidden-files-preview-empty",
+			});
+			emptyMsg.setText("Empty file");
+			return;
+		}
+
+		try {
+			const mjmlFn =
+				typeof mjml2html === "function"
+					? mjml2html
+					: (mjml2html as { default?: typeof mjml2html }).default ?? mjml2html;
+
+			const result = await mjmlFn(trimmed, {
+				validationLevel: "soft",
+				minify: false,
+			});
+
+			if (!this.previewEl || !this.isPreviewMode) return;
+
+			if (!result || !result.html) {
+				const errBox = this.previewEl.createDiv({
+					cls: "hidden-files-preview-error",
+				});
+				errBox.setText("Compilation produced no output.");
+				return;
+			}
+
+			this.renderHtmlPreview(result.html);
+		} catch (e) {
+			if (!this.previewEl || !this.isPreviewMode) return;
+			this.previewEl.empty();
+			const errBox = this.previewEl.createDiv({
+				cls: "hidden-files-preview-error",
+			});
+			const title = errBox.createDiv({
+				cls: "hidden-files-preview-error-title",
+				text: "MJML compilation error",
+			});
+			const iconSpan = title.createSpan({
+				cls: "hidden-files-preview-error-icon",
+			});
+			setIcon(iconSpan, "alert-triangle");
+			errBox.createDiv({
+				cls: "hidden-files-preview-error-msg",
+				text: e instanceof Error ? e.message : String(e),
+			});
 		}
 	}
 }
