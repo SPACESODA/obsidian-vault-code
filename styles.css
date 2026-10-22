@@ -932,3 +932,9 @@
 	display: none !important;
 }
 
+/* Header view action toggle button for code editor */
+.clickable-icon.view-action.vault-code-header-toggle-btn.is-active {
+	color: var(--text-accent);
+}
+
+

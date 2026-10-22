@@ -2886,12 +2886,29 @@ export default class VaultCodePlugin extends Plugin {
 					}
 				}
 			});
+
+			this.updateAllLeafHeaderActions();
 		});
 
 		this.registerEvent(
 			this.app.workspace.on("layout-change", () => {
 				this.patchFileExplorer();
 				this.applyFileExplorerFiltering();
+				this.updateAllLeafHeaderActions();
+			}),
+		);
+
+		this.registerEvent(
+			this.app.workspace.on("active-leaf-change", (leaf) => {
+				if (leaf) {
+					this.updateLeafHeaderActions(leaf);
+				}
+			}),
+		);
+
+		this.registerEvent(
+			this.app.workspace.on("file-open", () => {
+				this.updateAllLeafHeaderActions();
 			}),
 		);
 
@@ -2995,20 +3012,6 @@ export default class VaultCodePlugin extends Plugin {
 								}
 
 								item.onClick(async () => {
-									if (isCurrentCodeEditor) {
-										if (leaf?.view instanceof DotfileView) {
-											await leaf.view.saveExplicitly();
-										}
-										const target =
-											leaf ?? this.app.workspace.getLeaf(false);
-										await target.setViewState({
-											type: "markdown",
-											state: { file: file.path },
-											active: true,
-										});
-										return;
-									}
-
 									let targetLeaf = leaf;
 									if (!targetLeaf) {
 										this.app.workspace.iterateAllLeaves((l) => {
@@ -3025,22 +3028,7 @@ export default class VaultCodePlugin extends Plugin {
 										targetLeaf = this.app.workspace.getLeaf(false);
 									}
 
-									const currentView = targetLeaf.view as unknown as {
-										save?: () => Promise<void>;
-									};
-									if (typeof currentView?.save === "function") {
-										try {
-											await currentView.save();
-										} catch {
-											// Ignore save error
-										}
-									}
-
-									await targetLeaf.setViewState({
-										type: VIEW_TYPE_DOTFILE,
-										state: { file: file.path },
-										active: true,
-									});
+									await this.toggleCodeEditorForLeaf(targetLeaf, file);
 								});
 							});
 						}
@@ -3254,6 +3242,14 @@ export default class VaultCodePlugin extends Plugin {
 			"showUnsupportedFiles",
 			this.previousShowUnsupportedFiles,
 		);
+
+		// Remove any injected toggle buttons from leaves
+		this.app.workspace.iterateAllLeaves((leaf) => {
+			const actionsEl = (
+				leaf.view as unknown as { actionsEl?: HTMLElement }
+			)?.actionsEl;
+			actionsEl?.querySelector(".vault-code-header-toggle-btn")?.remove();
+		});
 	}
 
 	/* ── editability & extension handling ──────────────────── */
@@ -3290,6 +3286,118 @@ export default class VaultCodePlugin extends Plugin {
 			return true;
 		}
 		return this.isFileEditable(file);
+	}
+
+	async toggleCodeEditorForLeaf(
+		leaf: WorkspaceLeaf,
+		targetFile?: TFile,
+	): Promise<void> {
+		if (!leaf || !leaf.view) return;
+		const view = leaf.view;
+		const file = targetFile ?? (view as { file?: TFile }).file;
+		if (!file) return;
+
+		if (
+			view instanceof DotfileView &&
+			(!targetFile || targetFile.path === view.file?.path)
+		) {
+			await view.saveExplicitly();
+			await leaf.setViewState({
+				type: "markdown",
+				state: { file: file.path },
+				active: true,
+			});
+			this.updateAllLeafHeaderActions();
+			return;
+		}
+
+		const currentView = view as unknown as { save?: () => Promise<void> };
+		if (typeof currentView?.save === "function") {
+			try {
+				await currentView.save();
+			} catch {
+				// Ignore save error
+			}
+		}
+
+		await leaf.setViewState({
+			type: VIEW_TYPE_DOTFILE,
+			state: { file: file.path },
+			active: true,
+		});
+		this.updateAllLeafHeaderActions();
+	}
+
+	updateLeafHeaderActions(leaf: WorkspaceLeaf): void {
+		if (!leaf || !leaf.view) return;
+		const view = leaf.view;
+		const actionsEl = (view as unknown as { actionsEl?: HTMLElement })
+			?.actionsEl;
+		if (!actionsEl || !(actionsEl instanceof HTMLElement)) return;
+
+		const file = (view as { file?: TFile }).file;
+		const isMarkdown = Boolean(file && this.isMarkdownFile(file));
+
+		const existingBtn = actionsEl.querySelector<HTMLElement>(
+			".vault-code-header-toggle-btn",
+		);
+
+		if (!isMarkdown) {
+			if (existingBtn) {
+				existingBtn.remove();
+			}
+			return;
+		}
+
+		const isCodeEditor = view instanceof DotfileView;
+
+		if (existingBtn) {
+			existingBtn.toggleClass("is-active", isCodeEditor);
+			existingBtn.setAttribute(
+				"aria-label",
+				isCodeEditor
+					? t("viewToggleTooltip")
+					: t("contextEditInCodeEditor"),
+			);
+			return;
+		}
+
+		const btn = document.createElement("button");
+		btn.className = `clickable-icon view-action vault-code-header-toggle-btn${
+			isCodeEditor ? " is-active" : ""
+		}`;
+		btn.setAttribute(
+			"aria-label",
+			isCodeEditor
+				? t("viewToggleTooltip")
+				: t("contextEditInCodeEditor"),
+		);
+		setIcon(btn, "code");
+
+		btn.addEventListener("click", (evt: MouseEvent) => {
+			evt.preventDefault();
+			evt.stopPropagation();
+			void this.toggleCodeEditorForLeaf(leaf);
+		});
+
+		const moreBtn =
+			(view as unknown as { moreOptionsButtonEl?: HTMLElement })
+				.moreOptionsButtonEl ??
+			actionsEl.querySelector(
+				".clickable-icon[aria-label*='options' i], .clickable-icon:last-child",
+			);
+
+		if (moreBtn && moreBtn.parentElement === actionsEl) {
+			actionsEl.insertBefore(btn, moreBtn);
+		} else {
+			actionsEl.appendChild(btn);
+		}
+	}
+
+	updateAllLeafHeaderActions(): void {
+		this.app.workspace.iterateAllLeaves((leaf) => {
+			this.updateLeafHeaderActions(leaf);
+		});
 	}
 
 	isFileEditable(file: TFile): boolean {
