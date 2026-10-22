@@ -10,15 +10,22 @@ if you want to view the source, please visit the github repository of this plugi
 `;
 
 const prod = process.argv[2] === "production";
-const vaultPluginDir =
-	process.env.OBSIDIAN_VAULT_DIR ||
-	"";
+
+if (typeof process.loadEnvFile === "function") {
+	try {
+		process.loadEnvFile();
+	} catch {
+		// Ignore if .env is missing
+	}
+}
+
+const vaultPluginDir = process.env.OBSIDIAN_VAULT_DIR;
 
 const copyToVaultPlugin = {
 	name: "copy-to-vault",
 	setup(build) {
 		build.onEnd(() => {
-			if (existsSync(vaultPluginDir)) {
+			if (vaultPluginDir && existsSync(vaultPluginDir)) {
 				copyFileSync("main.js", `${vaultPluginDir}/main.js`);
 				copyFileSync("manifest.json", `${vaultPluginDir}/manifest.json`);
 				if (existsSync("styles.css")) {
