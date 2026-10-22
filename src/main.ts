@@ -3220,12 +3220,14 @@ export class DotfileView extends TextFileView {
 				});
 				const title = errBox.createDiv({
 					cls: "hidden-files-preview-error-title",
-					text: "SVG syntax error",
 				});
 				const iconSpan = title.createSpan({
 					cls: "hidden-files-preview-error-icon",
 				});
 				setIcon(iconSpan, "alert-triangle");
+				title.createSpan({
+					text: "SVG syntax error",
+				});
 				errBox.createDiv({
 					cls: "hidden-files-preview-error-msg",
 					text: parserError.textContent || "Unable to parse SVG",
@@ -3350,12 +3352,14 @@ export class DotfileView extends TextFileView {
 			});
 			const title = errBox.createDiv({
 				cls: "hidden-files-preview-error-title",
-				text: "MJML compilation error",
 			});
 			const iconSpan = title.createSpan({
 				cls: "hidden-files-preview-error-icon",
 			});
 			setIcon(iconSpan, "alert-triangle");
+			title.createSpan({
+				text: "MJML compilation error",
+			});
 			errBox.createDiv({
 				cls: "hidden-files-preview-error-msg",
 				text: e instanceof Error ? e.message : String(e),

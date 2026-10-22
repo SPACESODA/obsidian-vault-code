@@ -973,12 +973,14 @@ body .hidden-files-editor-wrapper .cm-searchMatch-selected {
 
 .hidden-files-preview-error {
 	margin: 24px auto;
-	max-width: 600px;
-	padding: 16px;
+	width: calc(100% - 48px);
+	max-width: 620px;
+	padding: 12px 16px;
 	border-radius: var(--radius-m, 8px);
-	background-color: var(--background-modifier-error, rgba(239, 68, 68, 0.1));
+	background-color: color-mix(in srgb, var(--text-error, #cf222e) 12%, var(--background-primary));
 	border: 1px solid var(--text-error, #cf222e);
 	color: var(--text-normal);
+	box-sizing: border-box;
 }
 
 .hidden-files-preview-error-title {
@@ -986,15 +988,32 @@ body .hidden-files-editor-wrapper .cm-searchMatch-selected {
 	align-items: center;
 	gap: 8px;
 	font-weight: var(--font-bold, 700);
+	font-size: var(--font-ui-medium, 14px);
 	color: var(--text-error, #cf222e);
-	margin-bottom: 8px;
+	margin-bottom: 6px;
+}
+
+.hidden-files-preview-error-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--text-error, #cf222e);
+}
+
+.hidden-files-preview-error-icon svg {
+	width: 16px;
+	height: 16px;
+	display: block;
 }
 
 .hidden-files-preview-error-msg {
-	font-family: var(--font-monospace);
+	font-family: var(--font-monospace, monospace);
 	font-size: var(--font-ui-smaller, 12px);
+	line-height: 1.5;
 	white-space: pre-wrap;
-	word-break: break-all;
+	overflow-wrap: break-word;
+	word-break: normal;
+	color: var(--text-normal);
 }
 
 /* Confirm close modal */
