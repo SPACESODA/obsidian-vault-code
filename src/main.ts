@@ -3288,8 +3288,12 @@ export class DotfileView extends TextFileView {
 			},
 		});
 
-		// Sandbox without allow-same-origin so it does not inherit Obsidian's host CSP
-		iframe.setAttribute("sandbox", "allow-scripts allow-forms allow-popups");
+		// allow-same-origin is essential so Electron tracks o.frame in webRequest,
+		// preventing Obsidian's main process from throwing TypeError on c.origin
+		iframe.setAttribute(
+			"sandbox",
+			"allow-scripts allow-forms allow-modals allow-same-origin allow-popups",
+		);
 
 		if (this.file && this.file.extension?.toLowerCase() !== "mjml") {
 			const fileUrl = this.app.vault.getResourcePath(this.file);
