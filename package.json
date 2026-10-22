@@ -28,7 +28,7 @@
     "url": "https://github.com/SPACESODA/obsidian-vault-code/issues"
   },
   "homepage": "https://github.com/SPACESODA/obsidian-vault-code#readme",
-  "license": "MIT",
+  "license": "AGPL-3.0-or-later",
   "devDependencies": {
     "@codemirror/autocomplete": "^6.20.4",
     "@codemirror/commands": "^6.11.1",

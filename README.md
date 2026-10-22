@@ -101,4 +101,4 @@ Tailor Vault Code to your workflow in **Settings → Community plugins → Vault
 
 ## License
 
-Brought to you by **[SPACESODA](https://github.com/SPACESODA)** under the [MIT License](LICENSE).
+Brought to you by **[SPACESODA](https://github.com/SPACESODA)** under the [GNU AGPLv3 License](LICENSE).
