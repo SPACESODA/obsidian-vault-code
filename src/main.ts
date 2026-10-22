@@ -5765,16 +5765,20 @@ class VaultCodeSettingTab extends PluginSettingTab {
 		}
 
 		let obsidianIgnoreButton: ButtonComponent | null = null;
+		let obsidianIgnoreButtonIconEl: HTMLElement | null = null;
+		let obsidianIgnoreButtonTextEl: HTMLElement | null = null;
 
 		const updateButtonState = async () => {
-			if (!obsidianIgnoreButton) return;
+			if (!obsidianIgnoreButton || !obsidianIgnoreButtonIconEl || !obsidianIgnoreButtonTextEl) return;
 			try {
 				const exists = await this.app.vault.adapter.exists(".obsidianignore");
 				if (exists) {
-					obsidianIgnoreButton.setButtonText(t("settingsButtonCopyDefault"));
+					setIcon(obsidianIgnoreButtonIconEl, "copy");
+					obsidianIgnoreButtonTextEl.setText(t("settingsButtonCopyDefault"));
 					obsidianIgnoreButton.setTooltip(t("settingsTooltipCopyDefault"));
 				} else {
-					obsidianIgnoreButton.setButtonText(t("settingsButtonCreateDefault"));
+					setIcon(obsidianIgnoreButtonIconEl, "file-plus");
+					obsidianIgnoreButtonTextEl.setText(t("settingsButtonCreateDefault"));
 					obsidianIgnoreButton.setTooltip(t("settingsTooltipCreateDefault"));
 				}
 			} catch {
@@ -5796,6 +5800,13 @@ class VaultCodeSettingTab extends PluginSettingTab {
 				obsidianIgnoreButton = button;
 				button.setCta();
 				button.setClass("vault-code-ignore-btn");
+				button.buttonEl.empty();
+				obsidianIgnoreButtonIconEl = button.buttonEl.createSpan({
+					cls: "vault-code-btn-icon",
+				});
+				obsidianIgnoreButtonTextEl = button.buttonEl.createSpan({
+					cls: "vault-code-btn-text",
+				});
 				button.onClick(async () => {
 					try {
 						const exists = await this.app.vault.adapter.exists(".obsidianignore");
@@ -5817,6 +5828,14 @@ class VaultCodeSettingTab extends PluginSettingTab {
 									DEFAULT_OBSIDIANIGNORE_CONTENT,
 								);
 								new Notice(t("settingsNoticeCopiedDefaultIgnore"));
+								if (obsidianIgnoreButtonIconEl) {
+									setIcon(obsidianIgnoreButtonIconEl, "check");
+									window.setTimeout(() => {
+										if (obsidianIgnoreButtonIconEl) {
+											setIcon(obsidianIgnoreButtonIconEl, "copy");
+										}
+									}, 1500);
+								}
 							} catch (err) {
 								console.error("Vault Code: Clipboard copy failed", err);
 							}

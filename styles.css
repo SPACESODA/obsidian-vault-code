@@ -1162,11 +1162,27 @@ button.vault-code-ignore-btn.mod-cta,
 button.vault-code-ignore-btn {
 	background-color: var(--interactive-accent);
 	color: var(--text-on-accent);
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
 }
 
 button.vault-code-ignore-btn.mod-cta:hover,
 button.vault-code-ignore-btn:hover {
 	background-color: var(--interactive-accent-hover);
+}
+
+.vault-code-ignore-btn .vault-code-btn-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	line-height: 1;
+}
+
+.vault-code-ignore-btn .vault-code-btn-icon svg {
+	width: 14px;
+	height: 14px;
+	display: block;
 }
 
 
