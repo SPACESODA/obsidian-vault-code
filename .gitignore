@@ -1,0 +1,17 @@
+# Build
+main.js
+
+# Dependencies
+node_modules/
+
+# IDE
+.idea/
+.vscode/*
+!.vscode/settings.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# npm
+npm-debug.log

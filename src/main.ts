@@ -1,0 +1,4270 @@
+import {
+	Plugin,
+	PluginSettingTab,
+	Setting,
+	App,
+	Notice,
+	TextFileView,
+	WorkspaceLeaf,
+	TFile,
+	TFolder,
+	TAbstractFile,
+	TextAreaComponent,
+	Modal,
+	OpenViewState,
+	Platform,
+	setIcon,
+	normalizePath,
+} from "obsidian";
+import {
+	EditorView,
+	lineNumbers,
+	highlightActiveLineGutter,
+	highlightSpecialChars,
+	drawSelection,
+	dropCursor,
+	rectangularSelection,
+	crosshairCursor,
+	highlightActiveLine,
+	keymap,
+	Command,
+	Panel,
+	ViewUpdate,
+} from "@codemirror/view";
+import { EditorState, Extension, Compartment } from "@codemirror/state";
+import {
+	defaultKeymap,
+	history,
+	historyKeymap,
+	indentWithTab,
+} from "@codemirror/commands";
+import {
+	search,
+	openSearchPanel,
+	closeSearchPanel,
+	searchPanelOpen,
+	searchKeymap,
+	highlightSelectionMatches,
+	SearchQuery,
+	setSearchQuery,
+	getSearchQuery,
+	findNext,
+	findPrevious,
+	selectMatches,
+	replaceNext,
+	replaceAll,
+} from "@codemirror/search";
+import {
+	foldGutter,
+	foldKeymap,
+	bracketMatching,
+	indentOnInput,
+	syntaxHighlighting,
+	defaultHighlightStyle,
+	LanguageDescription,
+	LanguageSupport,
+} from "@codemirror/language";
+import {
+	closeBrackets,
+	closeBracketsKeymap,
+} from "@codemirror/autocomplete";
+import { languages } from "@codemirror/language-data";
+import { t, setLanguage, SUPPORTED_LANGUAGES } from "./i18n";
+
+/* ── View type constants ───────────────────────────────────── */
+
+export const VIEW_TYPE_DOTFILE = "vault-code-editor";
+
+/** Formats that support visual live-preview toggling inside the editor. */
+export const PREVIEWABLE_EXTENSIONS = new Set(["svg", "html", "htm"]);
+
+/** All code and data file extensions supported for direct opening and editing. */
+export const SUPPORTED_EXTENSIONS = new Set([
+	"astro",
+	"bash",
+	"bat",
+	"bib",
+	"c",
+	"cjs",
+	"cmd",
+	"cpp",
+	"cs",
+	"css",
+	"csv",
+	"dart",
+	"diff",
+	"fish",
+	"go",
+	"gql",
+	"graphql",
+	"h",
+	"hpp",
+	"htm",
+	"html",
+	"ini",
+	"java",
+	"jl",
+	"js",
+	"json",
+	"json5",
+	"jsonc",
+	"jsx",
+	"kt",
+	"less",
+	"log",
+	"lua",
+	"mdx",
+	"mjs",
+	"patch",
+	"php",
+	"pine",
+	"prisma",
+	"ps1",
+	"py",
+	"r",
+	"rb",
+	"rs",
+	"sass",
+	"scss",
+	"sh",
+	"sql",
+	"svelte",
+	"svg",
+	"swift",
+	"tex",
+	"toml",
+	"ts",
+	"tsx",
+	"tsv",
+	"txt",
+	"vue",
+	"xml",
+	"yaml",
+	"yml",
+	"zig",
+	"zsh",
+]);
+
+/** Comprehensive list of binary extensions that must NEVER be opened or saved as text. */
+export const BINARY_EXTENSIONS = new Set([
+	// Documents & presentations
+	"pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "odt", "ods", "odp",
+	"pages", "numbers", "keynote", "rtf",
+	// Archives & compressed
+	"zip", "tar", "gz", "tgz", "bz2", "7z", "rar", "xz", "zst", "iso", "dmg", "pkg",
+	// Images (except SVG which is text/XML)
+	"png", "jpg", "jpeg", "gif", "webp", "bmp", "ico", "tiff", "tif", "heic", "heif", "avif", "psd", "ai",
+	// Audio & video
+	"mp3", "wav", "m4a", "flac", "aac", "ogg", "wma",
+	"mp4", "mkv", "avi", "mov", "wmv", "flv", "webm", "m4v",
+	// Executables, binaries & database
+	"exe", "dll", "so", "dylib", "bin", "dat", "db", "sqlite", "sqlite3", "class",
+	"pyc", "pyo", "wasm", "node", "apk", "aab", "ipa",
+]);
+
+/* ── Type augmentations for internal Obsidian APIs ─────────── */
+
+declare module "obsidian" {
+	interface Vault {
+		getConfig(key: string): unknown;
+		setConfig(key: string, value: unknown): void;
+	}
+}
+
+/** Internal adapter methods that exist at runtime but aren't typed. */
+interface PrivateAdapter {
+	_exists(fullPath: string, path: string): Promise<boolean>;
+	getFullPath(path: string): string;
+	getFullRealPath(realPath: string): string;
+	getRealPath(path: string): string;
+	listRecursive(path: string): Promise<void>;
+	reconcileDeletion(realPath: string, path: string): Promise<void>;
+	reconcileFileInternal?(realPath: string, path: string): Promise<void>;
+	reconcileFolderCreation(realPath: string, path: string): Promise<void>;
+}
+
+/* ── Settings ──────────────────────────────────────────────── */
+
+interface VaultCodeSettings {
+	showAllFileTypes: boolean;
+	showHiddenFiles: boolean;
+	allowEditDotfiles: boolean;
+	allowEditCodeFiles: boolean;
+	disableAutoSave: boolean;
+	customFileExtensions: string;
+	preventAutoOpenUnsupported: boolean;
+	openUnsupportedOnDoubleClick: boolean;
+	ignoredPaths: string;
+	language: string;
+}
+
+const DEFAULT_EXTENSIONS =
+	"astro, bash, bat, bib, c, cjs, cmd, cpp, cs, css, csv, dart, diff, fish, go, gql, graphql, h, hpp, htm, html, ini, java, jl, js, json, json5, jsonc, jsx, kt, less, log, lua, mdx, mjs, patch, php, pine, prisma, ps1, py, r, rb, rs, sass, scss, sh, sql, svelte, svg, swift, tex, toml, ts, tsx, tsv, txt, vue, xml, yaml, yml, zig, zsh";
+
+const DEFAULT_IGNORED_PATHS = `# Obsidian & Git
+.obsidian
+.git
+.trash
+
+# macOS
+.DS_Store
+._*
+
+# Windows
+Thumbs.db
+desktop.ini`;
+
+const DEFAULT_SETTINGS: VaultCodeSettings = {
+	showAllFileTypes: true,
+	showHiddenFiles: true,
+	allowEditDotfiles: true,
+	allowEditCodeFiles: true,
+	disableAutoSave: true,
+	customFileExtensions: DEFAULT_EXTENSIONS,
+	preventAutoOpenUnsupported: true,
+	openUnsupportedOnDoubleClick: true,
+	ignoredPaths: DEFAULT_IGNORED_PATHS,
+	language: "auto",
+};
+
+interface IgnoreRule {
+	regex: RegExp;
+	negate: boolean;
+	dirOnly: boolean;
+}
+
+function parseGitignore(text: string): IgnoreRule[] {
+	const rules: IgnoreRule[] = [];
+	const lines = text.split(/\r?\n/);
+	for (let line of lines) {
+		line = line.trim();
+		if (!line || line.startsWith("#")) continue;
+
+		let negate = false;
+		if (line.startsWith("!")) {
+			negate = true;
+			line = line.slice(1).trim();
+			if (!line) continue;
+		}
+
+		let dirOnly = false;
+		if (line.endsWith("/")) {
+			dirOnly = true;
+			line = line.slice(0, -1).trim();
+			if (!line) continue;
+		}
+
+		const hasSlash = line.includes("/");
+		if (line.startsWith("/")) {
+			line = line.slice(1);
+		}
+
+		let regexStr = "";
+		let i = 0;
+		while (i < line.length) {
+			const c = line[i];
+			if (!c) break;
+			if (c === "*") {
+				if (line[i + 1] === "*") {
+					if (line[i + 2] === "/") {
+						regexStr += "(?:.*/)?";
+						i += 3;
+						continue;
+					} else {
+						regexStr += ".*";
+						i += 2;
+						continue;
+					}
+				} else {
+					regexStr += "[^/]*";
+					i++;
+					continue;
+				}
+			} else if (c === "?") {
+				regexStr += "[^/]";
+				i++;
+				continue;
+			} else if (/[.+^$(){}[\]|\\]/.test(c)) {
+				regexStr += "\\" + c;
+				i++;
+				continue;
+			} else {
+				regexStr += c;
+				i++;
+				continue;
+			}
+		}
+
+		if (hasSlash) {
+			regexStr = "^" + regexStr + "(?:/.*)?$";
+		} else {
+			regexStr = "(?:^|/)" + regexStr + "(?:/.*)?$";
+		}
+
+		try {
+			rules.push({
+				regex: new RegExp(regexStr, "i"),
+				negate,
+				dirOnly,
+			});
+		} catch {
+			// Skip invalid regex pattern
+		}
+	}
+	return rules;
+}
+
+/** Check if any segment of a path is a dotfile or dotfolder. */
+function isDotPath(path: string): boolean {
+	const segments = path.split("/");
+	return segments.some((s) => s.startsWith("."));
+}
+
+/* ── Confirm Close Modal ───────────────────────────────────── */
+
+class ConfirmCloseModal extends Modal {
+	private titleText: string;
+	private bodyText: string;
+	private onSave: () => Promise<void> | void;
+	private onDiscard: () => void;
+
+	constructor(
+		app: App,
+		titleText: string,
+		bodyText: string,
+		onSave: () => Promise<void> | void,
+		onDiscard: () => void,
+	) {
+		super(app);
+		this.titleText = titleText;
+		this.bodyText = bodyText;
+		this.onSave = onSave;
+		this.onDiscard = onDiscard;
+	}
+
+	onOpen(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+		contentEl.addClass("hidden-files-confirm-modal");
+
+		contentEl.createEl("h3", {
+			text: this.titleText,
+		});
+
+		contentEl.createEl("p", {
+			text: this.bodyText,
+		});
+
+		const buttonContainer = contentEl.createDiv({
+			cls: "hidden-files-modal-buttons",
+		});
+
+		const saveBtn = buttonContainer.createEl("button", {
+			cls: "mod-cta",
+			text: t("modalButtonSave"),
+		});
+		saveBtn.addEventListener("click", () => {
+			this.close();
+			void this.onSave();
+		});
+
+		const discardBtn = buttonContainer.createEl("button", {
+			cls: "mod-warning",
+			text: t("modalButtonDiscard"),
+		});
+		discardBtn.addEventListener("click", () => {
+			this.close();
+			this.onDiscard();
+		});
+
+		const cancelBtn = buttonContainer.createEl("button", {
+			text: t("modalButtonCancel"),
+		});
+		cancelBtn.addEventListener("click", () => {
+			this.close();
+		});
+	}
+
+	onClose(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+	}
+}
+
+/* ── Create File Modal ─────────────────────────────────────── */
+
+class CreateFileModal extends Modal {
+	private plugin: VaultCodePlugin;
+	private targetFolder: TFolder;
+	private inputEl!: HTMLInputElement;
+	private errorEl!: HTMLElement;
+
+	constructor(
+		app: App,
+		plugin: VaultCodePlugin,
+		targetFolder?: TFolder | null,
+	) {
+		super(app);
+		this.plugin = plugin;
+		this.targetFolder = targetFolder ?? app.vault.getRoot();
+	}
+
+	onOpen(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+		contentEl.addClass("hidden-files-form-modal");
+
+		contentEl.createEl("h3", { text: t("modalCreateFileTitle") });
+
+		const folderPath =
+			this.targetFolder.isRoot() || !this.targetFolder.path
+				? "Vault root"
+				: this.targetFolder.path;
+		const infoDiv = contentEl.createDiv({
+			cls: "hidden-files-modal-destination",
+		});
+		const iconSpan = infoDiv.createSpan({
+			cls: "hidden-files-modal-dest-icon",
+		});
+		setIcon(iconSpan, "folder");
+		infoDiv.createSpan({
+			text: folderPath,
+			cls: "hidden-files-modal-dest-path",
+		});
+
+		const inputContainer = contentEl.createDiv({
+			cls: "hidden-files-modal-input-container",
+		});
+		this.inputEl = inputContainer.createEl("input", {
+			type: "text",
+			cls: "hidden-files-modal-input",
+			placeholder: t("modalCreateFilePlaceholder"),
+		});
+
+		this.errorEl = contentEl.createDiv({
+			cls: "hidden-files-modal-error",
+		});
+		this.errorEl.hide();
+
+		const btnContainer = contentEl.createDiv({
+			cls: "hidden-files-modal-buttons",
+		});
+
+		const cancelBtn = btnContainer.createEl("button", {
+			text: t("modalButtonCancel"),
+		});
+		cancelBtn.addEventListener("click", () => this.close());
+
+		const createBtn = btnContainer.createEl("button", {
+			cls: "mod-cta",
+			text: t("modalButtonCreate"),
+		});
+		createBtn.addEventListener("click", () => void this.handleSubmit());
+
+		this.inputEl.addEventListener("keydown", (evt: KeyboardEvent) => {
+			if (evt.key === "Enter") {
+				evt.preventDefault();
+				void this.handleSubmit();
+			} else if (evt.key === "Escape") {
+				this.close();
+			}
+		});
+
+		this.inputEl.addEventListener("input", () => {
+			this.clearError();
+		});
+
+		setTimeout(() => {
+			this.inputEl.focus();
+		}, 50);
+	}
+
+	private showError(message: string): void {
+		this.errorEl.setText(message);
+		this.errorEl.show();
+		this.inputEl.addClass("has-error");
+		this.inputEl.focus();
+	}
+
+	private clearError(): void {
+		this.errorEl.empty();
+		this.errorEl.hide();
+		this.inputEl.removeClass("has-error");
+	}
+
+	private async handleSubmit(): Promise<void> {
+		const raw = this.inputEl.value.trim();
+		if (!raw) {
+			this.showError(t("modalCreateFileEmptyError"));
+			return;
+		}
+
+		if (/[\\:*?"<>|]/.test(raw)) {
+			this.showError(t("modalCreateFilePathInvalidError"));
+			return;
+		}
+
+		const parentPath = this.targetFolder.isRoot()
+			? ""
+			: this.targetFolder.path;
+		const fullRelPath = normalizePath(
+			parentPath ? `${parentPath}/${raw}` : raw,
+		);
+
+		// If user input ended with '/', create folder instead
+		if (raw.endsWith("/")) {
+			try {
+				await this.plugin.createFolderRecursive(fullRelPath);
+				new Notice(t("noticeCreated", fullRelPath));
+				this.close();
+			} catch (e) {
+				this.showError(e instanceof Error ? e.message : String(e));
+			}
+			return;
+		}
+
+		// Check intermediate parent directories
+		const segments = fullRelPath.split("/");
+		let testPath = "";
+		for (let i = 0; i < segments.length - 1; i++) {
+			const segment = segments[i];
+			if (!segment) continue;
+			testPath = testPath ? `${testPath}/${segment}` : segment;
+			let stat = null;
+			try {
+				stat = await this.app.vault.adapter.stat(testPath);
+			} catch {
+				stat = null;
+			}
+			if (stat && stat.type === "file") {
+				this.showError(
+					`Cannot create: '${segment}' is an existing file, not a folder.`,
+				);
+				return;
+			}
+		}
+
+		// Check if destination file or folder already exists
+		if (await this.app.vault.adapter.exists(fullRelPath)) {
+			const fileName = segments[segments.length - 1] ?? raw;
+			this.showError(t("modalCreateFileExistsError", fileName));
+			return;
+		}
+
+		try {
+			const file = await this.plugin.createFileWithFolders(fullRelPath);
+			this.close();
+			if (file) {
+				await this.plugin.openCreatedFile(file);
+			}
+		} catch (e) {
+			this.showError(e instanceof Error ? e.message : String(e));
+		}
+	}
+
+	onClose(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+	}
+}
+
+/* ── Create Folder Modal ───────────────────────────────────── */
+
+class CreateFolderModal extends Modal {
+	private plugin: VaultCodePlugin;
+	private targetFolder: TFolder;
+	private inputEl!: HTMLInputElement;
+	private errorEl!: HTMLElement;
+
+	constructor(
+		app: App,
+		plugin: VaultCodePlugin,
+		targetFolder?: TFolder | null,
+	) {
+		super(app);
+		this.plugin = plugin;
+		this.targetFolder = targetFolder ?? app.vault.getRoot();
+	}
+
+	onOpen(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+		contentEl.addClass("hidden-files-form-modal");
+
+		contentEl.createEl("h3", { text: t("modalCreateFolderTitle") });
+
+		const folderPath =
+			this.targetFolder.isRoot() || !this.targetFolder.path
+				? "Vault root"
+				: this.targetFolder.path;
+		const infoDiv = contentEl.createDiv({
+			cls: "hidden-files-modal-destination",
+		});
+		const iconSpan = infoDiv.createSpan({
+			cls: "hidden-files-modal-dest-icon",
+		});
+		setIcon(iconSpan, "folder");
+		infoDiv.createSpan({
+			text: folderPath,
+			cls: "hidden-files-modal-dest-path",
+		});
+
+		const inputContainer = contentEl.createDiv({
+			cls: "hidden-files-modal-input-container",
+		});
+		this.inputEl = inputContainer.createEl("input", {
+			type: "text",
+			cls: "hidden-files-modal-input",
+			placeholder: t("modalCreateFolderPlaceholder"),
+		});
+
+		this.errorEl = contentEl.createDiv({
+			cls: "hidden-files-modal-error",
+		});
+		this.errorEl.hide();
+
+		const btnContainer = contentEl.createDiv({
+			cls: "hidden-files-modal-buttons",
+		});
+
+		const cancelBtn = btnContainer.createEl("button", {
+			text: t("modalButtonCancel"),
+		});
+		cancelBtn.addEventListener("click", () => this.close());
+
+		const createBtn = btnContainer.createEl("button", {
+			cls: "mod-cta",
+			text: t("modalButtonCreate"),
+		});
+		createBtn.addEventListener("click", () => void this.handleSubmit());
+
+		this.inputEl.addEventListener("keydown", (evt: KeyboardEvent) => {
+			if (evt.key === "Enter") {
+				evt.preventDefault();
+				void this.handleSubmit();
+			} else if (evt.key === "Escape") {
+				this.close();
+			}
+		});
+
+		this.inputEl.addEventListener("input", () => {
+			this.clearError();
+		});
+
+		setTimeout(() => {
+			this.inputEl.focus();
+		}, 50);
+	}
+
+	private showError(message: string): void {
+		this.errorEl.setText(message);
+		this.errorEl.show();
+		this.inputEl.addClass("has-error");
+		this.inputEl.focus();
+	}
+
+	private clearError(): void {
+		this.errorEl.empty();
+		this.errorEl.hide();
+		this.inputEl.removeClass("has-error");
+	}
+
+	private async handleSubmit(): Promise<void> {
+		const raw = this.inputEl.value.trim();
+		if (!raw) {
+			this.showError(t("modalCreateFolderEmptyError"));
+			return;
+		}
+
+		if (/[\\:*?"<>|]/.test(raw)) {
+			this.showError(t("modalCreateFilePathInvalidError"));
+			return;
+		}
+
+		const parentPath = this.targetFolder.isRoot()
+			? ""
+			: this.targetFolder.path;
+		const fullRelPath = normalizePath(
+			parentPath ? `${parentPath}/${raw}` : raw,
+		);
+
+		// Check intermediate parent directories
+		const segments = fullRelPath.split("/");
+		let testPath = "";
+		for (let i = 0; i < segments.length - 1; i++) {
+			const segment = segments[i];
+			if (!segment) continue;
+			testPath = testPath ? `${testPath}/${segment}` : segment;
+			let stat = null;
+			try {
+				stat = await this.app.vault.adapter.stat(testPath);
+			} catch {
+				stat = null;
+			}
+			if (stat && stat.type === "file") {
+				this.showError(
+					`Cannot create: '${segment}' is an existing file, not a folder.`,
+				);
+				return;
+			}
+		}
+
+		if (await this.app.vault.adapter.exists(fullRelPath)) {
+			const folderName = segments[segments.length - 1] ?? raw;
+			this.showError(t("modalCreateFolderExistsError", folderName));
+			return;
+		}
+
+		try {
+			await this.plugin.createFolderRecursive(fullRelPath);
+			new Notice(t("noticeCreated", fullRelPath));
+			this.close();
+		} catch (e) {
+			this.showError(e instanceof Error ? e.message : String(e));
+		}
+	}
+
+	onClose(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+	}
+}
+
+/* ── Rename Modal ──────────────────────────────────────────── */
+
+class RenameModal extends Modal {
+	private plugin: VaultCodePlugin;
+	private file: TAbstractFile;
+	private inputEl!: HTMLInputElement;
+	private errorEl!: HTMLElement;
+
+	constructor(
+		app: App,
+		plugin: VaultCodePlugin,
+		file: TAbstractFile,
+	) {
+		super(app);
+		this.plugin = plugin;
+		this.file = file;
+	}
+
+	onOpen(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+		contentEl.addClass("hidden-files-form-modal");
+
+		const isFolder = this.file instanceof TFolder;
+		contentEl.createEl("h3", {
+			text: isFolder ? t("modalRenameFolderTitle") : t("modalRenameFileTitle"),
+		});
+
+		const infoDiv = contentEl.createDiv({
+			cls: "hidden-files-modal-destination",
+		});
+		const iconSpan = infoDiv.createSpan({
+			cls: "hidden-files-modal-dest-icon",
+		});
+		setIcon(iconSpan, isFolder ? "folder" : "file");
+		infoDiv.createSpan({
+			text: this.file.path,
+			cls: "hidden-files-modal-dest-path",
+		});
+
+		const inputContainer = contentEl.createDiv({
+			cls: "hidden-files-modal-input-container",
+		});
+		this.inputEl = inputContainer.createEl("input", {
+			type: "text",
+			cls: "hidden-files-modal-input",
+			value: this.file.name,
+			placeholder: t("modalRenamePlaceholder"),
+		});
+
+		this.errorEl = contentEl.createDiv({
+			cls: "hidden-files-modal-error",
+		});
+		this.errorEl.hide();
+
+		const btnContainer = contentEl.createDiv({
+			cls: "hidden-files-modal-buttons",
+		});
+
+		const cancelBtn = btnContainer.createEl("button", {
+			text: t("modalButtonCancel"),
+		});
+		cancelBtn.addEventListener("click", () => this.close());
+
+		const renameBtn = btnContainer.createEl("button", {
+			cls: "mod-cta",
+			text: t("modalButtonRename"),
+		});
+		renameBtn.addEventListener("click", () => void this.handleSubmit());
+
+		this.inputEl.addEventListener("keydown", (evt: KeyboardEvent) => {
+			if (evt.key === "Enter") {
+				evt.preventDefault();
+				void this.handleSubmit();
+			} else if (evt.key === "Escape") {
+				this.close();
+			}
+		});
+
+		this.inputEl.addEventListener("input", () => {
+			this.clearError();
+		});
+
+		setTimeout(() => {
+			this.inputEl.focus();
+			// Select only the basename by default if it is a file with extension
+			if (this.file instanceof TFile && this.file.extension) {
+				const dotIndex = this.file.name.lastIndexOf(".");
+				if (dotIndex > 0) {
+					this.inputEl.setSelectionRange(0, dotIndex);
+					return;
+				}
+			}
+			this.inputEl.select();
+		}, 50);
+	}
+
+	private showError(message: string): void {
+		this.errorEl.setText(message);
+		this.errorEl.show();
+		this.inputEl.addClass("has-error");
+		this.inputEl.focus();
+	}
+
+	private clearError(): void {
+		this.errorEl.empty();
+		this.errorEl.hide();
+		this.inputEl.removeClass("has-error");
+	}
+
+	private async handleSubmit(): Promise<void> {
+		const newName = this.inputEl.value.trim();
+		if (!newName) {
+			this.showError(t("modalCreateFileEmptyError"));
+			return;
+		}
+
+		if (newName === this.file.name) {
+			this.close();
+			return;
+		}
+
+		if (/[\\/:*?"<>|]/.test(newName)) {
+			this.showError(t("modalCreateFilePathInvalidError"));
+			return;
+		}
+
+		const parentPath =
+			!this.file.parent || this.file.parent.isRoot()
+				? ""
+				: this.file.parent.path;
+		const newPath = normalizePath(
+			parentPath ? `${parentPath}/${newName}` : newName,
+		);
+
+		if (await this.app.vault.adapter.exists(newPath)) {
+			this.showError(t("modalCreateFileExistsError", newName));
+			return;
+		}
+
+		try {
+			await this.plugin.renameFileOrFolder(this.file, newName);
+			new Notice(`${t("modalButtonRename")}: ${newName}`);
+			this.close();
+		} catch (e) {
+			this.showError(e instanceof Error ? e.message : String(e));
+		}
+	}
+
+	onClose(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+	}
+}
+
+/* ── Modern Obsidian-Native Search Panel for CodeMirror 6 ──── */
+
+class ModernSearchPanel implements Panel {
+	dom: HTMLElement;
+	private view: EditorView;
+	private query: SearchQuery;
+	private searchInput: HTMLInputElement;
+	private replaceInput: HTMLInputElement;
+	private countEl: HTMLElement;
+	private caseBtn: HTMLElement;
+	private wordBtn: HTMLElement;
+	private regexBtn: HTMLElement;
+	private replaceRowEl: HTMLElement;
+	private replaceToggleBtn: HTMLElement;
+	private isReplaceOpen = false;
+	private isCaseSensitive = false;
+	private isRegex = false;
+	private isWholeWord = false;
+
+	constructor(view: EditorView) {
+		this.view = view;
+		const currentQuery = getSearchQuery(view.state);
+		this.isCaseSensitive = currentQuery.caseSensitive;
+		this.isRegex = currentQuery.regexp;
+		this.isWholeWord = currentQuery.wholeWord;
+		this.query = currentQuery;
+
+		this.dom = document.createElement("div");
+		this.dom.className = "hidden-files-search-panel";
+
+		// Row 1: Search row
+		const searchRow = this.dom.createDiv({
+			cls: "hidden-files-search-row",
+		});
+
+		// Toggle Replace button (chevron / expander)
+		this.replaceToggleBtn = searchRow.createEl("button", {
+			cls: "clickable-icon hidden-files-search-chevron-btn",
+			attr: {
+				"aria-label": t("searchToggleReplaceTooltip"),
+				title: t("searchToggleReplaceTooltip"),
+				type: "button",
+			},
+		});
+		setIcon(this.replaceToggleBtn, "chevron-right");
+		this.replaceToggleBtn.addEventListener("click", () => {
+			this.setReplaceOpen(!this.isReplaceOpen);
+			if (this.isReplaceOpen) {
+				this.replaceInput.focus();
+				this.replaceInput.select();
+			} else {
+				this.searchInput.focus();
+			}
+		});
+
+		// Search Input Wrapper
+		const searchInputWrapper = searchRow.createDiv({
+			cls: "hidden-files-search-input-wrapper",
+		});
+
+		this.searchInput = searchInputWrapper.createEl("input", {
+			cls: "hidden-files-search-input",
+			attr: {
+				type: "text",
+				name: "search",
+				"main-field": "true",
+				placeholder: t("searchFindPlaceholder"),
+				"aria-label": t("searchFindAriaLabel"),
+				spellcheck: "false",
+				autocomplete: "off",
+			},
+		});
+		this.searchInput.value = this.query.search;
+
+		// Match count pill
+		this.countEl = searchInputWrapper.createSpan({
+			cls: "hidden-files-search-count",
+		});
+		this.countEl.hide();
+
+		// Toggle buttons group (Case, Word, Regex) inside input wrapper
+		const togglesWrapper = searchInputWrapper.createDiv({
+			cls: "hidden-files-search-toggles",
+		});
+
+		this.caseBtn = togglesWrapper.createEl("button", {
+			cls: "hidden-files-search-toggle-btn",
+			text: "Aa",
+			attr: {
+				title: t("searchMatchCase"),
+				"aria-label": t("searchMatchCase"),
+				type: "button",
+			},
+		});
+		this.caseBtn.toggleClass("is-active", this.isCaseSensitive);
+		this.caseBtn.addEventListener("click", () => {
+			this.isCaseSensitive = !this.isCaseSensitive;
+			this.caseBtn.toggleClass("is-active", this.isCaseSensitive);
+			this.commit();
+		});
+
+		this.wordBtn = togglesWrapper.createEl("button", {
+			cls: "hidden-files-search-toggle-btn",
+			text: "\\b",
+			attr: {
+				title: t("searchWholeWord"),
+				"aria-label": t("searchWholeWord"),
+				type: "button",
+			},
+		});
+		this.wordBtn.toggleClass("is-active", this.isWholeWord);
+		this.wordBtn.addEventListener("click", () => {
+			this.isWholeWord = !this.isWholeWord;
+			this.wordBtn.toggleClass("is-active", this.isWholeWord);
+			this.commit();
+		});
+
+		this.regexBtn = togglesWrapper.createEl("button", {
+			cls: "hidden-files-search-toggle-btn",
+			text: ".*",
+			attr: {
+				title: t("searchRegex"),
+				"aria-label": t("searchRegex"),
+				type: "button",
+			},
+		});
+		this.regexBtn.toggleClass("is-active", this.isRegex);
+		this.regexBtn.addEventListener("click", () => {
+			this.isRegex = !this.isRegex;
+			this.regexBtn.toggleClass("is-active", this.isRegex);
+			this.commit();
+		});
+
+		// Navigation buttons: Previous, Next, Select All
+		const navBtnsWrapper = searchRow.createDiv({
+			cls: "hidden-files-search-actions",
+		});
+
+		const prevBtn = navBtnsWrapper.createEl("button", {
+			cls: "clickable-icon",
+			attr: {
+				title: t("searchPreviousMatch"),
+				"aria-label": t("searchPreviousMatch"),
+				type: "button",
+			},
+		});
+		setIcon(prevBtn, "chevron-up");
+		prevBtn.addEventListener("click", () => {
+			findPrevious(this.view);
+		});
+
+		const nextBtn = navBtnsWrapper.createEl("button", {
+			cls: "clickable-icon",
+			attr: {
+				title: t("searchNextMatch"),
+				"aria-label": t("searchNextMatch"),
+				type: "button",
+			},
+		});
+		setIcon(nextBtn, "chevron-down");
+		nextBtn.addEventListener("click", () => {
+			findNext(this.view);
+		});
+
+		const selectAllBtn = navBtnsWrapper.createEl("button", {
+			cls: "clickable-icon",
+			attr: {
+				title: t("searchSelectAll"),
+				"aria-label": t("searchSelectAll"),
+				type: "button",
+			},
+		});
+		setIcon(selectAllBtn, "check-check");
+		selectAllBtn.addEventListener("click", () => {
+			selectMatches(this.view);
+		});
+
+		// Close button
+		const closeBtn = searchRow.createEl("button", {
+			cls: "clickable-icon hidden-files-search-close-btn",
+			attr: {
+				title: t("searchClose"),
+				"aria-label": t("searchClose"),
+				type: "button",
+			},
+		});
+		setIcon(closeBtn, "x");
+		closeBtn.addEventListener("click", () => {
+			closeSearchPanel(this.view);
+			this.view.focus();
+		});
+
+		// Row 2: Replace row
+		this.replaceRowEl = this.dom.createDiv({
+			cls: "hidden-files-replace-row",
+		});
+		this.replaceRowEl.hide();
+
+		const replaceInputWrapper = this.replaceRowEl.createDiv({
+			cls: "hidden-files-replace-input-wrapper",
+		});
+
+		this.replaceInput = replaceInputWrapper.createEl("input", {
+			cls: "hidden-files-search-input",
+			attr: {
+				type: "text",
+				name: "replace",
+				placeholder: t("searchReplacePlaceholder"),
+				"aria-label": t("searchReplaceAriaLabel"),
+				spellcheck: "false",
+				autocomplete: "off",
+			},
+		});
+		this.replaceInput.value = this.query.replace;
+
+		const replaceBtnsWrapper = this.replaceRowEl.createDiv({
+			cls: "hidden-files-replace-actions",
+		});
+
+		const replaceBtn = replaceBtnsWrapper.createEl("button", {
+			cls: "hidden-files-search-action-btn",
+			text: t("searchReplace"),
+			attr: {
+				title: t("searchReplace"),
+				"aria-label": t("searchReplace"),
+				type: "button",
+			},
+		});
+		replaceBtn.addEventListener("click", () => {
+			replaceNext(this.view);
+		});
+
+		const replaceAllBtn = replaceBtnsWrapper.createEl("button", {
+			cls: "hidden-files-search-action-btn",
+			text: t("searchReplaceAll"),
+			attr: {
+				title: t("searchReplaceAll"),
+				"aria-label": t("searchReplaceAll"),
+				type: "button",
+			},
+		});
+		replaceAllBtn.addEventListener("click", () => {
+			replaceAll(this.view);
+		});
+
+		// Input event listeners
+		this.searchInput.addEventListener("input", () => this.commit());
+		this.replaceInput.addEventListener("input", () => this.commit());
+
+		// Keyboard navigation
+		this.dom.addEventListener("keydown", (e: KeyboardEvent) => {
+			if (e.key === "Escape") {
+				e.preventDefault();
+				e.stopPropagation();
+				closeSearchPanel(this.view);
+				this.view.focus();
+				return;
+			}
+			if (e.key === "c" && e.altKey) {
+				e.preventDefault();
+				this.isCaseSensitive = !this.isCaseSensitive;
+				this.caseBtn.toggleClass("is-active", this.isCaseSensitive);
+				this.commit();
+				return;
+			}
+			if (e.key === "w" && e.altKey) {
+				e.preventDefault();
+				this.isWholeWord = !this.isWholeWord;
+				this.wordBtn.toggleClass("is-active", this.isWholeWord);
+				this.commit();
+				return;
+			}
+			if (e.key === "r" && e.altKey) {
+				e.preventDefault();
+				this.isRegex = !this.isRegex;
+				this.regexBtn.toggleClass("is-active", this.isRegex);
+				this.commit();
+				return;
+			}
+			if (e.key === "Enter" && e.target === this.searchInput) {
+				e.preventDefault();
+				if (e.altKey) {
+					selectMatches(this.view);
+				} else if (e.shiftKey) {
+					findPrevious(this.view);
+				} else {
+					findNext(this.view);
+				}
+				return;
+			}
+			if (e.key === "Enter" && e.target === this.replaceInput) {
+				e.preventDefault();
+				if (e.altKey || e.shiftKey) {
+					replaceAll(this.view);
+				} else {
+					replaceNext(this.view);
+				}
+				return;
+			}
+		});
+
+		// Custom event to reveal replace row when triggered by Mod-H
+		this.dom.addEventListener("open-replace", () => {
+			this.setReplaceOpen(true);
+		});
+	}
+
+	setReplaceOpen(open: boolean): void {
+		this.isReplaceOpen = open;
+		if (open) {
+			this.replaceRowEl.show();
+			setIcon(this.replaceToggleBtn, "chevron-down");
+		} else {
+			this.replaceRowEl.hide();
+			setIcon(this.replaceToggleBtn, "chevron-right");
+		}
+	}
+
+	private commit(): void {
+		const query = new SearchQuery({
+			search: this.searchInput.value,
+			caseSensitive: this.isCaseSensitive,
+			regexp: this.isRegex,
+			wholeWord: this.isWholeWord,
+			replace: this.replaceInput.value,
+		});
+		if (!query.eq(this.query)) {
+			this.query = query;
+			this.view.dispatch({ effects: setSearchQuery.of(query) });
+		}
+		this.updateMatchCount();
+	}
+
+	private updateMatchCount(): void {
+		if (!this.countEl) return;
+		const query = getSearchQuery(this.view.state);
+		if (!query.valid || !query.search) {
+			this.countEl.setText("");
+			this.countEl.hide();
+			return;
+		}
+		try {
+			const cursor = query.getCursor(this.view.state);
+			let count = 0;
+			let current = 0;
+			const mainFrom = this.view.state.selection.main.from;
+			let item;
+			while (!(item = cursor.next()).done) {
+				count++;
+				if (item.value.from <= mainFrom) {
+					current = count;
+				}
+				if (count >= 1000) break;
+			}
+			this.countEl.show();
+			if (count === 0) {
+				this.countEl.setText(t("searchNoResults"));
+				this.countEl.addClass("is-no-matches");
+			} else {
+				this.countEl.removeClass("is-no-matches");
+				const countStr = count >= 1000 ? "999+" : String(count);
+				this.countEl.setText(t("searchCountMatches", current || 1, countStr));
+			}
+		} catch {
+			this.countEl.show();
+			this.countEl.setText(t("searchInvalidRegex"));
+			this.countEl.addClass("is-no-matches");
+		}
+	}
+
+	mount(): void {
+		this.searchInput.focus();
+		this.searchInput.select();
+		this.updateMatchCount();
+	}
+
+	update(update: ViewUpdate): void {
+		let queryChanged = false;
+		for (const tr of update.transactions) {
+			for (const effect of tr.effects) {
+				if (effect.is(setSearchQuery)) {
+					if (!effect.value.eq(this.query)) {
+						this.query = effect.value;
+						queryChanged = true;
+					}
+				}
+			}
+		}
+		if (queryChanged) {
+			this.searchInput.value = this.query.search;
+			this.replaceInput.value = this.query.replace;
+			this.isCaseSensitive = this.query.caseSensitive;
+			this.isRegex = this.query.regexp;
+			this.isWholeWord = this.query.wholeWord;
+			this.caseBtn.toggleClass("is-active", this.isCaseSensitive);
+			this.wordBtn.toggleClass("is-active", this.isWholeWord);
+			this.regexBtn.toggleClass("is-active", this.isRegex);
+		}
+		if (update.docChanged || update.selectionSet || queryChanged) {
+			this.updateMatchCount();
+		}
+	}
+
+	get top(): boolean {
+		return true;
+	}
+}
+
+/* ── Dotfile & Code Editor View ────────────────────────────── */
+
+export class DotfileView extends TextFileView {
+	private editor: EditorView | null = null;
+	private editorEl: HTMLElement | null = null;
+	private previewEl: HTMLElement | null = null;
+	private langEl: HTMLElement | null = null;
+	private searchBtnEl: HTMLButtonElement | null = null;
+	private saveBtnEl: HTMLButtonElement | null = null;
+	private saveIconEl: HTMLElement | null = null;
+	private saveTextEl: HTMLElement | null = null;
+	private viewToggleBtnEl: HTMLButtonElement | null = null;
+	private viewToggleIconEl: HTMLElement | null = null;
+	private viewToggleTextEl: HTMLElement | null = null;
+	private dirtyDotEl: HTMLElement | null = null;
+	private languageCompartment = new Compartment();
+	private plugin: VaultCodePlugin;
+	private isModified = false;
+	private discardOnClose = false;
+	private isPreviewMode = false;
+	private headerFileNameEl: HTMLElement | null = null;
+
+	constructor(leaf: WorkspaceLeaf, plugin: VaultCodePlugin) {
+		super(leaf);
+		this.plugin = plugin;
+	}
+
+	getViewType(): string {
+		return VIEW_TYPE_DOTFILE;
+	}
+
+	getDisplayText(): string {
+		return this.file ? this.file.name : t("settingsGroupCodeEditor");
+	}
+
+	getIcon(): string {
+		return "document-code";
+	}
+
+	canAcceptExtension(extension: string): boolean {
+		const ext = extension ? extension.toLowerCase() : "";
+		if (BINARY_EXTENSIONS.has(ext)) {
+			return false;
+		}
+		if (this.isDirty()) {
+			return false;
+		}
+		return this.plugin.isExtensionEditable(ext);
+	}
+
+	isDirty(): boolean {
+		if (this.discardOnClose) return false;
+		if (this.editor) {
+			return this.editor.state.doc.toString() !== (this.data ?? "");
+		}
+		return this.isModified;
+	}
+
+	discardChanges(): void {
+		this.discardOnClose = true;
+		this.isModified = false;
+	}
+
+	openFind(): void {
+		if (this.isPreviewMode) {
+			this.toggleViewMode();
+		}
+		if (this.editor) {
+			openSearchPanel(this.editor);
+		}
+	}
+
+	closeFind(): void {
+		if (this.editor) {
+			closeSearchPanel(this.editor);
+		}
+	}
+
+	toggleSearch(): void {
+		if (this.isPreviewMode) {
+			this.toggleViewMode();
+		}
+		if (!this.editor) return;
+		if (searchPanelOpen(this.editor.state)) {
+			closeSearchPanel(this.editor);
+		} else {
+			openSearchPanel(this.editor);
+		}
+	}
+
+	async saveExplicitly(): Promise<void> {
+		if (this.isBinaryOrNonEditable() || !this.file) return;
+		this.data = this.getViewData();
+		this.isModified = false;
+		this.discardOnClose = false;
+		await super.save();
+		this.updateDirtyUI();
+		this.updateStatus();
+		new Notice(t("noticeSaved", this.file.name));
+	}
+
+	private isBinaryOrNonEditable(): boolean {
+		if (!this.file) return true;
+		const ext = this.file.extension?.toLowerCase() ?? "";
+		return BINARY_EXTENSIONS.has(ext) || !this.plugin.isFileEditable(this.file);
+	}
+
+	override async save(clear?: boolean): Promise<void> {
+		if (this.isBinaryOrNonEditable() || this.discardOnClose) {
+			return;
+		}
+		if (this.plugin.settings.disableAutoSave && !this.isModified) {
+			return;
+		}
+		this.data = this.getViewData();
+		this.isModified = false;
+		await super.save(clear);
+		this.updateDirtyUI();
+	}
+
+	private updateDirtyUI(): void {
+		const dirty = this.isDirty();
+
+		if (this.dirtyDotEl) {
+			this.dirtyDotEl.toggleClass("is-visible", dirty);
+		}
+
+		if (this.saveBtnEl) {
+			if (dirty) {
+				this.saveBtnEl.removeClass("is-saved");
+				this.saveBtnEl.addClass("is-dirty");
+				if (this.saveIconEl) setIcon(this.saveIconEl, "save");
+				if (this.saveTextEl) this.saveTextEl.setText(t("saveChanges"));
+				this.saveBtnEl.title = t("saveChangesTooltip");
+				this.saveBtnEl.setAttribute("aria-label", t("saveChangesTooltip"));
+			} else {
+				this.saveBtnEl.removeClass("is-dirty");
+				this.saveBtnEl.addClass("is-saved");
+				if (this.saveIconEl) setIcon(this.saveIconEl, "check");
+				if (this.saveTextEl) this.saveTextEl.setText(t("saved"));
+				this.saveBtnEl.title = t("saved");
+				this.saveBtnEl.setAttribute("aria-label", t("saved"));
+			}
+		}
+	}
+
+	getViewData(): string {
+		return this.editor ? this.editor.state.doc.toString() : this.data;
+	}
+
+	setViewData(data: string, clear: boolean): void {
+		this.data = data;
+		this.isModified = false;
+		this.discardOnClose = false;
+		if (this.editor) {
+			const current = this.editor.state.doc.toString();
+			if (current !== data) {
+				this.editor.dispatch({
+					changes: {
+						from: 0,
+						to: this.editor.state.doc.length,
+						insert: data,
+					},
+				});
+			}
+			this.applyLanguage();
+			this.updateStatus();
+			this.updateDirtyUI();
+			this.updateViewModeUI();
+		}
+	}
+
+	clear(): void {
+		this.data = "";
+		this.isModified = false;
+		this.discardOnClose = false;
+		if (this.editor) {
+			this.editor.dispatch({
+				changes: {
+					from: 0,
+					to: this.editor.state.doc.length,
+					insert: "",
+				},
+			});
+			this.updateStatus();
+			this.updateDirtyUI();
+		}
+	}
+
+	async onOpen(): Promise<void> {
+		await super.onOpen();
+
+		if (this.file) {
+			const ext = this.file.extension?.toLowerCase() ?? "";
+			if (BINARY_EXTENSIONS.has(ext) || !this.plugin.isFileEditable(this.file)) {
+				const { contentEl } = this;
+				contentEl.empty();
+				contentEl.addClass("hidden-files-editor-container");
+				const callout = contentEl.createDiv({ cls: "callout" });
+				callout.setAttribute("data-callout", "warning");
+				const title = callout.createDiv({ cls: "callout-title" });
+				title.createDiv({
+					cls: "callout-title-inner",
+					text: t("calloutBinaryTitle"),
+				});
+				const content = callout.createDiv({ cls: "callout-content" });
+				content.createEl("p", {
+					text: t("calloutBinaryDesc", this.file.name),
+				});
+				return;
+			}
+		}
+
+		const { contentEl } = this;
+		contentEl.empty();
+		contentEl.addClass("hidden-files-editor-container");
+
+		// Header bar with filename, language badge, and live position
+		const headerEl = contentEl.createDiv({
+			cls: "hidden-files-editor-header",
+		});
+
+		const leftEl = headerEl.createDiv({
+			cls: "hidden-files-editor-header-left",
+		});
+		this.headerFileNameEl = leftEl.createSpan({
+			cls: "hidden-files-editor-title",
+		});
+		this.headerFileNameEl.setText(this.file?.name ?? "Editor");
+
+		this.dirtyDotEl = leftEl.createSpan({
+			cls: "hidden-files-editor-dirty-dot",
+			text: "●",
+		});
+
+		this.langEl = leftEl.createSpan({
+			cls: "hidden-files-editor-lang",
+		});
+		this.langEl.setText(this.getLanguageLabel());
+
+		const rightEl = headerEl.createDiv({
+			cls: "hidden-files-editor-header-right",
+		});
+
+		// Find and replace button (icon-only, on the left of View button)
+		this.searchBtnEl = rightEl.createEl("button", {
+			cls: "clickable-icon hidden-files-editor-search-btn",
+		});
+		setIcon(this.searchBtnEl, "search");
+		const searchTooltip = `${t("searchFindAriaLabel")} / ${t("searchReplace")}`;
+		this.searchBtnEl.title = searchTooltip;
+		this.searchBtnEl.setAttribute("aria-label", searchTooltip);
+		this.searchBtnEl.addEventListener("click", () => {
+			this.toggleSearch();
+		});
+
+		// View / Code toggle button for previewable files (svg, html, htm)
+		this.viewToggleBtnEl = rightEl.createEl("button", {
+			cls: "hidden-files-editor-view-toggle-btn",
+		});
+		this.viewToggleIconEl = this.viewToggleBtnEl.createSpan({
+			cls: "hidden-files-btn-icon",
+		});
+		this.viewToggleTextEl = this.viewToggleBtnEl.createSpan({
+			cls: "hidden-files-btn-text",
+		});
+		this.viewToggleBtnEl.addEventListener("click", () => {
+			this.toggleViewMode();
+		});
+
+		this.saveBtnEl = rightEl.createEl("button", {
+			cls: "hidden-files-editor-save-btn is-saved",
+		});
+		this.saveIconEl = this.saveBtnEl.createSpan({
+			cls: "hidden-files-btn-icon",
+		});
+		this.saveTextEl = this.saveBtnEl.createSpan({
+			cls: "hidden-files-btn-text",
+		});
+		this.saveBtnEl.addEventListener("click", () => {
+			void this.saveExplicitly();
+		});
+
+		this.updateDirtyUI();
+
+		// Editor wrapper
+		this.editorEl = contentEl.createDiv({
+			cls: "hidden-files-editor-wrapper",
+		});
+
+		// Preview container
+		this.previewEl = contentEl.createDiv({
+			cls: "hidden-files-editor-preview",
+		});
+		this.previewEl.hide();
+
+		// Initialize CodeMirror 6 with language compartment
+		this.editor = new EditorView({
+			state: this.createEditorState(this.data ?? ""),
+			parent: this.editorEl,
+		});
+
+		this.applyLanguage();
+		this.updateViewModeUI();
+
+		// Notify Obsidian workspace of CodeMirror editor instance
+		this.app.workspace.trigger("codemirror", this.editor);
+	}
+
+	private createEditorState(content: string): EditorState {
+		const openReplaceCommand: Command = (view) => {
+			openSearchPanel(view);
+			const panelDom = view.dom.querySelector<HTMLElement>(
+				".hidden-files-search-panel",
+			);
+			if (panelDom) {
+				panelDom.dispatchEvent(new CustomEvent("open-replace"));
+			}
+			const replaceInput = view.dom.querySelector<HTMLInputElement>(
+				'.hidden-files-search-panel input[name="replace"]',
+			);
+			if (replaceInput) {
+				replaceInput.focus();
+				replaceInput.select();
+			}
+			return true;
+		};
+
+		const extensions: Extension[] = [
+			lineNumbers(),
+			highlightActiveLineGutter(),
+			highlightSpecialChars(),
+			history(),
+			foldGutter(),
+			drawSelection(),
+			dropCursor(),
+			EditorState.allowMultipleSelections.of(true),
+			indentOnInput(),
+			syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+			bracketMatching(),
+			closeBrackets(),
+			rectangularSelection(),
+			crosshairCursor(),
+			highlightActiveLine(),
+			highlightSelectionMatches(),
+			search({
+				top: true,
+				createPanel: (view) => new ModernSearchPanel(view),
+			}),
+			this.languageCompartment.of([]),
+			keymap.of([
+				{
+					key: "Mod-f",
+					run: (view) => {
+						openSearchPanel(view);
+						return true;
+					},
+					scope: "editor search-panel",
+					preventDefault: true,
+				},
+				{
+					key: "Mod-h",
+					run: openReplaceCommand,
+					scope: "editor search-panel",
+					preventDefault: true,
+				},
+				{
+					key: "Mod-Alt-f",
+					run: openReplaceCommand,
+					scope: "editor search-panel",
+					preventDefault: true,
+				},
+				...closeBracketsKeymap,
+				...defaultKeymap,
+				...searchKeymap,
+				...historyKeymap,
+				...foldKeymap,
+				indentWithTab,
+				{
+					key: "Mod-s",
+					run: () => {
+						void this.saveExplicitly();
+						return true;
+					},
+				},
+				{
+					key: "Mod-e",
+					run: () => {
+						if (this.isPreviewable()) {
+							this.toggleViewMode();
+							return true;
+						}
+						return false;
+					},
+				},
+			]),
+			EditorView.updateListener.of((update) => {
+				if (update.docChanged) {
+					if (!this.isBinaryOrNonEditable()) {
+						const currentDoc = update.state.doc.toString();
+						this.isModified = currentDoc !== (this.data ?? "");
+						this.updateDirtyUI();
+
+						if (!this.plugin.settings.disableAutoSave) {
+							this.data = currentDoc;
+							this.requestSave();
+						}
+					}
+				}
+				if (this.searchBtnEl) {
+					this.searchBtnEl.toggleClass(
+						"is-active",
+						searchPanelOpen(update.state),
+					);
+				}
+			}),
+		];
+
+		return EditorState.create({
+			doc: content,
+			extensions: extensions,
+		});
+	}
+
+	private applyLanguage(): void {
+		if (!this.editor || !this.file) return;
+
+		const filename = this.file.name;
+		const ext = this.file.extension?.toLowerCase() ?? "";
+
+		const desc =
+			LanguageDescription.matchFilename(languages, filename) ||
+			(ext === "mdx"
+				? LanguageDescription.matchFilename(languages, "file.md")
+				: null) ||
+			(ext === "astro" || ext === "svelte"
+				? LanguageDescription.matchFilename(languages, "file.html")
+				: null) ||
+			(ext === "svg"
+				? LanguageDescription.matchFilename(languages, "file.xml")
+				: null) ||
+			(ext === "pine"
+				? LanguageDescription.matchFilename(languages, "file.py")
+				: null) ||
+			(ext === "json5" || ext === "jsonc"
+				? LanguageDescription.matchFilename(languages, "file.json")
+				: null) ||
+			(ext === "bash" || ext === "zsh" || ext === "fish"
+				? LanguageDescription.matchFilename(languages, "file.sh")
+				: null) ||
+			(ext === "patch"
+				? LanguageDescription.matchFilename(languages, "file.diff")
+				: null) ||
+			(ext === "bib"
+				? LanguageDescription.matchFilename(languages, "file.tex")
+				: null) ||
+			(ext === "gql"
+				? LanguageDescription.matchFilename(languages, "file.graphql")
+				: null) ||
+			(ext === "cmd" || ext === "bat"
+				? LanguageDescription.matchFilename(languages, "file.cmd")
+				: null) ||
+			(ext
+				? LanguageDescription.matchFilename(languages, `file.${ext}`)
+				: null);
+
+		if (desc) {
+			void desc.load().then((langSupport: LanguageSupport) => {
+				if (this.editor) {
+					this.editor.dispatch({
+						effects: this.languageCompartment.reconfigure(langSupport),
+					});
+				}
+			});
+		} else {
+			this.editor.dispatch({
+				effects: this.languageCompartment.reconfigure([]),
+			});
+		}
+
+		if (this.langEl) {
+			this.langEl.setText(this.getLanguageLabel());
+		}
+	}
+
+	private getLanguageLabel(): string {
+		if (!this.file) return "Plain Text";
+		const ext = this.file.extension?.toLowerCase() ?? "";
+		const name = this.file.name.toLowerCase();
+
+		if (name === ".gitignore") return "Git Ignore";
+		if (name === ".gitattributes") return "Git Attributes";
+		if (name.startsWith(".env")) return "Environment";
+		if (name === ".dockerignore") return "Docker Ignore";
+		if (name === ".editorconfig") return "EditorConfig";
+		if (name === ".npmrc") return "NPM Config";
+		if (name === ".prettierrc") return "Prettier Config";
+		if (name === ".eslintrc") return "ESLint Config";
+		if (name === "dockerfile") return "Dockerfile";
+		if (name === "makefile" || name === "gnumakefile") return "Makefile";
+		if (name === "license" || name === "licence") return "License";
+		if (name === "procfile") return "Procfile";
+		if (name === "cname") return "CNAME";
+
+		const labels: Record<string, string> = {
+			astro: "Astro",
+			bash: "Bash",
+			bat: "Batch",
+			bib: "BibTeX",
+			c: "C",
+			cjs: "JavaScript",
+			cmd: "Command Script",
+			cpp: "C++",
+			cs: "C#",
+			css: "CSS",
+			csv: "CSV",
+			dart: "Dart",
+			diff: "Diff",
+			fish: "Fish",
+			go: "Go",
+			gql: "GraphQL",
+			graphql: "GraphQL",
+			h: "C Header",
+			hpp: "C++ Header",
+			htm: "HTML",
+			html: "HTML",
+			ini: "INI",
+			java: "Java",
+			jl: "Julia",
+			js: "JavaScript",
+			json: "JSON",
+			json5: "JSON5",
+			jsonc: "JSONC",
+			jsx: "JSX",
+			kt: "Kotlin",
+			less: "Less",
+			log: "Log",
+			lua: "Lua",
+			mdx: "MDX",
+			mjs: "JavaScript",
+			patch: "Patch",
+			php: "PHP",
+			pine: "Pine Script",
+			prisma: "Prisma",
+			ps1: "PowerShell",
+			py: "Python",
+			r: "R",
+			rb: "Ruby",
+			rs: "Rust",
+			sass: "Sass",
+			scss: "SCSS",
+			sh: "Shell",
+			sql: "SQL",
+			svelte: "Svelte",
+			svg: "SVG",
+			swift: "Swift",
+			tex: "LaTeX",
+			toml: "TOML",
+			ts: "TypeScript",
+			tsx: "TSX",
+			tsv: "TSV",
+			txt: "Plain Text",
+			vue: "Vue",
+			xml: "XML",
+			yaml: "YAML",
+			yml: "YAML",
+			zig: "Zig",
+			zsh: "Zsh",
+		};
+
+		return labels[ext] ?? (ext ? ext.toUpperCase() : "Plain Text");
+	}
+
+	private updateStatus(): void {
+		// Line/col and character count is displayed natively in Obsidian's status bar
+	}
+
+	override async onRename(file: TFile): Promise<void> {
+		try {
+			await super.onRename(file);
+		} catch {
+			// Base onRename might not be implemented
+		}
+		if (this.headerFileNameEl) {
+			this.headerFileNameEl.setText(file.name);
+		}
+		this.applyLanguage();
+		this.updateStatus();
+		this.updateDirtyUI();
+		this.updateViewModeUI();
+	}
+
+	async onClose(): Promise<void> {
+		if (this.editor) {
+			this.editor.destroy();
+			this.editor = null;
+		}
+		if (this.previewEl) {
+			this.previewEl.empty();
+			this.previewEl = null;
+		}
+		await super.onClose();
+	}
+
+	private isPreviewable(): boolean {
+		if (!this.file) return false;
+		const ext = this.file.extension?.toLowerCase() ?? "";
+		return PREVIEWABLE_EXTENSIONS.has(ext);
+	}
+
+	private toggleViewMode(): void {
+		if (!this.isPreviewable()) return;
+		this.isPreviewMode = !this.isPreviewMode;
+		this.updateViewModeUI();
+	}
+
+	private updateViewModeUI(): void {
+		const previewable = this.isPreviewable();
+
+		if (!previewable) {
+			this.isPreviewMode = false;
+			if (this.viewToggleBtnEl) this.viewToggleBtnEl.hide();
+			if (this.previewEl) this.previewEl.hide();
+			if (this.editorEl) this.editorEl.show();
+			if (this.searchBtnEl) this.searchBtnEl.show();
+			return;
+		}
+
+		if (this.viewToggleBtnEl) {
+			this.viewToggleBtnEl.show();
+			if (this.viewToggleIconEl) {
+				setIcon(this.viewToggleIconEl, this.isPreviewMode ? "code" : "eye");
+			}
+			if (this.viewToggleTextEl) {
+				this.viewToggleTextEl.setText(
+					this.isPreviewMode ? t("viewToggleCode") : t("viewToggleRendered"),
+				);
+			}
+			const tooltip = t("viewToggleTooltip");
+			this.viewToggleBtnEl.title = tooltip;
+			this.viewToggleBtnEl.setAttribute("aria-label", tooltip);
+			this.viewToggleBtnEl.toggleClass("is-active", this.isPreviewMode);
+		}
+
+		if (this.isPreviewMode) {
+			if (this.editorEl) this.editorEl.hide();
+			if (this.searchBtnEl) this.searchBtnEl.hide();
+			if (this.previewEl) {
+				this.previewEl.show();
+				this.renderPreview();
+			}
+		} else {
+			if (this.previewEl) this.previewEl.hide();
+			if (this.searchBtnEl) this.searchBtnEl.show();
+			if (this.editorEl) {
+				this.editorEl.show();
+				if (this.editor) {
+					this.editor.focus();
+				}
+			}
+		}
+	}
+
+	private renderPreview(): void {
+		if (!this.previewEl || !this.file) return;
+		this.previewEl.empty();
+
+		const ext = this.file.extension?.toLowerCase() ?? "";
+		const rawContent = this.getViewData();
+
+		if (ext === "svg") {
+			this.renderSvgPreview(rawContent);
+		} else if (ext === "html" || ext === "htm") {
+			this.renderHtmlPreview(rawContent);
+		}
+	}
+
+	private renderSvgPreview(content: string): void {
+		if (!this.previewEl) return;
+
+		const trimmed = content.trim();
+		if (!trimmed) {
+			const emptyMsg = this.previewEl.createDiv({
+				cls: "hidden-files-preview-empty",
+			});
+			emptyMsg.setText("Empty SVG file");
+			return;
+		}
+
+		try {
+			const parser = new DOMParser();
+			const doc = parser.parseFromString(trimmed, "image/svg+xml");
+			const parserError = doc.querySelector("parsererror");
+
+			if (parserError) {
+				const errBox = this.previewEl.createDiv({
+					cls: "hidden-files-preview-error",
+				});
+				const title = errBox.createDiv({
+					cls: "hidden-files-preview-error-title",
+					text: "SVG syntax error",
+				});
+				const iconSpan = title.createSpan({
+					cls: "hidden-files-preview-error-icon",
+				});
+				setIcon(iconSpan, "alert-triangle");
+				errBox.createDiv({
+					cls: "hidden-files-preview-error-msg",
+					text: parserError.textContent || "Unable to parse SVG",
+				});
+				return;
+			}
+
+			const svgElement = doc.documentElement;
+			if (!svgElement || svgElement.nodeName.toLowerCase() !== "svg") {
+				const errBox = this.previewEl.createDiv({
+					cls: "hidden-files-preview-error",
+				});
+				errBox.setText("No root <svg> element found.");
+				return;
+			}
+
+			const stage = this.previewEl.createDiv({
+				cls: "hidden-files-svg-stage",
+			});
+			const canvas = stage.createDiv({
+				cls: "hidden-files-svg-canvas",
+			});
+
+			const imported = document.importNode(svgElement, true);
+			canvas.appendChild(imported);
+		} catch (e) {
+			const errBox = this.previewEl.createDiv({
+				cls: "hidden-files-preview-error",
+			});
+			errBox.setText(
+				`Failed to render SVG: ${e instanceof Error ? e.message : String(e)}`,
+			);
+		}
+	}
+
+	private renderHtmlPreview(content: string): void {
+		if (!this.previewEl) return;
+
+		const trimmed = content.trim();
+		if (!trimmed) {
+			const emptyMsg = this.previewEl.createDiv({
+				cls: "hidden-files-preview-empty",
+			});
+			emptyMsg.setText("Empty HTML file");
+			return;
+		}
+
+		const container = this.previewEl.createDiv({
+			cls: "hidden-files-html-container",
+		});
+		const iframe = container.createEl("iframe", {
+			cls: "hidden-files-html-iframe",
+		});
+
+		// allow-same-origin is essential so Chromium can load app://local/... images and stylesheets
+		iframe.setAttribute(
+			"sandbox",
+			"allow-scripts allow-forms allow-modals allow-same-origin allow-popups",
+		);
+
+		if (this.file) {
+			const fileUrl = this.app.vault.getResourcePath(this.file);
+			const cleanUrl = fileUrl.split("?")[0] ?? fileUrl;
+			const baseUrl = cleanUrl.substring(0, cleanUrl.lastIndexOf("/") + 1);
+
+			// Remove any existing <base> tags so the local vault directory takes precedence
+			let htmlContent = content.replace(/<base\b[^>]*>/gi, "");
+
+			// Inject <base href="..."> so relative paths (images, styles, scripts) resolve to the local vault folder
+			const baseTag = `<base href="${baseUrl}">`;
+			if (/<head\b[^>]*>/i.test(htmlContent)) {
+				htmlContent = htmlContent.replace(/<head\b[^>]*>/i, `$&${baseTag}`);
+			} else {
+				htmlContent = `${baseTag}${htmlContent}`;
+			}
+
+			iframe.srcdoc = htmlContent;
+		} else {
+			iframe.srcdoc = content;
+		}
+	}
+}
+
+/* ── Plugin ────────────────────────────────────────────────── */
+
+export default class VaultCodePlugin extends Plugin {
+	settings!: VaultCodeSettings;
+	private previousShowUnsupportedFiles = false;
+	private originalReconcileDeletion:
+		| PrivateAdapter["reconcileDeletion"]
+		| null = null;
+	private originalI18nT: ((...args: unknown[]) => string) | null = null;
+	private originalOpenFile:
+		| ((file: TFile, openState?: OpenViewState) => Promise<void>)
+		| null = null;
+	private originalDetach: (() => void) | null = null;
+	private originalGetTypeByExtension:
+		| ((ext: string) => string | undefined)
+		| null = null;
+	private originalIsExtensionRegistered:
+		| ((ext: string) => boolean)
+		| null = null;
+	private hiddenPaths = new Set<string>();
+
+	private originalFileItemStartRename:
+		| ((...args: unknown[]) => unknown)
+		| null = null;
+	private fileItemTargetProto: Record<string, unknown> | null = null;
+	private originalCreateFileItem:
+		| ((...args: unknown[]) => unknown)
+		| null = null;
+	private originalStartRenameFile:
+		| ((...args: unknown[]) => unknown)
+		| null = null;
+	private fileExplorerTargetProto: Record<string, unknown> | null = null;
+	private originalTFileGetNewPath:
+		| ((newName: string) => string)
+		| null = null;
+	private originalPromptForFileRename:
+		| ((file: TAbstractFile) => unknown)
+		| null = null;
+	private fileItemProtoPatched = false;
+	private originalPOGetTitle: ((...args: unknown[]) => string) | null = null;
+	private originalPOUpdateTitle:
+		| ((...args: unknown[]) => unknown)
+		| null = null;
+	private poTargetProto: Record<string, unknown> | null = null;
+	private originalSaveRename:
+		| ((...args: unknown[]) => Promise<boolean>)
+		| null = null;
+	private originalOnFileRenameInput:
+		| ((...args: unknown[]) => unknown)
+		| null = null;
+
+	async onload() {
+		await this.loadSettings();
+
+		this.previousShowUnsupportedFiles =
+			(this.app.vault.getConfig("showUnsupportedFiles") as boolean) ??
+			false;
+
+		this.applyShowAllFileTypes();
+
+		this.registerView(
+			VIEW_TYPE_DOTFILE,
+			(leaf) => new DotfileView(leaf, this),
+		);
+
+		this.patchWorkspaceLeaf();
+		this.patchViewRegistry();
+		this.patchTFileGetNewPath();
+		this.patchFileManagerPrompt();
+
+		this.registerDomEvent(window, "input", this.onInputCapture, true);
+		this.registerDomEvent(
+			window,
+			"click",
+			this.onFileExplorerClickCapture,
+			true,
+		);
+		this.registerDomEvent(
+			window,
+			"keydown",
+			this.onFileExplorerKeyDownCapture,
+			true,
+		);
+
+		this.app.workspace.onLayoutReady(async () => {
+			this.patchFileExplorer();
+			this.applyFileExplorerFiltering();
+			if (this.settings.showHiddenFiles) {
+				this.patchAdapter();
+				this.suppressDotfileWarning();
+				await this.rescanVault();
+			}
+		});
+
+		this.registerEvent(
+			this.app.workspace.on("layout-change", () => {
+				this.patchFileExplorer();
+				this.applyFileExplorerFiltering();
+			}),
+		);
+
+		if (Platform.isMobile) {
+			this.registerDomEvent(document, "visibilitychange", () => {
+				if (document.visibilityState === "hidden") {
+					const dirtyViews = this.getDirtyViews();
+					for (const view of dirtyViews) {
+						void view.saveExplicitly();
+					}
+				}
+			});
+		}
+
+		this.registerEvent(
+			this.app.workspace.on("quit", (tasks) => {
+				const dirtyViews = this.getDirtyViews();
+				if (dirtyViews.length > 0) {
+					tasks.add(async () => {
+						for (const view of dirtyViews) {
+							await view.saveExplicitly();
+						}
+					});
+				}
+			}),
+		);
+
+		this.registerEvent(
+			this.app.workspace.on("file-menu", (menu, file) => {
+				if (file instanceof TFolder) {
+					menu.addItem((item) => {
+						item
+							.setTitle(t("contextNewFile"))
+							.setIcon("file-plus")
+							.setSection("action")
+							.onClick(() => {
+								new CreateFileModal(this.app, this, file).open();
+							});
+					});
+				} else if (file instanceof TFile) {
+					const targetFolder = file.parent ?? this.app.vault.getRoot();
+
+					menu.addItem((item) => {
+						item
+							.setTitle(t("contextNewNoteHere"))
+							.setIcon("file-text")
+							.setSection("action")
+							.onClick(() => {
+								void this.createNewNoteInFolder(targetFolder);
+							});
+					});
+
+					menu.addItem((item) => {
+						item
+							.setTitle(t("contextNewFileHere"))
+							.setIcon("file-plus")
+							.setSection("action")
+							.onClick(() => {
+								new CreateFileModal(
+									this.app,
+									this,
+									targetFolder,
+								).open();
+							});
+					});
+
+					if (this.isFileEditable(file)) {
+						menu.addItem((item) => {
+							item
+								.setTitle(t("contextEditInCodeEditor"))
+								.setIcon("document-code")
+								.onClick(async () => {
+									const leaf =
+										this.app.workspace.getLeaf(false);
+									await leaf.setViewState({
+										type: VIEW_TYPE_DOTFILE,
+										state: { file: file.path },
+										active: true,
+									});
+								});
+						});
+					}
+				}
+			}),
+		);
+
+		this.registerEvent(
+			this.app.workspace.on("files-menu", (menu) => {
+				const root = this.app.vault.getRoot();
+				menu.addItem((item) => {
+					item
+						.setTitle(t("contextNewFile"))
+						.setIcon("file-plus")
+						.onClick(() => {
+							new CreateFileModal(this.app, this, root).open();
+						});
+				});
+			}),
+		);
+
+		this.addRibbonIcon("file-plus", t("ribbonNewFileTooltip"), () => {
+			const targetFolder = this.getActiveOrSelectedFolder();
+			new CreateFileModal(this.app, this, targetFolder).open();
+		});
+
+		this.addSettingTab(new VaultCodeSettingTab(this.app, this));
+
+		this.addCommand({
+			id: "create-new-file",
+			name: t("commandCreateFile"),
+			callback: () => {
+				const activeFolder = this.getActiveOrSelectedFolder();
+				new CreateFileModal(this.app, this, activeFolder).open();
+			},
+		});
+
+		this.addCommand({
+			id: "create-new-folder",
+			name: t("commandCreateFolder"),
+			callback: () => {
+				const activeFolder = this.getActiveOrSelectedFolder();
+				new CreateFolderModal(this.app, this, activeFolder).open();
+			},
+		});
+
+		this.addCommand({
+			id: "rename-active-file",
+			name: t("commandRenameActive"),
+			callback: () => {
+				const activeFile = this.app.workspace.getActiveFile();
+				if (activeFile) {
+					new RenameModal(this.app, this, activeFile).open();
+					return;
+				}
+
+				const leaves =
+					this.app.workspace.getLeavesOfType("file-explorer");
+				for (const leaf of leaves) {
+					const view = leaf.view as {
+						selectedFile?: TAbstractFile;
+					};
+					if (
+						view?.selectedFile &&
+						!(
+							view.selectedFile instanceof TFolder &&
+							view.selectedFile.isRoot()
+						)
+					) {
+						new RenameModal(this.app, this, view.selectedFile).open();
+						return;
+					}
+				}
+
+				new Notice(t("noticeNoActiveToRename"));
+			},
+		});
+
+		this.addCommand({
+			id: "toggle-show-hidden-files",
+			name: t("commandToggleHidden"),
+			callback: async () => {
+				this.settings.showHiddenFiles = !this.settings.showHiddenFiles;
+				await this.saveSettings();
+				if (this.settings.showHiddenFiles) {
+					await this.enableHiddenFiles();
+					new Notice(t("noticeHiddenFilesVisible"));
+				} else {
+					await this.disableHiddenFiles();
+					new Notice(t("noticeHiddenFilesHidden"));
+				}
+			},
+		});
+
+		this.addCommand({
+			id: "toggle-show-all-file-types",
+			name: t("commandToggleAllTypes"),
+			callback: async () => {
+				this.settings.showAllFileTypes = !this.settings.showAllFileTypes;
+				await this.saveSettings();
+				this.applyShowAllFileTypes();
+				new Notice(
+					this.settings.showAllFileTypes
+						? t("noticeAllFilesVisible")
+						: t("noticeAllFilesHidden"),
+				);
+			},
+		});
+
+		this.addCommand({
+			id: "toggle-allow-edit-dotfiles",
+			name: t("commandToggleAllowEditDotfiles"),
+			callback: async () => {
+				this.settings.allowEditDotfiles = !this.settings.allowEditDotfiles;
+				await this.saveSettings();
+				new Notice(
+					this.settings.allowEditDotfiles
+						? t("noticeDotfileEditingEnabled")
+						: t("noticeDotfileEditingDisabled"),
+				);
+			},
+		});
+
+		this.addCommand({
+			id: "toggle-allow-edit-code-files",
+			name: t("commandToggleAllowEditCodeFiles"),
+			callback: async () => {
+				this.settings.allowEditCodeFiles = !this.settings.allowEditCodeFiles;
+				await this.saveSettings();
+				new Notice(
+					this.settings.allowEditCodeFiles
+						? t("noticeCodeEditingEnabled")
+						: t("noticeCodeEditingDisabled"),
+				);
+			},
+		});
+
+		this.addCommand({
+			id: "toggle-disable-auto-save",
+			name: t("settingsDisableAutoSaveName"),
+			callback: async () => {
+				this.settings.disableAutoSave = !this.settings.disableAutoSave;
+				await this.saveSettings();
+				new Notice(
+					this.settings.disableAutoSave
+						? t("noticeAutoSaveDisabled")
+						: t("noticeAutoSaveEnabled"),
+				);
+			},
+		});
+
+		this.addCommand({
+			id: "find-and-replace-code-editor",
+			name: `${t("searchFindAriaLabel")} / ${t("searchReplace")}`,
+			checkCallback: (checking: boolean) => {
+				const activeView =
+					this.app.workspace.getActiveViewOfType(DotfileView);
+				if (activeView) {
+					if (!checking) {
+						activeView.openFind();
+					}
+					return true;
+				}
+				return false;
+			},
+		});
+	}
+
+	onunload() {
+		this.restoreWorkspaceLeaf();
+		this.restoreViewRegistry();
+		this.restoreTFileGetNewPath();
+		this.restoreFileManagerPrompt();
+		this.restoreFileExplorer();
+		void this.restoreAdapter();
+		this.restoreDotfileWarning();
+		this.app.vault.setConfig(
+			"showUnsupportedFiles",
+			this.previousShowUnsupportedFiles,
+		);
+	}
+
+	/* ── editability & extension handling ──────────────────── */
+
+	getCustomExtensionsSet(): Set<string> {
+		const raw = this.settings.customFileExtensions || "";
+		const set = new Set<string>();
+		for (const item of raw.split(/[\s,;]+/)) {
+			const cleaned = item.trim().replace(/^\.+/, "").toLowerCase();
+			if (cleaned.length > 0) {
+				set.add(cleaned);
+			}
+		}
+		return set;
+	}
+
+	isFileEditable(file: TFile): boolean {
+		if (!file || !(file instanceof TFile)) {
+			return false;
+		}
+		const ext = file.extension ? file.extension.toLowerCase() : "";
+		if (ext && BINARY_EXTENSIONS.has(ext)) {
+			return false;
+		}
+
+		const isDotfileOrExtensionless =
+			(file.name || "").startsWith(".") || ext === "";
+
+		if (isDotfileOrExtensionless) {
+			return this.settings.allowEditDotfiles;
+		}
+
+		if (this.settings.allowEditCodeFiles && ext) {
+			return this.getCustomExtensionsSet().has(ext);
+		}
+
+		return false;
+	}
+
+	isExtensionEditable(extension?: string): boolean {
+		if (extension === undefined || extension === null) {
+			return false;
+		}
+		const ext = extension.trim().toLowerCase();
+		if (ext && BINARY_EXTENSIONS.has(ext)) {
+			return false;
+		}
+		if (ext === "") {
+			return this.settings.allowEditDotfiles;
+		}
+		if (this.settings.allowEditCodeFiles) {
+			return this.getCustomExtensionsSet().has(ext);
+		}
+		return false;
+	}
+
+	isUnsupportedFile(file: TFile): boolean {
+		if (!file || !(file instanceof TFile)) {
+			return false;
+		}
+
+		// 1. If it is editable by our built-in code editor (code files, dotfiles, extensionless)
+		if (this.isFileEditable(file)) {
+			return false;
+		}
+
+		// 2. If it is natively supported by Obsidian core
+		const ext = file.extension ? file.extension.toLowerCase() : "";
+		const NATIVE_OBSIDIAN_EXTENSIONS = new Set([
+			"md",
+			"canvas",
+			// Images (raster, vector, icons)
+			"png",
+			"jpg",
+			"jpeg",
+			"gif",
+			"bmp",
+			"svg",
+			"webp",
+			"avif",
+			"ico",
+			// Audio
+			"mp3",
+			"wav",
+			"m4a",
+			"ogg",
+			"3gp",
+			"flac",
+			"aac",
+			"opus",
+			// Video
+			"mp4",
+			"webm",
+			"ogv",
+			"mov",
+			"mkv",
+			"m4v",
+			// PDF
+			"pdf",
+		]);
+		if (NATIVE_OBSIDIAN_EXTENSIONS.has(ext)) {
+			return false;
+		}
+
+		// 3. If any other community plugin has registered a view for this extension (e.g. EPUB, Excalidraw, etc.)
+		const viewRegistry = (
+			this.app as unknown as {
+				viewRegistry?: {
+					getTypeByExtension?: (ext?: string) => string | undefined;
+					typeByExtension?: Record<string, string>;
+					isExtensionRegistered?: (ext?: string) => boolean;
+				};
+			}
+		).viewRegistry;
+
+		const registeredType =
+			viewRegistry?.getTypeByExtension?.(ext) ??
+			viewRegistry?.typeByExtension?.[ext];
+
+		if (registeredType && registeredType !== VIEW_TYPE_DOTFILE) {
+			return false;
+		}
+
+		if (
+			viewRegistry?.isExtensionRegistered &&
+			viewRegistry.isExtensionRegistered(ext)
+		) {
+			return false;
+		}
+
+		// Non-editable binary/document files (e.g. .docx, .zip, .exe, .dmg)
+		return true;
+	}
+
+	/* ── viewRegistry patch ────────────────────────────────── */
+
+	private patchViewRegistry() {
+		const viewRegistry = (this.app as unknown as {
+			viewRegistry?: {
+				getTypeByExtension: (ext?: string) => string | undefined;
+				isExtensionRegistered?: (ext?: string) => boolean;
+			};
+		}).viewRegistry;
+		if (!viewRegistry || this.originalGetTypeByExtension) return;
+
+		this.originalGetTypeByExtension = viewRegistry.getTypeByExtension.bind(viewRegistry);
+		const origGetType = this.originalGetTypeByExtension;
+
+		if (viewRegistry.isExtensionRegistered) {
+			this.originalIsExtensionRegistered = viewRegistry.isExtensionRegistered.bind(viewRegistry);
+		}
+		const origIsRegistered = this.originalIsExtensionRegistered;
+		// eslint-disable-next-line @typescript-eslint/no-this-alias
+		const plugin = this;
+
+		viewRegistry.getTypeByExtension = (extension?: string) => {
+			if (!extension || typeof extension !== "string") {
+				return origGetType ? origGetType(extension as string) : undefined;
+			}
+			const ext = extension.trim().toLowerCase();
+			if (!ext) {
+				return origGetType ? origGetType(extension) : undefined;
+			}
+			if (plugin.isExtensionEditable(ext)) {
+				return VIEW_TYPE_DOTFILE;
+			}
+			const origType = origGetType ? origGetType(extension) : undefined;
+			if (origType === VIEW_TYPE_DOTFILE) {
+				return undefined;
+			}
+			return origType;
+		};
+
+		if (viewRegistry.isExtensionRegistered && origIsRegistered) {
+			viewRegistry.isExtensionRegistered = (extension?: string) => {
+				if (!extension || typeof extension !== "string") {
+					return origIsRegistered ? origIsRegistered(extension as string) : false;
+				}
+				const ext = extension.trim().toLowerCase();
+				if (!ext) {
+					return origIsRegistered ? origIsRegistered(extension) : false;
+				}
+				if (plugin.isExtensionEditable(ext)) {
+					return true;
+				}
+				const origRegistered = origIsRegistered(extension);
+				if (origRegistered && origGetType && origGetType(extension) === VIEW_TYPE_DOTFILE) {
+					return false;
+				}
+				return origRegistered;
+			};
+		}
+	}
+
+	private restoreViewRegistry() {
+		const viewRegistry = (this.app as unknown as {
+			viewRegistry?: {
+				getTypeByExtension: (ext: string) => string | undefined;
+				isExtensionRegistered?: (ext: string) => boolean;
+			};
+		}).viewRegistry;
+		if (viewRegistry) {
+			if (this.originalGetTypeByExtension) {
+				viewRegistry.getTypeByExtension = this.originalGetTypeByExtension;
+				this.originalGetTypeByExtension = null;
+			}
+			if (this.originalIsExtensionRegistered && viewRegistry.isExtensionRegistered) {
+				viewRegistry.isExtensionRegistered = this.originalIsExtensionRegistered;
+				this.originalIsExtensionRegistered = null;
+			}
+		}
+	}
+
+	/* ── workspace leaf openFile patch ─────────────────────── */
+
+	private patchWorkspaceLeaf() {
+		const proto = WorkspaceLeaf.prototype as unknown as {
+			openFile: (file: TFile, openState?: OpenViewState) => Promise<void>;
+			detach: () => void;
+		};
+
+		if (!this.originalOpenFile) {
+			this.originalOpenFile = proto.openFile;
+			const origOpenFile = this.originalOpenFile;
+			// eslint-disable-next-line @typescript-eslint/no-this-alias
+			const plugin = this;
+
+			proto.openFile = async function (
+				this: WorkspaceLeaf,
+				file: TFile,
+				openState?: OpenViewState,
+			): Promise<void> {
+				// If this active leaf is a dirty code file and auto-save is disabled,
+				// do NOT replace it! Open the clicked file in a new tab instead.
+				if (
+					plugin.settings.disableAutoSave &&
+					this.view instanceof DotfileView &&
+					this.view.isDirty()
+				) {
+					const newLeaf = plugin.app.workspace.getLeaf("tab");
+					return newLeaf.openFile(file, openState);
+				}
+
+				if (file instanceof TFile && plugin.isFileEditable(file)) {
+					const stateObj =
+						openState && typeof openState === "object"
+							? (openState as Record<string, unknown>)
+							: {};
+					const innerState =
+						stateObj.state && typeof stateObj.state === "object"
+							? (stateObj.state as Record<string, unknown>)
+							: {};
+					innerState.file = file.path;
+					const active =
+						stateObj.active !== undefined
+							? Boolean(stateObj.active)
+							: true;
+
+					await this.setViewState({
+						type: VIEW_TYPE_DOTFILE,
+						state: innerState,
+						active: active,
+						group: stateObj.group as WorkspaceLeaf | undefined,
+					});
+					return;
+				}
+				return origOpenFile.call(this, file, openState);
+			};
+		}
+
+		if (!this.originalDetach) {
+			this.originalDetach = proto.detach;
+			const origDetach = this.originalDetach;
+			// eslint-disable-next-line @typescript-eslint/no-this-alias
+			const plugin = this;
+
+			proto.detach = function (this: WorkspaceLeaf): void {
+				if (
+					plugin.settings.disableAutoSave &&
+					this.view instanceof DotfileView &&
+					this.view.isDirty()
+				) {
+					const dotfileView = this.view;
+					const fileName = dotfileView.file?.name ?? "file";
+
+					new ConfirmCloseModal(
+						plugin.app,
+						t("modalUnsavedTitle", fileName),
+						t("modalUnsavedMessage"),
+						async () => {
+							await dotfileView.saveExplicitly();
+							origDetach.call(this);
+						},
+						() => {
+							dotfileView.discardChanges();
+							origDetach.call(this);
+						},
+					).open();
+					return;
+				}
+				origDetach.call(this);
+			};
+		}
+	}
+
+	private restoreWorkspaceLeaf() {
+		const proto = WorkspaceLeaf.prototype as unknown as {
+			openFile: (file: TFile, openState?: OpenViewState) => Promise<void>;
+			detach: () => void;
+		};
+		if (this.originalOpenFile) {
+			proto.openFile = this.originalOpenFile;
+			this.originalOpenFile = null;
+		}
+		if (this.originalDetach) {
+			proto.detach = this.originalDetach;
+			this.originalDetach = null;
+		}
+	}
+
+	getDirtyViews(): DotfileView[] {
+		const dirty: DotfileView[] = [];
+		this.app.workspace.iterateAllLeaves((leaf) => {
+			if (leaf.view instanceof DotfileView && leaf.view.isDirty()) {
+				dirty.push(leaf.view);
+			}
+		});
+		return dirty;
+	}
+
+	/* ── settings persistence ──────────────────────────────── */
+
+	async loadSettings() {
+		const loaded = (await this.loadData()) as Partial<VaultCodeSettings> | null;
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, loaded ?? {});
+		setLanguage(this.settings.language);
+	}
+
+	async saveSettings() {
+		await this.saveData(this.settings);
+	}
+
+	/* ── show all file types ───────────────────────────────── */
+
+	applyShowAllFileTypes() {
+		this.app.vault.setConfig(
+			"showUnsupportedFiles",
+			this.settings.showAllFileTypes,
+		);
+	}
+
+	/* ── show hidden files — adapter monkey-patch ──────────── */
+
+	private adapter(): PrivateAdapter {
+		return this.app.vault.adapter as unknown as PrivateAdapter;
+	}
+
+	private cachedIgnoreRules: IgnoreRule[] | null = null;
+
+	getIgnoreRules(): IgnoreRule[] {
+		if (!this.cachedIgnoreRules) {
+			this.cachedIgnoreRules = parseGitignore(
+				this.settings.ignoredPaths || "",
+			);
+		}
+		return this.cachedIgnoreRules;
+	}
+
+	invalidateIgnoreRules(): void {
+		this.cachedIgnoreRules = null;
+	}
+
+	isPathIgnored(path: string, isDirectory = false): boolean {
+		const rules = this.getIgnoreRules();
+		if (!rules.length) return false;
+
+		const normalized = normalizePath(path).replace(/^\/+|\/+$/g, "");
+		if (!normalized) return false;
+
+		let ignored = false;
+		for (const rule of rules) {
+			if (rule.dirOnly && !isDirectory) {
+				continue;
+			}
+			if (rule.regex.test(normalized)) {
+				ignored = !rule.negate;
+			}
+		}
+		return ignored;
+	}
+
+	async applyIgnoredPathsUpdate(): Promise<void> {
+		this.invalidateIgnoreRules();
+		this.applyFileExplorerFiltering();
+
+		if (this.settings.showHiddenFiles) {
+			await this.rescanVault();
+		}
+	}
+
+	applyFileExplorerFiltering(): void {
+		const leaves = this.app.workspace.getLeavesOfType("file-explorer");
+		for (const leaf of leaves) {
+			const view = leaf.view as unknown as {
+				fileItems?: Record<
+					string,
+					{ el?: HTMLElement; file?: TAbstractFile }
+				>;
+			};
+			if (view?.fileItems) {
+				for (const [path, item] of Object.entries(view.fileItems)) {
+					if (!item.el) continue;
+					const isDir = item.file instanceof TFolder;
+					const isIgnored = this.isPathIgnored(path, isDir);
+					item.el.toggleClass("is-ignored-hidden", isIgnored);
+				}
+			}
+		}
+	}
+
+	private patchAdapter() {
+		const adapter = this.adapter();
+
+		if (this.originalReconcileDeletion) return; // already patched
+		this.originalReconcileDeletion =
+			adapter.reconcileDeletion.bind(adapter);
+
+		const origReconcileDeletion = this.originalReconcileDeletion;
+
+		adapter.reconcileDeletion = async (
+			realPath: string,
+			path: string,
+		) => {
+			if (this.settings.showHiddenFiles) {
+				if (this.isPathIgnored(path)) {
+					this.hiddenPaths.delete(path);
+					return origReconcileDeletion(realPath, path);
+				}
+
+				if (isDotPath(path)) {
+					// File exists on disk — re-register it instead of deleting
+					const fullPath = adapter.getFullPath(path);
+					if (await adapter._exists(fullPath, path)) {
+						this.hiddenPaths.add(path);
+						await this.showFile(path);
+						return;
+					}
+					this.hiddenPaths.delete(path);
+				}
+			}
+			return origReconcileDeletion(realPath, path);
+		};
+	}
+
+	private async restoreAdapter(): Promise<void> {
+		if (this.originalReconcileDeletion) {
+			const adapter = this.adapter();
+			adapter.reconcileDeletion = this.originalReconcileDeletion;
+			this.originalReconcileDeletion = null;
+
+			// Hide all files we previously revealed
+			for (const path of this.hiddenPaths) {
+				await adapter.reconcileDeletion(adapter.getRealPath(path), path);
+			}
+			this.hiddenPaths.clear();
+		}
+	}
+
+	/** Re-register a dotfile/dotfolder with the vault. */
+	private async showFile(path: string): Promise<void> {
+		const adapter = this.adapter();
+		const realPath = adapter.getRealPath(path);
+
+		if (adapter.reconcileFileInternal) {
+			await adapter.reconcileFileInternal(realPath, path);
+		}
+	}
+
+	/** Hide a previously shown dotfile. */
+	private async hideFile(path: string): Promise<void> {
+		const adapter = this.adapter();
+		if (this.originalReconcileDeletion) {
+			await this.originalReconcileDeletion(
+				adapter.getRealPath(path),
+				path,
+			);
+		}
+	}
+
+	/** Trigger a full vault rescan so all dotfiles and dotfolders across root and subfolders are revealed. */
+	private async rescanVault(): Promise<void> {
+		const adapter = this.adapter();
+		if (!adapter.listRecursive) return;
+
+		// 1. Scan root directory first
+		try {
+			await adapter.listRecursive("");
+		} catch {
+			// Ignore read error on root
+		}
+
+		// 2. Scan all subfolders in the vault to reveal hidden dotfiles and dotfolders inside them
+		const scanned = new Set<string>(["", "/"]);
+		let queue = this.app.vault
+			.getAllLoadedFiles()
+			.filter(
+				(f): f is TFolder =>
+					f instanceof TFolder && !scanned.has(f.path),
+			);
+
+		while (queue.length > 0) {
+			const current = queue;
+			queue = [];
+
+			for (const folder of current) {
+				if (scanned.has(folder.path)) continue;
+				scanned.add(folder.path);
+
+				if (this.isPathIgnored(folder.path, true)) {
+					continue;
+				}
+
+				try {
+					await adapter.listRecursive(folder.path);
+				} catch {
+					// Ignore unreadable folders
+				}
+			}
+
+			// Check for newly discovered folders created during this pass
+			const allFolders = this.app.vault
+				.getAllLoadedFiles()
+				.filter((f): f is TFolder => f instanceof TFolder);
+
+			for (const f of allFolders) {
+				if (!scanned.has(f.path)) {
+					if (!this.isPathIgnored(f.path, true)) {
+						queue.push(f);
+					}
+				}
+			}
+		}
+
+		this.applyFileExplorerFiltering();
+	}
+
+	getActiveOrSelectedFolder(): TFolder {
+		const leaves = this.app.workspace.getLeavesOfType("file-explorer");
+
+		// 1. Priority: Explicitly selected / focused item in File Explorer sidebar
+		for (const leaf of leaves) {
+			const view = leaf.view as unknown as {
+				fileItems?: Record<
+					string,
+					{
+						file?: TAbstractFile;
+						selfEl?: HTMLElement;
+						el?: HTMLElement;
+					}
+				>;
+				selectedFile?: TAbstractFile;
+			};
+
+			if (view?.fileItems) {
+				for (const item of Object.values(view.fileItems)) {
+					const isExplicitlySelected =
+						item.selfEl?.classList.contains("is-selected") ||
+						item.el?.classList.contains("is-selected");
+
+					if (isExplicitlySelected && item.file) {
+						if (item.file instanceof TFolder) {
+							return item.file;
+						}
+						if (item.file instanceof TFile && item.file.parent) {
+							return item.file.parent;
+						}
+					}
+				}
+			}
+
+			if (view?.selectedFile) {
+				if (view.selectedFile instanceof TFolder) {
+					return view.selectedFile;
+				}
+				if (view.selectedFile.parent) {
+					return view.selectedFile.parent;
+				}
+			}
+		}
+
+		// 2. Priority: Active file open in workspace editor
+		const activeFile = this.app.workspace.getActiveFile();
+		if (activeFile && activeFile.parent) {
+			return activeFile.parent;
+		}
+
+		// 3. Priority: Active item in File Explorer sidebar
+		for (const leaf of leaves) {
+			const view = leaf.view as unknown as {
+				fileItems?: Record<
+					string,
+					{
+						file?: TAbstractFile;
+						selfEl?: HTMLElement;
+						el?: HTMLElement;
+					}
+				>;
+			};
+
+			if (view?.fileItems) {
+				for (const item of Object.values(view.fileItems)) {
+					const isActive =
+						item.selfEl?.classList.contains("is-active") ||
+						item.el?.classList.contains("is-active");
+
+					if (isActive && item.file) {
+						if (item.file instanceof TFolder) {
+							return item.file;
+						}
+						if (item.file instanceof TFile && item.file.parent) {
+							return item.file.parent;
+						}
+					}
+				}
+			}
+		}
+
+		// 4. Default: Vault root folder
+		return this.app.vault.getRoot();
+	}
+
+	async createNewNoteInFolder(folder: TFolder): Promise<void> {
+		const leaves = this.app.workspace.getLeavesOfType("file-explorer");
+		try {
+			for (const leaf of leaves) {
+				const fileExplorerView = leaf.view as unknown as {
+					createAbstractFile?: (
+						type: "file" | "folder",
+						location: TFolder,
+						newLeaf?: boolean,
+					) => Promise<void>;
+				};
+				if (typeof fileExplorerView?.createAbstractFile === "function") {
+					await fileExplorerView.createAbstractFile(
+						"file",
+						folder,
+						false,
+					);
+					return;
+				}
+			}
+		} catch {
+			// Fallback to vault create below
+		}
+
+		const parentPath = folder.isRoot() ? "" : folder.path;
+		let fileName = "Untitled.md";
+		let index = 1;
+		let fullPath = parentPath ? `${parentPath}/${fileName}` : fileName;
+		while (await this.app.vault.adapter.exists(fullPath)) {
+			fileName = `Untitled ${index}.md`;
+			fullPath = parentPath ? `${parentPath}/${fileName}` : fileName;
+			index++;
+		}
+		const newFile = await this.app.vault.create(fullPath, "");
+		const leaf = this.app.workspace.getLeaf(false);
+		await leaf.openFile(newFile);
+	}
+
+	async registerHiddenPath(path: string): Promise<void> {
+		this.hiddenPaths.add(path);
+		const adapter = this.adapter();
+		const realPath = adapter.getRealPath(path);
+		try {
+			const stat = await this.app.vault.adapter.stat(path);
+			if (stat?.type === "folder") {
+				if (adapter.reconcileFolderCreation) {
+					await adapter.reconcileFolderCreation(realPath, path);
+				}
+			} else {
+				if (adapter.reconcileFileInternal) {
+					await adapter.reconcileFileInternal(realPath, path);
+				}
+			}
+		} catch {
+			if (adapter.reconcileFileInternal) {
+				await adapter.reconcileFileInternal(realPath, path);
+			}
+		}
+	}
+
+	async createFolderRecursive(folderPath: string): Promise<TFolder | null> {
+		const normalized = normalizePath(folderPath);
+		if (!normalized || normalized === "/" || normalized === ".") {
+			return this.app.vault.getRoot();
+		}
+
+		const segments = normalized.split("/");
+		let currentPath = "";
+
+		for (const segment of segments) {
+			if (!segment) continue;
+			currentPath = currentPath ? `${currentPath}/${segment}` : segment;
+
+			let stat = null;
+			try {
+				stat = await this.app.vault.adapter.stat(currentPath);
+			} catch {
+				stat = null;
+			}
+			if (stat) {
+				if (stat.type === "file") {
+					throw new Error(
+						`Cannot create folder: '${segment}' already exists as a file.`,
+					);
+				}
+				continue;
+			}
+
+			const isDot =
+				segment.startsWith(".") ||
+				isDotPath(currentPath);
+
+			if (isDot) {
+				await this.app.vault.adapter.mkdir(currentPath);
+				await this.registerHiddenPath(currentPath);
+			} else {
+				try {
+					await this.app.vault.createFolder(currentPath);
+				} catch {
+					await this.app.vault.adapter.mkdir(currentPath);
+				}
+			}
+		}
+
+		const folder = this.app.vault.getAbstractFileByPath(currentPath);
+		return folder instanceof TFolder ? folder : null;
+	}
+
+	async createFileWithFolders(
+		filePath: string,
+		data = "",
+	): Promise<TFile | null> {
+		const normalized = normalizePath(filePath);
+		if (!normalized) throw new Error("File path cannot be empty.");
+
+		const lastSlash = normalized.lastIndexOf("/");
+		const parentDir =
+			lastSlash !== -1 ? normalized.substring(0, lastSlash) : "";
+		const fileName =
+			lastSlash !== -1 ? normalized.substring(lastSlash + 1) : normalized;
+
+		if (!fileName) throw new Error("File name cannot be empty.");
+
+		if (parentDir) {
+			await this.createFolderRecursive(parentDir);
+		}
+
+		if (await this.app.vault.adapter.exists(normalized)) {
+			throw new Error(`A file or folder named '${fileName}' already exists.`);
+		}
+
+		const isDotfile =
+			fileName.startsWith(".") ||
+			isDotPath(normalized);
+
+		if (isDotfile) {
+			await this.app.vault.adapter.write(normalized, data);
+			await this.registerHiddenPath(normalized);
+		} else {
+			try {
+				await this.app.vault.create(normalized, data);
+			} catch {
+				await this.app.vault.adapter.write(normalized, data);
+			}
+		}
+
+		let file = this.app.vault.getAbstractFileByPath(normalized);
+		for (let i = 0; i < 10 && !(file instanceof TFile); i++) {
+			await new Promise((resolve) => setTimeout(resolve, 50));
+			file = this.app.vault.getAbstractFileByPath(normalized);
+		}
+
+		return file instanceof TFile ? file : null;
+	}
+
+	async openCreatedFile(file: TFile): Promise<void> {
+		const ext = file.extension ? file.extension.toLowerCase() : "";
+		const isMarkdown = ext === "md" || ext === "markdown";
+		const isCode = this.isFileEditable(file);
+
+		const leaf = this.app.workspace.getLeaf(false);
+		if (isMarkdown) {
+			await leaf.openFile(file);
+		} else if (isCode) {
+			await leaf.setViewState({
+				type: VIEW_TYPE_DOTFILE,
+				state: { file: file.path },
+				active: true,
+			});
+		} else {
+			new Notice(t("noticeCreated", file.name));
+		}
+	}
+
+	async renameFileOrFolder(
+		file: TAbstractFile,
+		newName: string,
+	): Promise<void> {
+		const parentPath =
+			!file.parent || file.parent.isRoot() ? "" : file.parent.path;
+		const newPath = normalizePath(
+			parentPath ? `${parentPath}/${newName}` : newName,
+		);
+
+		try {
+			await this.app.fileManager.renameFile(file, newPath);
+		} catch {
+			await this.app.vault.adapter.rename(file.path, newPath);
+		}
+
+		if (
+			newName.startsWith(".") ||
+			isDotPath(newPath)
+		) {
+			await this.registerHiddenPath(newPath);
+		}
+	}
+
+	/** Enable hidden files — patch + rescan. */
+	async enableHiddenFiles(): Promise<void> {
+		this.patchAdapter();
+		this.suppressDotfileWarning();
+		await this.rescanVault();
+	}
+
+	/** Disable hidden files — hide all revealed files + restore. */
+	async disableHiddenFiles(): Promise<void> {
+		// Hide all currently visible dotfiles before restoring
+		for (const path of this.hiddenPaths) {
+			await this.hideFile(path);
+		}
+		this.hiddenPaths.clear();
+		await this.restoreAdapter();
+		this.restoreDotfileWarning();
+	}
+
+	/* ── suppress the "bad dotfile" warning ────────────────── */
+
+	private suppressDotfileWarning() {
+		const win = window as unknown as {
+			i18next?: { t: (...args: unknown[]) => string };
+		};
+		if (!win.i18next || this.originalI18nT) return;
+
+		this.originalI18nT = win.i18next.t.bind(win.i18next);
+		const origT = this.originalI18nT;
+
+		win.i18next.t = function (...args: unknown[]): string {
+			if (args[0] === "plugins.file-explorer.msg-bad-dotfile") {
+				return "";
+			}
+			return origT(...args);
+		};
+	}
+
+	private restoreDotfileWarning() {
+		if (this.originalI18nT) {
+			const win = window as unknown as {
+				i18next?: { t: (...args: unknown[]) => string };
+			};
+			if (win.i18next) {
+				win.i18next.t = this.originalI18nT;
+			}
+			this.originalI18nT = null;
+		}
+	}
+
+	/* ── inline rename & path resolution patches ────────── */
+
+	private patchTFileGetNewPath(): void {
+		if (this.originalTFileGetNewPath) return;
+
+		const proto = TFile.prototype as unknown as {
+			getNewPathAfterRename?: (newName: string) => string;
+		};
+		if (!proto.getNewPathAfterRename) return;
+
+		this.originalTFileGetNewPath = proto.getNewPathAfterRename;
+
+		proto.getNewPathAfterRename = function (
+			this: TFile,
+			newName: string,
+		): string {
+			// eslint-disable-next-line no-control-regex
+			let cleanName = newName.replace(/[\x00-\x1F]/g, " ").trim();
+			if (!cleanName) return "";
+
+			// Check if cleanName has an explicit extension or is a dotfile
+			const lastDot = cleanName.lastIndexOf(".");
+			const hasExtension = lastDot > 0 && lastDot < cleanName.length - 1;
+			const isDotfile = cleanName.startsWith(".");
+
+			// If it does not have an explicit extension and is not a dotfile,
+			// preserve the file's current extension (e.g. .md, .canvas, .json)
+			if (!hasExtension && !isDotfile && this.extension) {
+				cleanName = `${cleanName}.${this.extension}`;
+			}
+
+			const parentPath =
+				!this.parent || this.parent.isRoot() ? "" : this.parent.path;
+			return parentPath ? `${parentPath}/${cleanName}` : cleanName;
+		};
+	}
+
+	private restoreTFileGetNewPath(): void {
+		if (this.originalTFileGetNewPath) {
+			const proto = TFile.prototype as unknown as {
+				getNewPathAfterRename?: (newName: string) => string;
+			};
+			proto.getNewPathAfterRename = this.originalTFileGetNewPath;
+			this.originalTFileGetNewPath = null;
+		}
+	}
+
+	private patchFileManagerPrompt(): void {
+		const fileManager = this.app.fileManager as unknown as {
+			promptForFileRename?: (file: TAbstractFile) => unknown;
+		};
+		if (!fileManager || this.originalPromptForFileRename) return;
+
+		this.originalPromptForFileRename =
+			fileManager.promptForFileRename?.bind(fileManager) ?? null;
+
+		fileManager.promptForFileRename = (file: TAbstractFile) => {
+			if (file instanceof TFile || file instanceof TFolder) {
+				new RenameModal(this.app, this, file).open();
+				return;
+			}
+			return this.originalPromptForFileRename?.(file);
+		};
+	}
+
+	private restoreFileManagerPrompt(): void {
+		const fileManager = this.app.fileManager as unknown as {
+			promptForFileRename?: (file: TAbstractFile) => unknown;
+		};
+		if (fileManager && this.originalPromptForFileRename) {
+			fileManager.promptForFileRename = this.originalPromptForFileRename;
+			this.originalPromptForFileRename = null;
+		}
+	}
+
+	private patchFileExplorer(): void {
+		const leaves = this.app.workspace.getLeavesOfType("file-explorer");
+		if (!leaves.length) return;
+
+		const fileExplorerView = leaves[0]?.view as unknown as
+			| Record<string, unknown>
+			| undefined;
+		if (!fileExplorerView) return;
+
+		// eslint-disable-next-line @typescript-eslint/no-this-alias
+		const plugin = this;
+
+		const viewProto = Object.getPrototypeOf(fileExplorerView) as Record<
+			string,
+			unknown
+		> | null;
+		if (viewProto) {
+			if (
+				!this.originalCreateFileItem &&
+				typeof viewProto.createFileItem === "function"
+			) {
+				this.originalCreateFileItem = viewProto.createFileItem as (
+					...args: unknown[]
+				) => unknown;
+				this.fileExplorerTargetProto = viewProto;
+				const origCreate = this.originalCreateFileItem;
+				const patchItem = this.patchFileItemPrototype.bind(this);
+				viewProto.createFileItem = function (
+					this: unknown,
+					...args: unknown[]
+				) {
+					const res = origCreate?.apply(this, args);
+					patchItem(this);
+					plugin.applyFileExplorerFiltering();
+					return res;
+				};
+			}
+
+			if (
+				!this.originalStartRenameFile &&
+				typeof viewProto.startRenameFile === "function"
+			) {
+				this.originalStartRenameFile = viewProto.startRenameFile as (
+					...args: unknown[]
+				) => unknown;
+				const origStart = this.originalStartRenameFile;
+				const patchItem = this.patchFileItemPrototype.bind(this);
+				viewProto.startRenameFile = function (
+					this: unknown,
+					...args: unknown[]
+				) {
+					patchItem(this);
+					return origStart?.apply(this, args);
+				};
+			}
+
+			if (
+				!this.originalSaveRename &&
+				typeof viewProto.saveRename === "function"
+			) {
+				this.originalSaveRename = viewProto.saveRename as (
+					...args: unknown[]
+				) => Promise<boolean>;
+				const origSave = this.originalSaveRename;
+				const handleNested = this.handleNestedFolderRename.bind(this);
+				viewProto.saveRename = async function (
+					this: {
+						fileBeingRenamed?: TAbstractFile;
+						fileItems?: Record<string, { innerEl?: HTMLElement }>;
+					},
+				): Promise<boolean> {
+					const file = this.fileBeingRenamed;
+					if (file instanceof TFolder) {
+						const item = this.fileItems?.[file.path];
+						const text = item?.innerEl?.getText()?.trim() ?? "";
+						if (text.includes("/")) {
+							return await handleNested(this, file, item, text);
+						}
+					}
+					return (await origSave?.apply(this)) ?? true;
+				};
+			}
+
+			if (
+				!this.originalOnFileRenameInput &&
+				typeof viewProto.onFileRenameInput === "function"
+			) {
+				this.originalOnFileRenameInput = viewProto.onFileRenameInput as (
+					...args: unknown[]
+				) => unknown;
+				const origOnInput = this.originalOnFileRenameInput;
+				viewProto.onFileRenameInput = function (
+					this: { files?: Map<HTMLElement, TAbstractFile> },
+					e: Event,
+					t: HTMLElement,
+				) {
+					const n = this.files?.get(t.parentElement?.parentElement ?? t);
+					if (n instanceof TFolder) {
+						const i = t.getText();
+						if (i.includes("/")) {
+							const hasBadChars = /[\\:*?"<>|]/.test(i);
+							if (!hasBadChars) {
+								if (
+									!(
+										1 === t.childNodes.length &&
+										t.firstChild?.nodeType === Node.TEXT_NODE
+									)
+								) {
+									t.setText(i);
+								}
+								const tooltip =
+									t.parentElement?.find(".tooltip") ||
+									document.querySelector(".tooltip.mod-error");
+								tooltip?.remove();
+								return;
+							}
+						}
+					}
+					return origOnInput?.call(this, e, t);
+				};
+			}
+		}
+
+		this.patchFileItemPrototype(fileExplorerView);
+		this.applyFileExplorerFiltering();
+	}
+
+	private onInputCapture = (evt: Event) => {
+		const target = evt.target as HTMLElement | null;
+		if (!target) return;
+
+		const isFolderTitle =
+			target.classList?.contains("nav-folder-title-content") ||
+			target.closest?.(".nav-folder-title-content");
+
+		if (isFolderTitle) {
+			const text = target.textContent ?? "";
+			if (text.includes("/")) {
+				const hasBadChars = /[\\:*?"<>|]/.test(text);
+				if (!hasBadChars) {
+					evt.stopImmediatePropagation();
+					const tooltips =
+						document.querySelectorAll(".tooltip.mod-error");
+					tooltips.forEach((el) => el.remove());
+				}
+			}
+		}
+	};
+
+	selectFileInExplorer(titleEl: HTMLElement, file: TFile): void {
+		const leaves = this.app.workspace.getLeavesOfType("file-explorer");
+		for (const leaf of leaves) {
+			const view = leaf.view as unknown as {
+				containerEl?: HTMLElement;
+				selectedFile?: TAbstractFile;
+			};
+			if (view?.containerEl) {
+				const prevSelected = view.containerEl.querySelectorAll(
+					".nav-file-title.is-selected, .nav-folder-title.is-selected, .nav-file-title.is-active, .nav-folder-title.is-active",
+				);
+				prevSelected.forEach((el) => {
+					el.classList.remove("is-selected");
+					el.classList.remove("is-active");
+				});
+				view.selectedFile = file;
+			}
+		}
+
+		titleEl.classList.add("is-selected");
+		titleEl.classList.add("is-active");
+		titleEl.focus();
+	}
+
+	private onFileExplorerClickCapture = (evt: MouseEvent) => {
+		if (evt.button !== 0) return;
+		if (!this.settings.preventAutoOpenUnsupported) return;
+
+		const target = evt.target as HTMLElement | null;
+		if (!target) return;
+
+		const titleEl = target.closest(
+			".nav-file-title, .nav-folder-title",
+		);
+		if (!(titleEl instanceof HTMLElement)) return;
+
+		const explorer = titleEl.closest(
+			".workspace-leaf-content[data-type='file-explorer']",
+		);
+		if (!explorer) return;
+
+		// Clean up custom is-selected on other elements when an item in tree is clicked
+		const allSelected = explorer.querySelectorAll(".is-selected");
+		allSelected.forEach((el) => {
+			if (el !== titleEl) el.classList.remove("is-selected");
+		});
+
+		if (titleEl.classList.contains("nav-folder-title")) {
+			return; // Folder clicks handled natively by Obsidian
+		}
+
+		const dataPath = titleEl.getAttribute("data-path");
+		if (!dataPath) return;
+
+		const abstractFile = this.app.vault.getAbstractFileByPath(dataPath);
+		if (!(abstractFile instanceof TFile)) return;
+
+		if (this.isUnsupportedFile(abstractFile)) {
+			if (
+				evt.detail === 2 &&
+				this.settings.openUnsupportedOnDoubleClick
+			) {
+				evt.preventDefault();
+				evt.stopPropagation();
+				evt.stopImmediatePropagation();
+				const appWithOpen = this.app as unknown as {
+					openWithDefaultApp?: (p: string) => void;
+				};
+				appWithOpen.openWithDefaultApp?.(abstractFile.path);
+				return;
+			}
+
+			// Block the default Obsidian action (which would call openWithDefaultApp on single click!)
+			evt.preventDefault();
+			evt.stopPropagation();
+			evt.stopImmediatePropagation();
+
+			this.selectFileInExplorer(titleEl, abstractFile);
+		}
+	};
+
+	private onFileExplorerKeyDownCapture = (evt: KeyboardEvent) => {
+		if (evt.key !== "Enter") return;
+		if (!this.settings.preventAutoOpenUnsupported) return;
+
+		const target = evt.target as HTMLElement | null;
+		if (!target) return;
+
+		const titleEl = target.closest(".nav-file-title");
+		if (!(titleEl instanceof HTMLElement)) return;
+
+		const explorer = titleEl.closest(
+			".workspace-leaf-content[data-type='file-explorer']",
+		);
+		if (!explorer) return;
+
+		const dataPath = titleEl.getAttribute("data-path");
+		if (!dataPath) return;
+
+		const abstractFile = this.app.vault.getAbstractFileByPath(dataPath);
+		if (!(abstractFile instanceof TFile)) return;
+
+		if (this.isUnsupportedFile(abstractFile)) {
+			// Prevent accidental external application launch when pressing Enter
+			evt.preventDefault();
+			evt.stopPropagation();
+			evt.stopImmediatePropagation();
+		}
+	};
+
+	private async handleNestedFolderRename(
+		view: {
+			fileItems?: Record<string, unknown>;
+			displayError?: (msg: string, item: unknown) => void;
+		},
+		folder: TFolder,
+		item: unknown,
+		input: string,
+	): Promise<boolean> {
+		// eslint-disable-next-line no-control-regex
+		const cleanInput = input.replace(/[\x00-\x1F]/g, " ").trim();
+		if (!cleanInput) {
+			view.displayError?.("Folder name cannot be empty.", item);
+			return false;
+		}
+
+		if (/[\\:*?"<>|]/.test(cleanInput)) {
+			view.displayError?.(
+				"Path cannot contain invalid characters (\\ : * ? \" < > |).",
+				item,
+			);
+			return false;
+		}
+
+		const segments = cleanInput
+			.split("/")
+			.map((s) => s.trim())
+			.filter(Boolean);
+
+		if (segments.length === 0) {
+			view.displayError?.("Folder name cannot be empty.", item);
+			return false;
+		}
+
+		if (segments.some((s) => s === "." || s === "..")) {
+			view.displayError?.("Folder path cannot contain '.' or '..'.", item);
+			return false;
+		}
+
+		const parentPath =
+			folder.parent && !folder.parent.isRoot()
+				? folder.parent.path
+				: "";
+		const targetRelPath = normalizePath(
+			parentPath ? `${parentPath}/${cleanInput}` : cleanInput,
+		);
+
+		if (folder.path === targetRelPath) {
+			return true;
+		}
+
+		if (await this.app.vault.adapter.exists(targetRelPath)) {
+			const folderName = segments[segments.length - 1];
+			view.displayError?.(
+				`A file or folder named '${folderName}' already exists.`,
+				item,
+			);
+			return false;
+		}
+
+		try {
+			// 1. Ensure all intermediate parent folders are created recursively
+			const lastSlash = targetRelPath.lastIndexOf("/");
+			if (lastSlash > 0) {
+				const intermediateParent = targetRelPath.substring(
+					0,
+					lastSlash,
+				);
+				await this.createFolderRecursive(intermediateParent);
+			}
+
+			// 2. Rename the current folder to the final target path
+			try {
+				await this.app.fileManager.renameFile(folder, targetRelPath);
+			} catch {
+				await this.app.vault.adapter.rename(folder.path, targetRelPath);
+			}
+
+			// 3. Register any hidden path segments if they start with '.'
+			let currentCheck = parentPath;
+			for (const segment of segments) {
+				currentCheck = currentCheck
+					? `${currentCheck}/${segment}`
+					: segment;
+				if (segment.startsWith(".")) {
+					await this.registerHiddenPath(currentCheck);
+				}
+			}
+
+			// 4. Trigger vault rescan so Obsidian's tree immediately discovers all intermediate and new dotfolders
+			await this.rescanVault();
+
+			return true;
+		} catch (e) {
+			const msg = e instanceof Error ? e.message : String(e);
+			view.displayError?.(msg, item);
+			return false;
+		}
+	}
+
+	private patchFileItemPrototype(fileExplorerView: unknown): void {
+		if (!fileExplorerView) return;
+
+		const view = fileExplorerView as {
+			fileItems?: Record<string, unknown>;
+		};
+		if (!view.fileItems) return;
+
+		const fileItem = (Object.values(view.fileItems).find(
+			(i: unknown) =>
+				(i as { file?: TAbstractFile })?.file instanceof TFile,
+		) || Object.values(view.fileItems)[0]) as
+			| Record<string, unknown>
+			| undefined;
+		if (!fileItem) return;
+
+		// 1. Patch PO.prototype (so dotfiles display full name and hide tag badge)
+		let poProto: Record<string, unknown> | null = Object.getPrototypeOf(
+			fileItem as object,
+		) as Record<string, unknown> | null;
+		while (poProto && poProto !== Object.prototype) {
+			if (Object.prototype.hasOwnProperty.call(poProto, "getTitle")) {
+				break;
+			}
+			poProto = Object.getPrototypeOf(poProto as object) as Record<
+				string,
+				unknown
+			> | null;
+		}
+
+		if (
+			poProto &&
+			!this.originalPOGetTitle &&
+			typeof poProto.getTitle === "function"
+		) {
+			this.originalPOGetTitle = poProto.getTitle as (
+				...args: unknown[]
+			) => string;
+			this.poTargetProto = poProto;
+			const origGetTitle = this.originalPOGetTitle;
+
+			poProto.getTitle = function (this: {
+				file?: TAbstractFile;
+			}): string {
+				if (
+					this.file &&
+					this.file.name &&
+					this.file.name.startsWith(".")
+				) {
+					return this.file.name;
+				}
+				return origGetTitle.call(this);
+			};
+
+			if (typeof poProto.updateTitle === "function") {
+				this.originalPOUpdateTitle = poProto.updateTitle as (
+					...args: unknown[]
+				) => unknown;
+				const origUpdateTitle = this.originalPOUpdateTitle;
+
+				poProto.updateTitle = function (this: {
+					file?: TAbstractFile;
+					tagEl?: HTMLElement | null;
+				}) {
+					origUpdateTitle.call(this);
+					if (
+						this.file &&
+						this.file.name &&
+						this.file.name.startsWith(".")
+					) {
+						if (this.tagEl) {
+							this.tagEl.detach();
+							this.tagEl = null;
+						}
+					}
+				};
+			}
+
+			// Immediately refresh titles of loaded dotfiles
+			for (const item of Object.values(view.fileItems)) {
+				const fItem = item as {
+					file?: TAbstractFile;
+					updateTitle?: () => void;
+				};
+				if (fItem?.file?.name?.startsWith(".")) {
+					fItem.updateTitle?.();
+				}
+			}
+		}
+
+		// 2. Patch DO.prototype for inline startRename
+		if (!this.fileItemProtoPatched) {
+			let curr: Record<string, unknown> | null = Object.getPrototypeOf(
+				fileItem as object,
+			) as Record<string, unknown> | null;
+			while (curr && curr !== Object.prototype) {
+				if (Object.prototype.hasOwnProperty.call(curr, "startRename")) {
+					break;
+				}
+				curr = Object.getPrototypeOf(curr as object) as Record<
+					string,
+					unknown
+				> | null;
+			}
+
+			if (curr && typeof curr.startRename !== "function") return;
+
+			if (curr) {
+				this.originalFileItemStartRename = curr.startRename as (
+					...args: unknown[]
+				) => unknown;
+				this.fileItemTargetProto = curr;
+				const origStartRename = this.originalFileItemStartRename;
+
+				curr.startRename = function (this: {
+					file: TAbstractFile;
+					selfEl: HTMLElement;
+					innerEl: HTMLElement;
+					view?: { app?: App };
+				}) {
+					const file = this.file;
+					if (file instanceof TFile) {
+						this.selfEl.addClass("is-being-renamed");
+						this.innerEl.setAttribute("contenteditable", "true");
+						const spellcheck =
+							this.view?.app?.vault?.getConfig("spellcheck");
+						this.innerEl.setAttribute("spellcheck", String(spellcheck));
+
+						// Display the full filename in innerEl
+						this.innerEl.setText(file.name);
+
+						// Pre-select only the basename if the file has an extension
+						const dotIndex = file.name.lastIndexOf(".");
+						const textNode = this.innerEl.firstChild;
+						if (
+							textNode &&
+							textNode.nodeType === Node.TEXT_NODE &&
+							textNode.textContent
+						) {
+							const len = textNode.textContent.length;
+							const selectEnd =
+								dotIndex > 0 ? Math.min(dotIndex, len) : len;
+							const win =
+								(this.innerEl as unknown as { win?: Window }).win ??
+								window;
+							const range = win.document.createRange();
+							range.setStart(textNode, 0);
+							range.setEnd(textNode, selectEnd);
+							const sel = win.getSelection();
+							if (sel) {
+								sel.removeAllRanges();
+								sel.addRange(range);
+							}
+							this.innerEl.focus({ preventScroll: true });
+							return;
+						}
+
+						// Fallback: select all contents
+						const win =
+							(this.innerEl as unknown as { win?: Window }).win ??
+							window;
+						const range = win.document.createRange();
+						range.selectNodeContents(this.innerEl);
+						const sel = win.getSelection();
+						if (sel) {
+							sel.removeAllRanges();
+							sel.addRange(range);
+						}
+						this.innerEl.focus({ preventScroll: true });
+						return;
+					}
+
+					return origStartRename.call(this);
+				};
+
+				this.fileItemProtoPatched = true;
+			}
+		}
+	}
+
+	private restoreFileExplorer(): void {
+		if (this.originalPOGetTitle && this.poTargetProto) {
+			this.poTargetProto.getTitle = this.originalPOGetTitle;
+			this.originalPOGetTitle = null;
+		}
+		if (this.originalPOUpdateTitle && this.poTargetProto) {
+			this.poTargetProto.updateTitle = this.originalPOUpdateTitle;
+			this.originalPOUpdateTitle = null;
+		}
+		this.poTargetProto = null;
+
+		if (this.originalFileItemStartRename && this.fileItemTargetProto) {
+			this.fileItemTargetProto.startRename =
+				this.originalFileItemStartRename;
+			this.originalFileItemStartRename = null;
+			this.fileItemTargetProto = null;
+		}
+		if (this.originalCreateFileItem && this.fileExplorerTargetProto) {
+			this.fileExplorerTargetProto.createFileItem =
+				this.originalCreateFileItem;
+			this.originalCreateFileItem = null;
+		}
+		if (this.originalStartRenameFile && this.fileExplorerTargetProto) {
+			this.fileExplorerTargetProto.startRenameFile =
+				this.originalStartRenameFile;
+			this.originalStartRenameFile = null;
+		}
+		if (this.originalSaveRename && this.fileExplorerTargetProto) {
+			this.fileExplorerTargetProto.saveRename = this.originalSaveRename;
+			this.originalSaveRename = null;
+		}
+		if (this.originalOnFileRenameInput && this.fileExplorerTargetProto) {
+			this.fileExplorerTargetProto.onFileRenameInput =
+				this.originalOnFileRenameInput;
+			this.originalOnFileRenameInput = null;
+		}
+		this.fileExplorerTargetProto = null;
+		this.fileItemProtoPatched = false;
+
+		// Refresh file items to restore default Obsidian titles
+		const leaves = this.app.workspace.getLeavesOfType("file-explorer");
+		for (const leaf of leaves) {
+			const view = leaf.view as { fileItems?: Record<string, unknown> };
+			if (view.fileItems) {
+				for (const item of Object.values(view.fileItems)) {
+					(item as { updateTitle?: () => void })?.updateTitle?.();
+				}
+			}
+		}
+	}
+}
+
+/* ── Settings tab ──────────────────────────────────────────── */
+
+class VaultCodeSettingTab extends PluginSettingTab {
+	plugin: VaultCodePlugin;
+
+	constructor(app: App, plugin: VaultCodePlugin) {
+		super(app, plugin);
+		this.plugin = plugin;
+	}
+
+	display(): void {
+		const { containerEl } = this;
+		containerEl.empty();
+		containerEl.addClass("hidden-files-settings");
+
+		// Language Setting
+		new Setting(containerEl)
+			.setName(t("settingsLanguageName"))
+			.setDesc(t("settingsLanguageDesc"))
+			.addDropdown((dropdown) => {
+				dropdown.addOption("auto", t("settingsLanguageAuto"));
+				for (const [code, label] of Object.entries(SUPPORTED_LANGUAGES)) {
+					if (code !== "auto") {
+						dropdown.addOption(code, label);
+					}
+				}
+				dropdown
+					.setValue(this.plugin.settings.language || "auto")
+					.onChange(async (value) => {
+						this.plugin.settings.language = value;
+						setLanguage(value);
+						await this.plugin.saveSettings();
+						this.display();
+					});
+			});
+
+		// Group 1: File explorer
+		new Setting(containerEl)
+			.setName(t("settingsGroupFileExplorer"))
+			.setHeading();
+
+		new Setting(containerEl)
+			.setName(t("settingsShowHiddenDotfilesName"))
+			.setDesc(t("settingsShowHiddenDotfilesDesc"))
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.showHiddenFiles)
+					.onChange(async (value) => {
+						this.plugin.settings.showHiddenFiles = value;
+						await this.plugin.saveSettings();
+						if (value) {
+							await this.plugin.enableHiddenFiles();
+							new Notice(t("noticeHiddenFilesVisible"));
+						} else {
+							await this.plugin.disableHiddenFiles();
+							new Notice(t("noticeHiddenFilesHidden"));
+						}
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName(t("settingsShowAllFileTypesName"))
+			.setDesc(t("settingsShowAllFileTypesDesc"))
+			.addToggle((toggle) => {
+				const current =
+					(this.app.vault.getConfig(
+						"showUnsupportedFiles",
+					) as boolean) ?? false;
+				toggle.setValue(current).onChange(async (value) => {
+					this.plugin.settings.showAllFileTypes = value;
+					await this.plugin.saveSettings();
+					this.plugin.applyShowAllFileTypes();
+					new Notice(
+						value
+							? t("noticeAllFilesVisible")
+							: t("noticeAllFilesHidden"),
+					);
+				});
+			});
+
+		new Setting(containerEl)
+			.setName(t("settingsPreventAutoOpenName"))
+			.setDesc(t("settingsPreventAutoOpenDesc"))
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.preventAutoOpenUnsupported)
+					.onChange(async (value) => {
+						this.plugin.settings.preventAutoOpenUnsupported = value;
+						await this.plugin.saveSettings();
+						this.display();
+					}),
+			);
+
+		if (this.plugin.settings.preventAutoOpenUnsupported) {
+			new Setting(containerEl)
+				.setName(t("settingsOpenOnDoubleClickName"))
+				.setDesc(t("settingsOpenOnDoubleClickDesc"))
+				.addToggle((toggle) =>
+					toggle
+						.setValue(
+							this.plugin.settings.openUnsupportedOnDoubleClick,
+						)
+						.onChange(async (value) => {
+							this.plugin.settings.openUnsupportedOnDoubleClick =
+								value;
+							await this.plugin.saveSettings();
+						}),
+				);
+		}
+
+		let ignoredPathsTextArea: TextAreaComponent | null = null;
+
+		new Setting(containerEl)
+			.setName(t("settingsIgnoredPathsName"))
+			.setDesc(t("settingsIgnoredPathsDesc"))
+			.setClass("hidden-files-extensions-setting")
+			.addTextArea((text) => {
+				ignoredPathsTextArea = text;
+				text
+					.setPlaceholder(t("settingsIgnoredPathsPlaceholder"))
+					.setValue(this.plugin.settings.ignoredPaths)
+					.onChange(async (value) => {
+						this.plugin.settings.ignoredPaths = value;
+						await this.plugin.saveSettings();
+						await this.plugin.applyIgnoredPathsUpdate();
+					});
+				text.inputEl.addClass("hidden-files-extensions-textarea");
+				text.inputEl.rows = 8;
+				text.inputEl.cols = 35;
+			})
+			.addButton((button) =>
+				button
+					.setButtonText(t("settingsButtonResetDefault"))
+					.setTooltip(t("settingsTooltipResetIgnored"))
+					.onClick(async () => {
+						this.plugin.settings.ignoredPaths =
+							DEFAULT_IGNORED_PATHS;
+						await this.plugin.saveSettings();
+						if (ignoredPathsTextArea) {
+							ignoredPathsTextArea.setValue(
+								DEFAULT_IGNORED_PATHS,
+							);
+						}
+						await this.plugin.applyIgnoredPathsUpdate();
+						new Notice(t("noticeIgnoredPathsReset"));
+					}),
+			);
+
+		// Group 2: Code editor
+		// Group 2: Code editor
+		new Setting(containerEl)
+			.setName(t("settingsGroupCodeEditor"))
+			.setHeading();
+
+		const callout = containerEl.createDiv({
+			cls: "callout hidden-files-security-callout",
+		});
+		callout.setAttribute("data-callout", "warning");
+		const calloutContent = callout.createDiv({ cls: "callout-content" });
+		calloutContent.createEl("p", {
+			text: t("settingsSecurityWarning"),
+		});
+
+		new Setting(containerEl)
+			.setName(t("settingsAllowEditDotfilesName"))
+			.setDesc(t("settingsAllowEditDotfilesDesc"))
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.allowEditDotfiles)
+					.onChange(async (value) => {
+						this.plugin.settings.allowEditDotfiles = value;
+						await this.plugin.saveSettings();
+						new Notice(
+							value
+								? t("noticeDotfileEditingEnabled")
+								: t("noticeDotfileEditingDisabled"),
+						);
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName(t("settingsAllowEditCodeFilesName"))
+			.setDesc(t("settingsAllowEditCodeFilesDesc"))
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.allowEditCodeFiles)
+					.onChange(async (value) => {
+						this.plugin.settings.allowEditCodeFiles = value;
+						await this.plugin.saveSettings();
+						new Notice(
+							value
+								? t("noticeCodeEditingEnabled")
+								: t("noticeCodeEditingDisabled"),
+						);
+					}),
+			);
+
+		let extensionsTextArea: TextAreaComponent | null = null;
+
+		new Setting(containerEl)
+			.setName(t("settingsCustomExtensionsName"))
+			.setDesc(t("settingsCustomExtensionsDesc"))
+			.setClass("hidden-files-extensions-setting")
+			.addTextArea((text) => {
+				extensionsTextArea = text;
+				text
+					.setPlaceholder(t("settingsCustomExtensionsPlaceholder"))
+					.setValue(this.plugin.settings.customFileExtensions)
+					.onChange(async (value) => {
+						this.plugin.settings.customFileExtensions = value;
+						await this.plugin.saveSettings();
+					});
+				text.inputEl.addClass("hidden-files-extensions-textarea");
+				text.inputEl.rows = 4;
+				text.inputEl.cols = 35;
+			})
+			.addButton((button) =>
+				button
+					.setButtonText(t("settingsButtonResetDefault"))
+					.setTooltip(t("settingsTooltipResetExtensions"))
+					.onClick(async () => {
+						this.plugin.settings.customFileExtensions = DEFAULT_EXTENSIONS;
+						await this.plugin.saveSettings();
+						if (extensionsTextArea) {
+							extensionsTextArea.setValue(DEFAULT_EXTENSIONS);
+						}
+						new Notice(t("noticeExtensionsReset"));
+					}),
+			);
+
+		const autoSaveSetting = new Setting(containerEl)
+			.setName(t("settingsDisableAutoSaveName"))
+			.setDesc(t("settingsDisableAutoSaveDesc"));
+
+		const warningEl = autoSaveSetting.descEl.createDiv({
+			cls: "hidden-files-auto-save-warning",
+			text: t("settingsAutoSaveWarning"),
+		});
+
+		const updateWarning = (disableAutoSave: boolean) => {
+			warningEl.toggle(!disableAutoSave);
+		};
+		updateWarning(this.plugin.settings.disableAutoSave);
+
+		autoSaveSetting.addToggle((toggle) =>
+			toggle
+				.setValue(this.plugin.settings.disableAutoSave)
+				.onChange(async (value) => {
+					this.plugin.settings.disableAutoSave = value;
+					updateWarning(value);
+					await this.plugin.saveSettings();
+					new Notice(
+						value
+							? t("noticeAutoSaveDisabled")
+							: t("noticeAutoSaveEnabled"),
+					);
+				}),
+		);
+
+		new Setting(containerEl)
+			.setClass("vault-code-reset-setting")
+			.setName(t("settingsResetAllName"))
+			.setDesc(t("settingsResetAllDesc"))
+			.addButton((button) =>
+				button
+					.setButtonText(t("settingsButtonResetAll"))
+					.setWarning()
+					.setTooltip(t("settingsTooltipResetAll"))
+					.onClick(async () => {
+						this.plugin.settings = Object.assign({}, DEFAULT_SETTINGS);
+						setLanguage(this.plugin.settings.language);
+						await this.plugin.saveSettings();
+						this.plugin.applyShowAllFileTypes();
+						await this.plugin.applyIgnoredPathsUpdate();
+						if (this.plugin.settings.showHiddenFiles) {
+							await this.plugin.enableHiddenFiles();
+						} else {
+							await this.plugin.disableHiddenFiles();
+						}
+						this.display();
+						new Notice(t("noticeAllSettingsReset"));
+					}),
+			);
+	}
+}
