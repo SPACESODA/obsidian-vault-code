@@ -20,7 +20,6 @@ export const de: TranslationSchema = {
 	searchPreviousMatch: "Vorheriger Treffer",
 	searchNextMatch: "Nächster Treffer",
 	searchSelectAll: "Alle Treffer auswählen",
-	searchClose: "Suche schließen (Esc)",
 	searchReplacePlaceholder: "Ersetzen durch...",
 	searchReplaceAriaLabel: "Ersetzen durch",
 	searchReplace: "Ersetzen",

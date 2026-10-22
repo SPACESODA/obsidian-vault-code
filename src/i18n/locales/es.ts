@@ -20,7 +20,6 @@ export const es: TranslationSchema = {
 	searchPreviousMatch: "Coincidencia anterior",
 	searchNextMatch: "Coincidencia siguiente",
 	searchSelectAll: "Seleccionar todas las coincidencias",
-	searchClose: "Cerrar búsqueda (Esc)",
 	searchReplacePlaceholder: "Reemplazar con...",
 	searchReplaceAriaLabel: "Reemplazar con",
 	searchReplace: "Reemplazar",

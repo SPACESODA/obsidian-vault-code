@@ -20,7 +20,6 @@ export const ko: TranslationSchema = {
 	searchPreviousMatch: "이전 일치 항목",
 	searchNextMatch: "다음 일치 항목",
 	searchSelectAll: "모든 일치 항목 선택",
-	searchClose: "검색 닫기 (Esc)",
 	searchReplacePlaceholder: "바꿀 내용...",
 	searchReplaceAriaLabel: "바꿀 내용",
 	searchReplace: "바꾸기",

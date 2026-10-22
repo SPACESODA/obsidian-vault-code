@@ -20,7 +20,6 @@ export const ru: TranslationSchema = {
 	searchPreviousMatch: "Предыдущее совпадение",
 	searchNextMatch: "Следующее совпадение",
 	searchSelectAll: "Выбрать все совпадения",
-	searchClose: "Закрыть поиск (Esc)",
 	searchReplacePlaceholder: "Заменить на...",
 	searchReplaceAriaLabel: "Заменить на",
 	searchReplace: "Заменить",

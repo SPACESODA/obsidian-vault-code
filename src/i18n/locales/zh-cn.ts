@@ -20,7 +20,6 @@ export const zhCn: TranslationSchema = {
 	searchPreviousMatch: "上一个匹配项",
 	searchNextMatch: "下一个匹配项",
 	searchSelectAll: "选择所有匹配项",
-	searchClose: "关闭搜索 (Esc)",
 	searchReplacePlaceholder: "替换为...",
 	searchReplaceAriaLabel: "替换为",
 	searchReplace: "替换",

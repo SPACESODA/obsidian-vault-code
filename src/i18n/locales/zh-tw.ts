@@ -20,7 +20,6 @@ export const zhTw: TranslationSchema = {
 	searchPreviousMatch: "上一個相符項",
 	searchNextMatch: "下一個相符項",
 	searchSelectAll: "選取所有相符項",
-	searchClose: "關閉搜尋 (Esc)",
 	searchReplacePlaceholder: "取代為...",
 	searchReplaceAriaLabel: "取代為",
 	searchReplace: "取代",

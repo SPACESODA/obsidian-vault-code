@@ -20,7 +20,6 @@ export const ja: TranslationSchema = {
 	searchPreviousMatch: "前の候補",
 	searchNextMatch: "次の候補",
 	searchSelectAll: "すべて選択",
-	searchClose: "検索を閉じる (Esc)",
 	searchReplacePlaceholder: "置換...",
 	searchReplaceAriaLabel: "置換",
 	searchReplace: "置換",

@@ -18,7 +18,6 @@ export const en = {
 	searchPreviousMatch: "Previous match",
 	searchNextMatch: "Next match",
 	searchSelectAll: "Select all matches",
-	searchClose: "Close search (Esc)",
 	searchReplacePlaceholder: "Replace with...",
 	searchReplaceAriaLabel: "Replace with",
 	searchReplace: "Replace",
