@@ -94,7 +94,7 @@ export const zhCn: TranslationSchema = {
 
 	// Settings - Code Editor
 	settingsGroupCodeEditor: "代码编辑器",
-	settingsSecurityWarning: "显示隐藏文件允许查看和编辑敏感配置文件（例如 .env、令牌、凭据）。在文件列表中修改或删除文件时请务必谨慎。",
+	settingsSecurityWarning: "显示隐藏文件允许查看和编辑敏感配置文件（例如 .env、token、凭据）。在文件列表中修改或删除文件时请务必谨慎。",
 	settingsAllowEditDotfilesName: "允许编辑隐藏文件与无扩展名文件",
 	settingsAllowEditDotfilesDesc: "直接在内置编辑器中打开并编辑点文件（如 .gitignore 或 .env）以及无扩展名的文件（如 license 或 makefile）。",
 	settingsAllowEditCodeFilesName: "允许编辑代码与数据文件",

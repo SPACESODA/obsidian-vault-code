@@ -15,6 +15,8 @@ import {
 	Platform,
 	setIcon,
 	normalizePath,
+	Scope,
+	ViewStateResult,
 } from "obsidian";
 import {
 	EditorView,
@@ -27,11 +29,10 @@ import {
 	crosshairCursor,
 	highlightActiveLine,
 	keymap,
-	Command,
 	Panel,
 	ViewUpdate,
 } from "@codemirror/view";
-import { EditorState, Extension, Compartment } from "@codemirror/state";
+import { EditorState, Extension, Compartment, Prec } from "@codemirror/state";
 import {
 	defaultKeymap,
 	history,
@@ -1607,22 +1608,74 @@ export class DotfileView extends TextFileView {
 	private discardOnClose = false;
 	private isPreviewMode = false;
 	private headerFileNameEl: HTMLElement | null = null;
+	private filePath: string | null = null;
 
 	constructor(leaf: WorkspaceLeaf, plugin: VaultCodePlugin) {
 		super(leaf);
 		this.plugin = plugin;
+		this.scope = new Scope(this.app.scope);
+		this.scope.register(["Mod"], "f", (evt: KeyboardEvent) => {
+			evt.preventDefault();
+			this.openFind();
+			return false;
+		});
+		this.scope.register(["Mod"], "h", (evt: KeyboardEvent) => {
+			evt.preventDefault();
+			this.openReplace();
+			return false;
+		});
+		this.scope.register(["Mod", "Alt"], "f", (evt: KeyboardEvent) => {
+			evt.preventDefault();
+			this.openReplace();
+			return false;
+		});
 	}
 
 	getViewType(): string {
 		return VIEW_TYPE_DOTFILE;
 	}
 
-	getDisplayText(): string {
-		return this.file ? this.file.name : t("settingsGroupCodeEditor");
+	override getDisplayText(): string {
+		if (this.file) return this.file.name;
+		if (this.filePath) {
+			const parts = this.filePath.split("/");
+			return parts[parts.length - 1] || t("settingsGroupCodeEditor");
+		}
+		return t("settingsGroupCodeEditor");
 	}
 
-	getIcon(): string {
+	override getIcon(): string {
 		return "document-code";
+	}
+
+	override getState(): Record<string, unknown> {
+		const state = super.getState();
+		state.file = this.file ? this.file.path : this.filePath;
+		return state;
+	}
+
+	override async setState(state: unknown, result: ViewStateResult): Promise<void> {
+		if (
+			state &&
+			typeof state === "object" &&
+			"file" in state &&
+			typeof (state as { file: unknown }).file === "string"
+		) {
+			this.filePath = (state as { file: string }).file;
+		}
+		await super.setState(state, result);
+	}
+
+	override async onLoadFile(file: TFile): Promise<void> {
+		this.filePath = file.path;
+		await super.onLoadFile(file);
+		if (this.headerFileNameEl) {
+			this.headerFileNameEl.setText(file.name);
+		}
+		this.applyLanguage();
+		this.updateStatus();
+		this.updateDirtyUI();
+		this.updateViewModeUI();
 	}
 
 	canAcceptExtension(extension: string): boolean {
@@ -1655,6 +1708,35 @@ export class DotfileView extends TextFileView {
 		}
 		if (this.editor) {
 			openSearchPanel(this.editor);
+			const searchInput = this.editor.dom.querySelector<HTMLInputElement>(
+				'.hidden-files-search-panel input[name="search"]',
+			);
+			if (searchInput) {
+				searchInput.focus();
+				searchInput.select();
+			}
+		}
+	}
+
+	openReplace(): void {
+		if (this.isPreviewMode) {
+			this.toggleViewMode();
+		}
+		if (this.editor) {
+			openSearchPanel(this.editor);
+			const panelDom = this.editor.dom.querySelector<HTMLElement>(
+				".hidden-files-search-panel",
+			);
+			if (panelDom) {
+				panelDom.dispatchEvent(new CustomEvent("open-replace"));
+			}
+			const replaceInput = this.editor.dom.querySelector<HTMLInputElement>(
+				'.hidden-files-search-panel input[name="replace"]',
+			);
+			if (replaceInput) {
+				replaceInput.focus();
+				replaceInput.select();
+			}
 		}
 	}
 
@@ -1672,7 +1754,7 @@ export class DotfileView extends TextFileView {
 		if (searchPanelOpen(this.editor.state)) {
 			closeSearchPanel(this.editor);
 		} else {
-			openSearchPanel(this.editor);
+			this.openFind();
 		}
 	}
 
@@ -1896,24 +1978,6 @@ export class DotfileView extends TextFileView {
 	}
 
 	private createEditorState(content: string): EditorState {
-		const openReplaceCommand: Command = (view) => {
-			openSearchPanel(view);
-			const panelDom = view.dom.querySelector<HTMLElement>(
-				".hidden-files-search-panel",
-			);
-			if (panelDom) {
-				panelDom.dispatchEvent(new CustomEvent("open-replace"));
-			}
-			const replaceInput = view.dom.querySelector<HTMLInputElement>(
-				'.hidden-files-search-panel input[name="replace"]',
-			);
-			if (replaceInput) {
-				replaceInput.focus();
-				replaceInput.select();
-			}
-			return true;
-		};
-
 		const extensions: Extension[] = [
 			lineNumbers(),
 			highlightActiveLineGutter(),
@@ -1944,52 +2008,60 @@ export class DotfileView extends TextFileView {
 				createPanel: (view) => new ModernSearchPanel(view, this.app),
 			}),
 			this.languageCompartment.of([]),
-			keymap.of([
-				{
-					key: "Mod-f",
-					run: (view) => {
-						openSearchPanel(view);
-						return true;
-					},
-					scope: "editor search-panel",
-					preventDefault: true,
-				},
-				{
-					key: "Mod-h",
-					run: openReplaceCommand,
-					scope: "editor search-panel",
-					preventDefault: true,
-				},
-				{
-					key: "Mod-Alt-f",
-					run: openReplaceCommand,
-					scope: "editor search-panel",
-					preventDefault: true,
-				},
-				...closeBracketsKeymap,
-				...defaultKeymap,
-				...searchKeymap,
-				...historyKeymap,
-				...foldKeymap,
-				indentWithTab,
-				{
-					key: "Mod-s",
-					run: () => {
-						void this.saveExplicitly();
-						return true;
-					},
-				},
-				{
-					key: "Mod-e",
-					run: () => {
-						if (this.isPreviewable()) {
-							this.toggleViewMode();
+			Prec.highest(
+				keymap.of([
+					{
+						key: "Mod-f",
+						run: () => {
+							this.openFind();
 							return true;
-						}
-						return false;
+						},
+						scope: "editor search-panel",
+						preventDefault: true,
 					},
-				},
-			]),
+					{
+						key: "Mod-h",
+						run: () => {
+							this.openReplace();
+							return true;
+						},
+						scope: "editor search-panel",
+						preventDefault: true,
+					},
+					{
+						key: "Mod-Alt-f",
+						run: () => {
+							this.openReplace();
+							return true;
+						},
+						scope: "editor search-panel",
+						preventDefault: true,
+					},
+					...closeBracketsKeymap,
+					...defaultKeymap,
+					...searchKeymap,
+					...historyKeymap,
+					...foldKeymap,
+					indentWithTab,
+					{
+						key: "Mod-s",
+						run: () => {
+							void this.saveExplicitly();
+							return true;
+						},
+					},
+					{
+						key: "Mod-e",
+						run: () => {
+							if (this.isPreviewable()) {
+								this.toggleViewMode();
+								return true;
+							}
+							return false;
+						},
+					},
+				]),
+			),
 			EditorView.updateListener.of((update) => {
 				if (update.docChanged) {
 					if (!this.isBinaryOrNonEditable()) {
@@ -2172,6 +2244,7 @@ export class DotfileView extends TextFileView {
 	}
 
 	override async onRename(file: TFile): Promise<void> {
+		this.filePath = file.path;
 		try {
 			await super.onRename(file);
 		} catch {
@@ -2435,6 +2508,11 @@ export default class VaultCodePlugin extends Plugin {
 		| null = null;
 
 	async onload() {
+		this.registerView(
+			VIEW_TYPE_DOTFILE,
+			(leaf) => new DotfileView(leaf, this),
+		);
+
 		await this.loadSettings();
 
 		this.previousShowUnsupportedFiles =
@@ -2442,11 +2520,6 @@ export default class VaultCodePlugin extends Plugin {
 			false;
 
 		this.applyShowAllFileTypes();
-
-		this.registerView(
-			VIEW_TYPE_DOTFILE,
-			(leaf) => new DotfileView(leaf, this),
-		);
 
 		this.patchWorkspaceLeaf();
 		this.patchViewRegistry();
@@ -2475,6 +2548,20 @@ export default class VaultCodePlugin extends Plugin {
 				this.suppressDotfileWarning();
 				await this.rescanVault();
 			}
+
+			// Ensure any deferred or restored tabs for code files are properly initialized
+			this.app.workspace.iterateAllLeaves((leaf) => {
+				const viewState = leaf.getViewState();
+				if (viewState && viewState.type === VIEW_TYPE_DOTFILE) {
+					if (!(leaf.view instanceof DotfileView)) {
+						void leaf.setViewState({
+							type: VIEW_TYPE_DOTFILE,
+							state: viewState.state,
+							active: false,
+						});
+					}
+				}
+			});
 		});
 
 		this.registerEvent(
@@ -2720,6 +2807,22 @@ export default class VaultCodePlugin extends Plugin {
 				if (activeView) {
 					if (!checking) {
 						activeView.openFind();
+					}
+					return true;
+				}
+				return false;
+			},
+		});
+
+		this.addCommand({
+			id: "replace-code-editor",
+			name: t("searchReplace"),
+			checkCallback: (checking: boolean) => {
+				const activeView =
+					this.app.workspace.getActiveViewOfType(DotfileView);
+				if (activeView) {
+					if (!checking) {
+						activeView.openReplace();
 					}
 					return true;
 				}
