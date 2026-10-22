@@ -32,6 +32,7 @@ export const de: TranslationSchema = {
 	// Context Menu
 	contextNewNoteHere: "Neue Notiz hier",
 	contextNewFileHere: "Neue Datei hier (beliebiger Typ)",
+	contextNewFolderHere: "Neuer Ordner hier",
 	contextNewFile: "Neue Datei (beliebiger Typ)",
 	contextEditInCodeEditor: "Im Code-Editor bearbeiten",
 
@@ -112,7 +113,7 @@ export const de: TranslationSchema = {
 	settingsIndentWithTabs: "Tabs",
 	settingsIndentWithSpaces: "Leerzeichen",
 	settingsLineWrappingName: "Zeilenumbruch",
-	settingsLineWrappingDesc: "Lange Zeilen an das Editorfenster anpassen, anstatt horizontal zu scrollen.",
+	settingsLineWrappingDesc: "Lange Zeilen an das Editorfenster anpassen.",
 	settingsDisableAutoSaveName: "Automatisches Speichern deaktivieren",
 	settingsDisableAutoSaveDesc: "Erfordert das Drücken des Tastaturkürzels oder das Klicken auf die Schaltfläche vor dem Speichern auf Festplatte. Hinweis: Beim Schließen von Obsidian werden ungespeicherte Änderungen automatisch gespeichert.",
 	settingsAutoSaveWarning: "Warnung: Durch das automatische Speichern werden Änderungen sofort geschrieben, was das Risiko einer versehentlichen Beschädigung sensibler Codedateien erhöhen kann.",

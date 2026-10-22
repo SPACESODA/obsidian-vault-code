@@ -32,6 +32,7 @@ export const it: TranslationSchema = {
 	// Context Menu
 	contextNewNoteHere: "Nuova nota qui",
 	contextNewFileHere: "Nuovo file qui (qualsiasi tipo)",
+	contextNewFolderHere: "Nuova cartella qui",
 	contextNewFile: "Nuovo file (qualsiasi tipo)",
 	contextEditInCodeEditor: "Modifica nell'editor di codice",
 
@@ -112,7 +113,7 @@ export const it: TranslationSchema = {
 	settingsIndentWithTabs: "Tabulazioni",
 	settingsIndentWithSpaces: "Spazi",
 	settingsLineWrappingName: "A capo automatico",
-	settingsLineWrappingDesc: "Manda a capo le righe lunghe per adattarle alla finestra anziché scorrere orizzontalmente.",
+	settingsLineWrappingDesc: "Manda a capo le righe lunghe per adattarle alla finestra.",
 	settingsDisableAutoSaveName: "Disattiva salvataggio automatico",
 	settingsDisableAutoSaveDesc: "Richiede di premere la scorciatoia di salvataggio o il pulsante di salvataggio prima di scrivere le modifiche su disco. Nota: all'uscita da Obsidian le modifiche non salvate verranno salvate automaticamente.",
 	settingsAutoSaveWarning: "Attenzione: il salvataggio automatico scrive immediatamente le modifiche su disco, aumentando il rischio di danneggiare accidentalmente file di codice importanti.",

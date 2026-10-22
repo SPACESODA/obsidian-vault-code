@@ -3114,6 +3114,20 @@ export default class VaultCodePlugin extends Plugin {
 							});
 					});
 
+					menu.addItem((item) => {
+						item
+							.setTitle(t("contextNewFolderHere"))
+							.setIcon("folder-plus")
+							.setSection("action")
+							.onClick(() => {
+								new CreateFolderModal(
+									this.app,
+									this,
+									targetFolder,
+								).open();
+							});
+					});
+
 					if (this.isFileEditable(file)) {
 						menu.addItem((item) => {
 							item

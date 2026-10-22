@@ -32,6 +32,7 @@ export const ru: TranslationSchema = {
 	// Context Menu
 	contextNewNoteHere: "Новая заметка здесь",
 	contextNewFileHere: "Новый файл здесь (любой тип)",
+	contextNewFolderHere: "Новая папка здесь",
 	contextNewFile: "Новый файл (любой тип)",
 	contextEditInCodeEditor: "Редактировать в редакторе кода",
 
@@ -112,7 +113,7 @@ export const ru: TranslationSchema = {
 	settingsIndentWithTabs: "Табуляция",
 	settingsIndentWithSpaces: "Пробелы",
 	settingsLineWrappingName: "Перенос строк",
-	settingsLineWrappingDesc: "Переносить длинные строки по ширине окна редактора вместо горизонтальной прокрутки.",
+	settingsLineWrappingDesc: "Переносить длинные строки по ширине окна редактора.",
 	settingsDisableAutoSaveName: "Отключить автосохранение",
 	settingsDisableAutoSaveDesc: "Требуется нажать сочетание клавиш или кнопку сохранения перед записью изменений на диск. Примечание: при закрытии Obsidian несохраненные изменения сохранятся автоматически.",
 	settingsAutoSaveWarning: "Предупреждение: автосохранение мгновенно записывает изменения на диск, что может увеличить риск случайного повреждения важных файлов кода.",

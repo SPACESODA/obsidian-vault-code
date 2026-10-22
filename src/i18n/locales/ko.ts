@@ -32,6 +32,7 @@ export const ko: TranslationSchema = {
 	// Context Menu
 	contextNewNoteHere: "여기에 새 노트 만들기",
 	contextNewFileHere: "여기에 새 파일 만들기 (모든 형식)",
+	contextNewFolderHere: "여기에 새 폴더 만들기",
 	contextNewFile: "새 파일 만들기 (모든 형식)",
 	contextEditInCodeEditor: "코드 편집기에서 편집",
 
@@ -112,7 +113,7 @@ export const ko: TranslationSchema = {
 	settingsIndentWithTabs: "탭 (Tabs)",
 	settingsIndentWithSpaces: "공백 (Spaces)",
 	settingsLineWrappingName: "자동 줄 바꿈",
-	settingsLineWrappingDesc: "긴 줄을 가로로 스크롤하는 대신 편집기 창 너비에 맞춰 줄 바꿈합니다.",
+	settingsLineWrappingDesc: "편집기 창 너비에 맞춰 긴 줄을 자동 줄 바꿈합니다.",
 	settingsDisableAutoSaveName: "자동 저장 비활성화",
 	settingsDisableAutoSaveDesc: "변경 사항을 디스크에 기록하기 전에 저장 단축키를 누르거나 저장 버튼을 클릭해야 합니다. 참고: Obsidian 앱을 종료할 때 저장되지 않은 편집 내용은 자동으로 저장됩니다.",
 	settingsAutoSaveWarning: "경고: 자동 저장을 허용하면 변경 사항이 즉시 디스크에 기록되므로 중요한 코드 파일이 실수로 손상될 위험이 높아질 수 있습니다.",

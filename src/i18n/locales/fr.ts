@@ -32,6 +32,7 @@ export const fr: TranslationSchema = {
 	// Context Menu
 	contextNewNoteHere: "Nouvelle note ici",
 	contextNewFileHere: "Nouveau fichier ici (tout type)",
+	contextNewFolderHere: "Nouveau dossier ici",
 	contextNewFile: "Nouveau fichier (tout type)",
 	contextEditInCodeEditor: "Modifier dans l'éditeur de code",
 
@@ -112,7 +113,7 @@ export const fr: TranslationSchema = {
 	settingsIndentWithTabs: "Tabulations",
 	settingsIndentWithSpaces: "Espaces",
 	settingsLineWrappingName: "Retour à la ligne",
-	settingsLineWrappingDesc: "Ajuster les longues lignes à la largeur de l'éditeur au lieu de faire défiler horizontalement.",
+	settingsLineWrappingDesc: "Ajuster les longues lignes à la largeur de l'éditeur.",
 	settingsDisableAutoSaveName: "Désactiver l'enregistrement automatique",
 	settingsDisableAutoSaveDesc: "Nécessite d'appuyer sur le raccourci d'enregistrement ou de cliquer sur le bouton avant d'écrire les modifications sur le disque. Remarque : à la fermeture d'Obsidian, les modifications non enregistrées sont automatiquement sauvegardées.",
 	settingsAutoSaveWarning: "Avertissement : l'enregistrement automatique écrit immédiatement les modifications sur le disque, ce qui peut augmenter le risque d'endommager accidentellement des fichiers de code sensibles.",

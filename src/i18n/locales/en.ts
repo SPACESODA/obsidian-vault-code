@@ -30,6 +30,7 @@ export const en = {
 	// Context Menu
 	contextNewNoteHere: "New note here",
 	contextNewFileHere: "New file here (any type)",
+	contextNewFolderHere: "New folder here",
 	contextNewFile: "New file (any type)",
 	contextEditInCodeEditor: "Edit in code editor",
 
@@ -110,7 +111,7 @@ export const en = {
 	settingsIndentWithTabs: "Tabs",
 	settingsIndentWithSpaces: "Spaces",
 	settingsLineWrappingName: "Line wrapping",
-	settingsLineWrappingDesc: "Wrap long lines to fit the editor window instead of scrolling horizontally.",
+	settingsLineWrappingDesc: "Wrap long lines to fit the editor window.",
 	settingsDisableAutoSaveName: "Disable auto-save",
 	settingsDisableAutoSaveDesc: "Require pressing the save shortcut or tapping the save button before changes are saved to disk. Limitation: if you quit the Obsidian app, unsaved edits will be saved automatically.",
 	settingsAutoSaveWarning: "Warning: Allowing auto-save immediately writes changes to disk, which may increase the risk of unintentionally damaging sensitive code files.",

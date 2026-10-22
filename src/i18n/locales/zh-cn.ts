@@ -32,6 +32,7 @@ export const zhCn: TranslationSchema = {
 	// Context Menu
 	contextNewNoteHere: "在此新建笔记",
 	contextNewFileHere: "在此新建文件（任何类型）",
+	contextNewFolderHere: "在此新建文件夹",
 	contextNewFile: "新建文件（任何类型）",
 	contextEditInCodeEditor: "在代码编辑器中编辑",
 
@@ -112,7 +113,7 @@ export const zhCn: TranslationSchema = {
 	settingsIndentWithTabs: "Tab (制表符)",
 	settingsIndentWithSpaces: "空格 (Spaces)",
 	settingsLineWrappingName: "自动换行",
-	settingsLineWrappingDesc: "长行自动折行以适应编辑器窗口，而非水平滚动。",
+	settingsLineWrappingDesc: "长行自动折行以适应编辑器窗口。",
 	settingsDisableAutoSaveName: "禁用自动保存",
 	settingsDisableAutoSaveDesc: "在将更改保存到磁盘之前，必须先按下保存快捷键或点击保存按钮。限制：如果退出 Obsidian 应用程序，未保存的编辑将自动保存。",
 	settingsAutoSaveWarning: "警告：允许自动保存会立即将更改写入磁盘，这可能会增加意外损坏敏感代码文件的风险。",

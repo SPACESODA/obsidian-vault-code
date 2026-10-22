@@ -32,6 +32,7 @@ export const ja: TranslationSchema = {
 	// Context Menu
 	contextNewNoteHere: "ここに新規ノートを作成",
 	contextNewFileHere: "ここに新規ファイルを作成（任意の形式）",
+	contextNewFolderHere: "ここに新規フォルダを作成",
 	contextNewFile: "新規ファイル（任意の形式）",
 	contextEditInCodeEditor: "コードエディタで編集",
 
@@ -112,7 +113,7 @@ export const ja: TranslationSchema = {
 	settingsIndentWithTabs: "タブ (Tabs)",
 	settingsIndentWithSpaces: "スペース (Spaces)",
 	settingsLineWrappingName: "行の折り返し",
-	settingsLineWrappingDesc: "エディタの幅に合わせて長い行を折り返します（無効時は水平スクロール）。",
+	settingsLineWrappingDesc: "エディタの幅に合わせて長い行を折り返します。",
 	settingsDisableAutoSaveName: "自動保存を無効化",
 	settingsDisableAutoSaveDesc: "変更をディスクに保存する前に、保存ショートカットキーを押すか保存ボタンをタップすることを必須にします。注意: Obsidian アプリを終了すると、未保存の編集は自動的に保存されます。",
 	settingsAutoSaveWarning: "警告: 自動保存を有効にすると変更が即座に書き込まれるため、機密コードファイルを誤って破損するリスクが高まる可能性があります。",

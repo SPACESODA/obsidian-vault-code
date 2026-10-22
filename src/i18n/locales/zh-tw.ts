@@ -32,6 +32,7 @@ export const zhTw: TranslationSchema = {
 	// Context Menu
 	contextNewNoteHere: "在此新增筆記",
 	contextNewFileHere: "在此新增檔案（任何類型）",
+	contextNewFolderHere: "在此新增資料夾",
 	contextNewFile: "新增檔案（任何類型）",
 	contextEditInCodeEditor: "在程式碼編輯器中編輯",
 
@@ -112,7 +113,7 @@ export const zhTw: TranslationSchema = {
 	settingsIndentWithTabs: "Tab (製表符)",
 	settingsIndentWithSpaces: "空格 (Spaces)",
 	settingsLineWrappingName: "自動換行",
-	settingsLineWrappingDesc: "將長行自動換行以符合編輯器視窗，而非水平捲動。",
+	settingsLineWrappingDesc: "將長行自動換行以符合編輯器視窗。",
 	settingsDisableAutoSaveName: "停用自動儲存",
 	settingsDisableAutoSaveDesc: "在將變更儲存到磁碟之前，必須先按下儲存快捷鍵或點選儲存按鈕。限制：若退出 Obsidian 應用程式，未儲存的編輯將會自動儲存。",
 	settingsAutoSaveWarning: "警告：允許自動儲存會立即將變更寫入磁碟，這可能會增加意外損壞機密程式碼檔案的風險。",

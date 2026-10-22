@@ -32,6 +32,7 @@ export const es: TranslationSchema = {
 	// Context Menu
 	contextNewNoteHere: "Nueva nota aquí",
 	contextNewFileHere: "Nuevo archivo aquí (cualquier tipo)",
+	contextNewFolderHere: "Nueva carpeta aquí",
 	contextNewFile: "Nuevo archivo (cualquier tipo)",
 	contextEditInCodeEditor: "Editar en editor de código",
 
@@ -112,7 +113,7 @@ export const es: TranslationSchema = {
 	settingsIndentWithTabs: "Tabulaciones",
 	settingsIndentWithSpaces: "Espacios",
 	settingsLineWrappingName: "Ajuste de línea",
-	settingsLineWrappingDesc: "Ajustar líneas largas a la ventana del editor en lugar de desplazarse horizontalmente.",
+	settingsLineWrappingDesc: "Ajustar líneas largas a la ventana del editor.",
 	settingsDisableAutoSaveName: "Desactivar guardado automático",
 	settingsDisableAutoSaveDesc: "Requiere pulsar el atajo de guardado o el botón de guardar antes de escribir cambios en el disco. Limitación: si cierra Obsidian, los cambios no guardados se guardarán automáticamente.",
 	settingsAutoSaveWarning: "Advertencia: El guardado automático escribe inmediatamente los cambios en el disco, lo que puede aumentar el riesgo de dañar accidentalmente archivos de código sensibles.",
