@@ -216,6 +216,8 @@
 	background-color: var(--background-secondary);
 	font-family: var(--font-interface);
 	font-size: var(--font-ui-smaller, 12px);
+	width: 100%;
+	box-sizing: border-box;
 }
 
 .hidden-files-search-row,
@@ -224,6 +226,7 @@
 	align-items: center;
 	gap: 6px;
 	width: 100%;
+	box-sizing: border-box;
 }
 
 /* Chevron expander button */
@@ -259,7 +262,7 @@
 	box-sizing: border-box;
 	flex: 1 1 auto;
 	min-width: 140px;
-	max-width: 480px;
+	width: 100%;
 	transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -353,8 +356,7 @@
 	flex-shrink: 0;
 }
 
-.hidden-files-search-actions .clickable-icon,
-.hidden-files-search-close-btn {
+.hidden-files-search-actions .clickable-icon {
 	width: 26px;
 	height: 26px;
 	min-width: 26px;
@@ -371,15 +373,13 @@
 	transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-.hidden-files-search-actions .clickable-icon svg,
-.hidden-files-search-close-btn svg {
+.hidden-files-search-actions .clickable-icon svg {
 	width: 15px;
 	height: 15px;
 	display: block;
 }
 
-.hidden-files-search-actions .clickable-icon:hover,
-.hidden-files-search-close-btn:hover {
+.hidden-files-search-actions .clickable-icon:hover {
 	background-color: var(--background-modifier-hover);
 	color: var(--text-normal);
 }
@@ -440,9 +440,6 @@
 	}
 	.hidden-files-search-actions {
 		order: 3;
-	}
-	.hidden-files-search-close-btn {
-		order: 4;
 		margin-left: auto;
 	}
 	.hidden-files-replace-row {

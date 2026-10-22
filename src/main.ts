@@ -1355,21 +1355,6 @@ class ModernSearchPanel implements Panel {
 			selectMatches(this.view);
 		});
 
-		// Close button
-		const closeBtn = searchRow.createEl("button", {
-			cls: "clickable-icon hidden-files-search-close-btn",
-			attr: {
-				title: t("searchClose"),
-				"aria-label": t("searchClose"),
-				type: "button",
-			},
-		});
-		setIcon(closeBtn, "x");
-		closeBtn.addEventListener("click", () => {
-			closeSearchPanel(this.view);
-			this.view.focus();
-		});
-
 		// Row 2: Replace row
 		this.replaceRowEl = this.dom.createDiv({
 			cls: "hidden-files-replace-row",
