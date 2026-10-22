@@ -2549,6 +2549,8 @@ export default class VaultCodePlugin extends Plugin {
 	private originalOnFileRenameInput:
 		| ((...args: unknown[]) => unknown)
 		| null = null;
+	private lastUnsupportedClickFile: string | null = null;
+	private lastUnsupportedClickTime = 0;
 
 	async onload() {
 		this.registerView(
@@ -2570,18 +2572,6 @@ export default class VaultCodePlugin extends Plugin {
 		this.patchFileManagerPrompt();
 
 		this.registerDomEvent(window, "input", this.onInputCapture, true);
-		this.registerDomEvent(
-			window,
-			"click",
-			this.onFileExplorerClickCapture,
-			true,
-		);
-		this.registerDomEvent(
-			window,
-			"keydown",
-			this.onFileExplorerKeyDownCapture,
-			true,
-		);
 
 		this.app.workspace.onLayoutReady(async () => {
 			this.patchFileExplorer();
@@ -3118,6 +3108,32 @@ export default class VaultCodePlugin extends Plugin {
 				file: TFile,
 				openState?: OpenViewState,
 			): Promise<void> {
+				// Intercept unsupported files: prevent external app launch on single click,
+				// while allowing double-click to open in default app if enabled.
+				if (file instanceof TFile && plugin.isUnsupportedFile(file)) {
+					if (plugin.settings.preventAutoOpenUnsupported) {
+						const now = Date.now();
+						const isDoubleClick =
+							plugin.lastUnsupportedClickFile === file.path &&
+							now - plugin.lastUnsupportedClickTime < 500;
+						plugin.lastUnsupportedClickFile = file.path;
+						plugin.lastUnsupportedClickTime = isDoubleClick
+							? 0
+							: now;
+
+						if (
+							isDoubleClick &&
+							plugin.settings.openUnsupportedOnDoubleClick
+						) {
+							const appWithOpen = plugin.app as unknown as {
+								openWithDefaultApp?: (p: string) => void;
+							};
+							appWithOpen.openWithDefaultApp?.(file.path);
+						}
+						return;
+					}
+				}
+
 				// If this active leaf is a dirty code file and auto-save is disabled,
 				// do NOT replace it! Open the clicked file in a new tab instead.
 				if (
@@ -4018,116 +4034,6 @@ export default class VaultCodePlugin extends Plugin {
 					tooltips.forEach((el) => el.remove());
 				}
 			}
-		}
-	};
-
-	selectFileInExplorer(titleEl: HTMLElement, file: TFile): void {
-		const leaves = this.app.workspace.getLeavesOfType("file-explorer");
-		for (const leaf of leaves) {
-			const view = leaf.view as unknown as {
-				containerEl?: HTMLElement;
-				selectedFile?: TAbstractFile;
-			};
-			if (view?.containerEl) {
-				const prevSelected = view.containerEl.querySelectorAll(
-					".nav-file-title.is-selected, .nav-folder-title.is-selected, .nav-file-title.is-active, .nav-folder-title.is-active",
-				);
-				prevSelected.forEach((el) => {
-					el.classList.remove("is-selected");
-					el.classList.remove("is-active");
-				});
-				view.selectedFile = file;
-			}
-		}
-
-		titleEl.classList.add("is-selected");
-		titleEl.classList.add("is-active");
-		titleEl.focus();
-	}
-
-	private onFileExplorerClickCapture = (evt: MouseEvent) => {
-		if (evt.button !== 0) return;
-		if (!this.settings.preventAutoOpenUnsupported) return;
-
-		const target = evt.target as HTMLElement | null;
-		if (!target) return;
-
-		const titleEl = target.closest(
-			".nav-file-title, .nav-folder-title",
-		);
-		if (!(titleEl instanceof HTMLElement)) return;
-
-		const explorer = titleEl.closest(
-			".workspace-leaf-content[data-type='file-explorer']",
-		);
-		if (!explorer) return;
-
-		// Clean up custom is-selected on other elements when an item in tree is clicked
-		const allSelected = explorer.querySelectorAll(".is-selected");
-		allSelected.forEach((el) => {
-			if (el !== titleEl) el.classList.remove("is-selected");
-		});
-
-		if (titleEl.classList.contains("nav-folder-title")) {
-			return; // Folder clicks handled natively by Obsidian
-		}
-
-		const dataPath = titleEl.getAttribute("data-path");
-		if (!dataPath) return;
-
-		const abstractFile = this.app.vault.getAbstractFileByPath(dataPath);
-		if (!(abstractFile instanceof TFile)) return;
-
-		if (this.isUnsupportedFile(abstractFile)) {
-			if (
-				evt.detail === 2 &&
-				this.settings.openUnsupportedOnDoubleClick
-			) {
-				evt.preventDefault();
-				evt.stopPropagation();
-				evt.stopImmediatePropagation();
-				const appWithOpen = this.app as unknown as {
-					openWithDefaultApp?: (p: string) => void;
-				};
-				appWithOpen.openWithDefaultApp?.(abstractFile.path);
-				return;
-			}
-
-			// Block the default Obsidian action (which would call openWithDefaultApp on single click!)
-			evt.preventDefault();
-			evt.stopPropagation();
-			evt.stopImmediatePropagation();
-
-			this.selectFileInExplorer(titleEl, abstractFile);
-		}
-	};
-
-	private onFileExplorerKeyDownCapture = (evt: KeyboardEvent) => {
-		if (evt.key !== "Enter") return;
-		if (!this.settings.preventAutoOpenUnsupported) return;
-
-		const target = evt.target as HTMLElement | null;
-		if (!target) return;
-
-		const titleEl = target.closest(".nav-file-title");
-		if (!(titleEl instanceof HTMLElement)) return;
-
-		const explorer = titleEl.closest(
-			".workspace-leaf-content[data-type='file-explorer']",
-		);
-		if (!explorer) return;
-
-		const dataPath = titleEl.getAttribute("data-path");
-		if (!dataPath) return;
-
-		const abstractFile = this.app.vault.getAbstractFileByPath(dataPath);
-		if (!(abstractFile instanceof TFile)) return;
-
-		if (this.isUnsupportedFile(abstractFile)) {
-			// Prevent accidental external application launch when pressing Enter
-			evt.preventDefault();
-			evt.stopPropagation();
-			evt.stopImmediatePropagation();
 		}
 	};
 

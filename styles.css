@@ -917,12 +917,6 @@
 	display: none !important;
 }
 
-/* Selected state for intercepted unsupported files in File Explorer */
-.nav-file-title.is-selected {
-	background-color: var(--nav-item-background-active, var(--background-modifier-active-hover)) !important;
-	color: var(--nav-item-color-active, var(--text-normal)) !important;
-}
-
 /* Ignored files and folders hidden by user ignore patterns */
 .nav-file.is-ignored-hidden,
 .nav-folder.is-ignored-hidden {
