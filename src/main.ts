@@ -417,6 +417,8 @@ interface VaultCodeSettings {
 	openUnsupportedOnDoubleClick: boolean;
 	ignoredPaths: string;
 	language: string;
+	tabSize: string;
+	indentWithTabs: string;
 }
 
 const DEFAULT_EXTENSIONS =
@@ -446,6 +448,8 @@ const DEFAULT_SETTINGS: VaultCodeSettings = {
 	openUnsupportedOnDoubleClick: true,
 	ignoredPaths: DEFAULT_IGNORED_PATHS,
 	language: "auto",
+	tabSize: "auto",
+	indentWithTabs: "auto",
 };
 
 interface IgnoreRule {
@@ -2185,8 +2189,23 @@ export class DotfileView extends TextFileView {
 	}
 
 	private createEditorState(content: string): EditorState {
-		const useTab = (this.app.vault.getConfig("useTab") as boolean) ?? true;
-		const tabSize = (this.app.vault.getConfig("tabSize") as number) ?? 4;
+		let useTab = (this.app.vault.getConfig("useTab") as boolean) ?? true;
+		if (this.plugin.settings.indentWithTabs === "tabs") {
+			useTab = true;
+		} else if (this.plugin.settings.indentWithTabs === "spaces") {
+			useTab = false;
+		}
+
+		let tabSize = (this.app.vault.getConfig("tabSize") as number) ?? 4;
+		if (
+			this.plugin.settings.tabSize &&
+			this.plugin.settings.tabSize !== "auto"
+		) {
+			const parsed = parseInt(this.plugin.settings.tabSize, 10);
+			if (!isNaN(parsed) && parsed > 0) {
+				tabSize = parsed;
+			}
+		}
 
 		const extensions: Extension[] = [
 			lineNumbers(),
@@ -2323,7 +2342,10 @@ export class DotfileView extends TextFileView {
 			(ext === "email" || ext === "eml"
 				? LanguageDescription.matchFilename(languages, "file.html")
 				: null) ||
-			(ext === "astro" || ext === "svelte"
+			(ext === "astro"
+				? LanguageDescription.matchFilename(languages, "file.tsx")
+				: null) ||
+			(ext === "svelte"
 				? LanguageDescription.matchFilename(languages, "file.html")
 				: null) ||
 			(ext === "svg"
@@ -4783,6 +4805,37 @@ class VaultCodeSettingTab extends PluginSettingTab {
 						new Notice(t("noticeExtensionsReset"));
 					}),
 			);
+
+		new Setting(containerEl)
+			.setName(t("settingsTabSizeName"))
+			.setDesc(t("settingsTabSizeDesc"))
+			.addDropdown((dropdown) => {
+				dropdown
+					.addOption("auto", t("settingsTabSizeAuto"))
+					.addOption("2", "2")
+					.addOption("4", "4")
+					.addOption("8", "8")
+					.setValue(this.plugin.settings.tabSize || "auto")
+					.onChange(async (value) => {
+						this.plugin.settings.tabSize = value;
+						await this.plugin.saveSettings();
+					});
+			});
+
+		new Setting(containerEl)
+			.setName(t("settingsIndentWithName"))
+			.setDesc(t("settingsIndentWithDesc"))
+			.addDropdown((dropdown) => {
+				dropdown
+					.addOption("auto", t("settingsIndentWithAuto"))
+					.addOption("tabs", t("settingsIndentWithTabs"))
+					.addOption("spaces", t("settingsIndentWithSpaces"))
+					.setValue(this.plugin.settings.indentWithTabs || "auto")
+					.onChange(async (value) => {
+						this.plugin.settings.indentWithTabs = value;
+						await this.plugin.saveSettings();
+					});
+			});
 
 		const autoSaveSetting = new Setting(containerEl)
 			.setName(t("settingsDisableAutoSaveName"))
