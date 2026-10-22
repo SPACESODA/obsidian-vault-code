@@ -5247,5 +5247,19 @@ class VaultCodeSettingTab extends PluginSettingTab {
 						new Notice(t("noticeAllSettingsReset"));
 					}),
 			);
+
+		const footerEl = containerEl.createDiv({
+			cls: "vault-code-settings-footer",
+		});
+		footerEl.createSpan({ text: "Brought to you by " });
+		footerEl.createEl("a", {
+			text: "SPACESODA",
+			href: "https://github.com/SPACESODA",
+		});
+		footerEl.createSpan({ text: " | Star on " });
+		footerEl.createEl("a", {
+			text: "GitHub",
+			href: "https://github.com/SPACESODA/obsidian-vault-code",
+		});
 	}
 }

@@ -548,6 +548,25 @@
 	margin-top: 36px;
 }
 
+/* Settings tab footer */
+.vault-code-settings-footer {
+	text-align: center;
+	font-size: var(--font-ui-smaller, 12px);
+	color: var(--text-muted);
+	margin-top: 32px;
+	margin-bottom: 20px;
+}
+
+.vault-code-settings-footer a {
+	color: var(--text-muted);
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+
+.vault-code-settings-footer a:hover {
+	color: var(--text-accent);
+}
+
 /* Dirty indicator dot */
 .hidden-files-editor-dirty-dot {
 	display: none;
