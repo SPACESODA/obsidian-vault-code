@@ -360,7 +360,7 @@ button.hidden-files-goto-close,
 .hidden-files-search-row,
 .hidden-files-replace-row {
 	display: flex;
-	align-items: center;
+	align-items: flex-start;
 	gap: 6px;
 	width: 100%;
 	box-sizing: border-box;
@@ -379,6 +379,7 @@ button.hidden-files-goto-close,
 	color: var(--text-muted);
 	border-radius: var(--radius-s, 4px);
 	flex-shrink: 0;
+	margin-top: 2px;
 }
 
 .hidden-files-search-chevron-btn svg {
@@ -390,12 +391,12 @@ button.hidden-files-goto-close,
 .hidden-files-search-input-wrapper,
 .hidden-files-replace-input-wrapper {
 	display: flex;
-	align-items: center;
+	align-items: flex-start;
 	background-color: var(--background-modifier-form-field, var(--background-primary));
 	border: 1px solid var(--background-modifier-border);
 	border-radius: var(--radius-s, 4px);
-	padding: 0 4px 0 8px;
-	height: 28px;
+	padding: 2px 4px 2px 8px;
+	min-height: 28px;
 	box-sizing: border-box;
 	flex: 1 1 auto;
 	min-width: 140px;
@@ -409,6 +410,9 @@ button.hidden-files-goto-close,
 	box-shadow: 0 0 0 1px var(--interactive-accent);
 }
 
+.hidden-files-search-input-wrapper textarea.hidden-files-search-input,
+.hidden-files-replace-input-wrapper textarea.hidden-files-search-input,
+textarea.hidden-files-search-input,
 .hidden-files-search-input-wrapper input.hidden-files-search-input,
 .hidden-files-replace-input-wrapper input.hidden-files-search-input,
 input.hidden-files-search-input,
@@ -422,9 +426,18 @@ input.hidden-files-search-input,
 	font-size: var(--font-ui-smaller, 12px);
 	flex: 1 1 auto;
 	min-width: 60px;
-	padding: 0 4px 0 0;
-	height: 100%;
-	line-height: 28px;
+	padding: 2px 4px 2px 0;
+	height: var(--search-input-height, 22px);
+	min-height: 22px;
+	max-height: 140px;
+	line-height: 20px;
+	resize: none;
+	overflow-y: hidden;
+	box-sizing: border-box;
+}
+
+.hidden-files-search-input.is-scrollable {
+	overflow-y: auto;
 }
 
 .hidden-files-search-input::placeholder {
@@ -441,6 +454,8 @@ input.hidden-files-search-input,
 	white-space: nowrap;
 	user-select: none;
 	flex-shrink: 0;
+	align-self: flex-start;
+	line-height: 22px;
 }
 
 .hidden-files-search-count.is-no-matches {
@@ -454,6 +469,8 @@ input.hidden-files-search-input,
 	gap: 2px;
 	margin-left: 2px;
 	flex-shrink: 0;
+	align-self: flex-start;
+	margin-top: 1px;
 }
 
 .hidden-files-search-toggle-btn {
@@ -494,6 +511,8 @@ input.hidden-files-search-input,
 	align-items: center;
 	gap: 3px;
 	flex-shrink: 0;
+	align-self: flex-start;
+	margin-top: 1px;
 }
 
 .hidden-files-search-actions .clickable-icon {

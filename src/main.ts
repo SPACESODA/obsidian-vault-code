@@ -1072,8 +1072,8 @@ class ModernSearchPanel implements Panel {
 	dom: HTMLElement;
 	private view: EditorView;
 	private query: SearchQuery;
-	private searchInput: HTMLInputElement;
-	private replaceInput: HTMLInputElement;
+	private searchInput: HTMLTextAreaElement;
+	private replaceInput: HTMLTextAreaElement;
 	private countEl: HTMLElement;
 	private caseBtn: HTMLElement;
 	private wordBtn: HTMLElement;
@@ -1127,10 +1127,10 @@ class ModernSearchPanel implements Panel {
 			cls: "hidden-files-search-input-wrapper",
 		});
 
-		this.searchInput = searchInputWrapper.createEl("input", {
+		this.searchInput = searchInputWrapper.createEl("textarea", {
 			cls: "hidden-files-search-input",
 			attr: {
-				type: "text",
+				rows: "1",
 				name: "search",
 				"main-field": "true",
 				placeholder: t("searchFindPlaceholder"),
@@ -1140,6 +1140,7 @@ class ModernSearchPanel implements Panel {
 			},
 		});
 		this.searchInput.value = this.query.search;
+		this.autoResizeInput(this.searchInput);
 
 		// Match count pill
 		this.countEl = searchInputWrapper.createSpan({
@@ -1254,10 +1255,10 @@ class ModernSearchPanel implements Panel {
 			cls: "hidden-files-replace-input-wrapper",
 		});
 
-		this.replaceInput = replaceInputWrapper.createEl("input", {
+		this.replaceInput = replaceInputWrapper.createEl("textarea", {
 			cls: "hidden-files-search-input",
 			attr: {
-				type: "text",
+				rows: "1",
 				name: "replace",
 				placeholder: t("searchReplacePlaceholder"),
 				"aria-label": t("searchReplaceAriaLabel"),
@@ -1266,6 +1267,7 @@ class ModernSearchPanel implements Panel {
 			},
 		});
 		this.replaceInput.value = this.query.replace;
+		this.autoResizeInput(this.replaceInput);
 
 		const replaceBtnsWrapper = this.replaceRowEl.createDiv({
 			cls: "hidden-files-replace-actions",
@@ -1298,8 +1300,14 @@ class ModernSearchPanel implements Panel {
 		});
 
 		// Input event listeners
-		this.searchInput.addEventListener("input", () => this.commit());
-		this.replaceInput.addEventListener("input", () => this.commit());
+		this.searchInput.addEventListener("input", () => {
+			this.autoResizeInput(this.searchInput);
+			this.commit();
+		});
+		this.replaceInput.addEventListener("input", () => {
+			this.autoResizeInput(this.replaceInput);
+			this.commit();
+		});
 
 		// Keyboard navigation
 		this.dom.addEventListener("keydown", (e: KeyboardEvent) => {
@@ -1332,6 +1340,16 @@ class ModernSearchPanel implements Panel {
 				return;
 			}
 			if (e.key === "Enter" && e.target === this.searchInput) {
+				if (e.ctrlKey || e.metaKey) {
+					// VS Code style: Ctrl+Enter or Cmd+Enter inserts a newline into the find query
+					e.preventDefault();
+					const start = this.searchInput.selectionStart ?? this.searchInput.value.length;
+					const end = this.searchInput.selectionEnd ?? this.searchInput.value.length;
+					this.searchInput.setRangeText("\n", start, end, "end");
+					this.autoResizeInput(this.searchInput);
+					this.commit();
+					return;
+				}
 				e.preventDefault();
 				if (e.altKey) {
 					selectMatches(this.view);
@@ -1343,6 +1361,16 @@ class ModernSearchPanel implements Panel {
 				return;
 			}
 			if (e.key === "Enter" && e.target === this.replaceInput) {
+				if (e.ctrlKey || e.metaKey) {
+					// VS Code style: Ctrl+Enter or Cmd+Enter inserts a newline into the replace query
+					e.preventDefault();
+					const start = this.replaceInput.selectionStart ?? this.replaceInput.value.length;
+					const end = this.replaceInput.selectionEnd ?? this.replaceInput.value.length;
+					this.replaceInput.setRangeText("\n", start, end, "end");
+					this.autoResizeInput(this.replaceInput);
+					this.commit();
+					return;
+				}
 				e.preventDefault();
 				if (e.altKey || e.shiftKey) {
 					this.promptReplaceAll();
@@ -1464,9 +1492,25 @@ class ModernSearchPanel implements Panel {
 		}
 	}
 
+	private autoResizeInput(el: HTMLTextAreaElement): void {
+		const baseHeight = "22px";
+		el.setCssProps({ "--search-input-height": baseHeight });
+		const scrollH = el.scrollHeight;
+		if (scrollH > 24) {
+			const newHeight = `${Math.min(scrollH, 140)}px`;
+			el.setCssProps({ "--search-input-height": newHeight });
+			el.toggleClass("is-scrollable", scrollH > 140);
+		} else {
+			el.setCssProps({ "--search-input-height": baseHeight });
+			el.removeClass("is-scrollable");
+		}
+	}
+
 	mount(): void {
 		this.searchInput.focus();
 		this.searchInput.select();
+		this.autoResizeInput(this.searchInput);
+		this.autoResizeInput(this.replaceInput);
 		this.updateMatchCount();
 	}
 
@@ -1485,6 +1529,8 @@ class ModernSearchPanel implements Panel {
 		if (queryChanged) {
 			this.searchInput.value = this.query.search;
 			this.replaceInput.value = this.query.replace;
+			this.autoResizeInput(this.searchInput);
+			this.autoResizeInput(this.replaceInput);
 			this.isCaseSensitive = this.query.caseSensitive;
 			this.isRegex = this.query.regexp;
 			this.isWholeWord = this.query.wholeWord;
@@ -2191,8 +2237,8 @@ export class DotfileView extends TextFileView {
 		}
 		if (this.editor) {
 			openSearchPanel(this.editor);
-			const searchInput = this.editor.dom.querySelector<HTMLInputElement>(
-				'.hidden-files-search-panel input[name="search"]',
+			const searchInput = this.editor.dom.querySelector<HTMLElement & { focus: () => void; select: () => void }>(
+				'.hidden-files-search-panel [name="search"]',
 			);
 			if (searchInput) {
 				searchInput.focus();
@@ -2213,8 +2259,8 @@ export class DotfileView extends TextFileView {
 			if (panelDom) {
 				panelDom.dispatchEvent(new CustomEvent("open-replace"));
 			}
-			const replaceInput = this.editor.dom.querySelector<HTMLInputElement>(
-				'.hidden-files-search-panel input[name="replace"]',
+			const replaceInput = this.editor.dom.querySelector<HTMLElement & { focus: () => void; select: () => void }>(
+				'.hidden-files-search-panel [name="replace"]',
 			);
 			if (replaceInput) {
 				replaceInput.focus();
