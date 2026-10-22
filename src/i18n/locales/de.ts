@@ -62,6 +62,10 @@ export const de: TranslationSchema = {
 	modalReplaceAllMessage: "Möchten Sie wirklich alle {0} Vorkommen von „{1}“ durch „{2}“ ersetzen?",
 	modalButtonReplaceAll: "Alle ersetzen",
 
+	// Modals - Go to Line
+	modalGotoLineDesc: "Zeile {0} von {1}",
+	modalButtonGo: "Gehe zu",
+
 	// Callouts
 	calloutBinaryTitle: "Nicht unterstütztes Binärformat",
 	calloutBinaryDesc: "Diese Datei ({0}) kann nicht im Code-Editor geöffnet werden, um eine Beschädigung der Binärdaten zu verhindern.",

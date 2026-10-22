@@ -60,6 +60,10 @@ export const en = {
 	modalReplaceAllMessage: "Are you sure you want to replace all {0} occurrences of \"{1}\" with \"{2}\"?",
 	modalButtonReplaceAll: "Replace all",
 
+	// Modals - Go to Line
+	modalGotoLineDesc: "Line {0} of {1}",
+	modalButtonGo: "Go",
+
 	// Callouts
 	calloutBinaryTitle: "Unsupported binary format",
 	calloutBinaryDesc: "This file ({0}) cannot be opened in the code editor to protect it from binary corruption.",

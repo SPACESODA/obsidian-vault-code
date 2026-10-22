@@ -62,6 +62,10 @@ export const zhCn: TranslationSchema = {
 	modalReplaceAllMessage: "确定要将全部 {0} 个“{1}”替换为“{2}”吗？",
 	modalButtonReplaceAll: "全部替换",
 
+	// Modals - Go to Line
+	modalGotoLineDesc: "第 {0} 行，共 {1} 行",
+	modalButtonGo: "跳转",
+
 	// Callouts
 	calloutBinaryTitle: "不支持的二进制格式",
 	calloutBinaryDesc: "无法在代码编辑器中打开此文件（{0}），以防止二进制数据损坏。",

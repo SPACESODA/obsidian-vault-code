@@ -62,6 +62,10 @@ export const ru: TranslationSchema = {
 	modalReplaceAllMessage: "Вы уверены, что хотите заменить все {0} совпадений «{1}» на «{2}»?",
 	modalButtonReplaceAll: "Заменить все",
 
+	// Modals - Go to Line
+	modalGotoLineDesc: "Строка {0} из {1}",
+	modalButtonGo: "Перейти",
+
 	// Callouts
 	calloutBinaryTitle: "Неподдерживаемый двоичный формат",
 	calloutBinaryDesc: "Этот файл ({0}) нельзя открыть в редакторе кода во избежание повреждения двоичных данных.",

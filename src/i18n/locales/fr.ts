@@ -62,6 +62,10 @@ export const fr: TranslationSchema = {
 	modalReplaceAllMessage: "Voulez-vous vraiment remplacer les {0} occurrences de « {1} » par « {2} » ?",
 	modalButtonReplaceAll: "Tout remplacer",
 
+	// Modals - Go to Line
+	modalGotoLineDesc: "Ligne {0} sur {1}",
+	modalButtonGo: "Aller",
+
 	// Callouts
 	calloutBinaryTitle: "Format binaire non pris en charge",
 	calloutBinaryDesc: "Ce fichier ({0}) ne peut pas être ouvert dans l'éditeur de code afin d'éviter toute corruption binaire.",

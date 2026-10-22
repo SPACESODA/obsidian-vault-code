@@ -65,7 +65,6 @@ import {
 	selectMatches,
 	replaceNext,
 	replaceAll,
-	gotoLine,
 } from "@codemirror/search";
 import {
 	foldGutter,
@@ -697,6 +696,150 @@ class ConfirmReplaceAllModal extends Modal {
 
 		// Auto-focus confirm button
 		replaceAllBtn.focus();
+	}
+
+	onClose(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+	}
+}
+
+/* ── Go To Line Modal ──────────────────────────────────────── */
+
+class GotoLineModal extends Modal {
+	private view: DotfileView;
+	private inputEl!: HTMLInputElement;
+	private errorEl!: HTMLElement;
+
+	constructor(app: App, view: DotfileView) {
+		super(app);
+		this.view = view;
+	}
+
+	onOpen(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+		contentEl.addClass("hidden-files-modal", "hidden-files-goto-modal");
+
+		contentEl.createEl("h3", {
+			text: t("commandGotoLine"),
+			cls: "hidden-files-modal-title",
+		});
+
+		const editor = this.view.editor;
+		if (!editor) {
+			this.close();
+			return;
+		}
+
+		const state = editor.state;
+		const totalLines = state.doc.lines;
+		const currentLine = state.doc.lineAt(state.selection.main.head).number;
+
+		const descEl = contentEl.createDiv({
+			cls: "hidden-files-goto-desc",
+		});
+		descEl.setText(t("modalGotoLineDesc", currentLine, totalLines));
+
+		const formEl = contentEl.createEl("form");
+		formEl.addEventListener("submit", (e) => {
+			e.preventDefault();
+			this.submit();
+		});
+
+		this.inputEl = formEl.createEl("input", {
+			type: "text",
+			cls: "hidden-files-modal-input",
+			value: String(currentLine),
+		});
+		this.inputEl.setAttribute(
+			"placeholder",
+			`1 - ${totalLines} (e.g. 42, 42:10, +10)`,
+		);
+
+		this.errorEl = formEl.createDiv({
+			cls: "hidden-files-modal-error",
+		});
+		this.errorEl.hide();
+
+		const buttonContainer = formEl.createDiv({
+			cls: "hidden-files-modal-buttons",
+		});
+
+		const cancelBtn = buttonContainer.createEl("button", {
+			text: t("modalButtonCancel"),
+			type: "button",
+		});
+		cancelBtn.addEventListener("click", () => {
+			this.close();
+		});
+
+		buttonContainer.createEl("button", {
+			text: t("modalButtonGo"),
+			cls: "mod-cta",
+			type: "submit",
+		});
+
+		this.inputEl.addEventListener("input", () => {
+			this.errorEl.hide();
+		});
+
+		setTimeout(() => {
+			this.inputEl.focus();
+			this.inputEl.select();
+		}, 50);
+	}
+
+	private submit(): void {
+		const raw = this.inputEl.value.trim();
+		if (!raw) {
+			this.close();
+			return;
+		}
+
+		const editor = this.view.editor;
+		if (!editor) {
+			this.close();
+			return;
+		}
+
+		const state = editor.state;
+		const totalLines = state.doc.lines;
+		const currentHead = state.selection.main.head;
+		const currentLine = state.doc.lineAt(currentHead).number;
+
+		// Match formats: "42", "42:10", "+10", "-5", "50%"
+		const match = /^([+-])?(\d+)?(?::(\d+))?(%)?$/.exec(raw);
+		if (!match) {
+			this.errorEl.setText(`Invalid line format: "${raw}"`);
+			this.errorEl.show();
+			return;
+		}
+
+		const [, sign, lnStr, clStr, percent] = match;
+		const col = clStr ? Math.max(0, parseInt(clStr, 10) - 1) : 0;
+		let line = lnStr ? parseInt(lnStr, 10) : currentLine;
+
+		if (lnStr && percent) {
+			let pc = line / 100;
+			if (sign) {
+				pc = pc * (sign === "-" ? -1 : 1) + (currentLine / totalLines);
+			}
+			line = Math.round(totalLines * pc);
+		} else if (lnStr && sign) {
+			line = currentLine + (sign === "-" ? -line : line);
+		}
+
+		const clampedLine = Math.max(1, Math.min(totalLines, line));
+		const docLine = state.doc.line(clampedLine);
+		const targetPos = docLine.from + Math.min(col, docLine.length);
+
+		editor.dispatch({
+			selection: EditorSelection.cursor(targetPos),
+			effects: EditorView.scrollIntoView(targetPos, { y: "center" }),
+		});
+		editor.focus();
+		this.close();
 	}
 
 	onClose(): void {
@@ -1657,6 +1800,162 @@ export const smartNewlineAndIndent: Command = (view: EditorView) => {
 
 /* ── Prevent Stuck Auto-Scroll Extension ────────────────────── */
 
+let isGlobalMouseDown = false;
+const activeDragScrollIntervals = new Set<number>();
+
+if (typeof window !== "undefined") {
+	window.addEventListener(
+		"mousedown",
+		(e) => {
+			if (e.buttons > 0) isGlobalMouseDown = true;
+			if (e.button === 1) {
+				// Prevent Chromium middle-click autoscroll mode
+				e.preventDefault();
+			}
+		},
+		true,
+	);
+	window.addEventListener(
+		"mouseup",
+		() => {
+			isGlobalMouseDown = false;
+			clearAllDragScrollIntervals();
+		},
+		true,
+	);
+	window.addEventListener(
+		"pointerup",
+		() => {
+			isGlobalMouseDown = false;
+			clearAllDragScrollIntervals();
+		},
+		true,
+	);
+	window.addEventListener(
+		"dragend",
+		() => {
+			isGlobalMouseDown = false;
+			clearAllDragScrollIntervals();
+		},
+		true,
+	);
+	window.addEventListener(
+		"blur",
+		() => {
+			isGlobalMouseDown = false;
+			clearAllDragScrollIntervals();
+		},
+		true,
+	);
+}
+
+function clearAllDragScrollIntervals(): void {
+	for (const id of activeDragScrollIntervals) {
+		try {
+			clearInterval(id);
+		} catch {
+			// ignore
+		}
+	}
+	activeDragScrollIntervals.clear();
+}
+
+let isMouseSelectionPatched = false;
+
+function patchMouseSelectionPrototype(mouseSel: unknown): void {
+	if (isMouseSelectionPatched || !mouseSel) return;
+	isMouseSelectionPatched = true;
+
+	const proto = Object.getPrototypeOf(mouseSel) as {
+		_vaultCodePatched?: boolean;
+		setScrollSpeed?: (sx: number, sy: number) => void;
+		scroll?: () => void;
+		destroy?: () => void;
+		scrolling?: number;
+		scrollSpeed?: { x: number; y: number };
+		lastEvent?: unknown;
+	} | null;
+
+	if (!proto || proto._vaultCodePatched) return;
+	proto._vaultCodePatched = true;
+
+	const origSetScrollSpeed = proto.setScrollSpeed;
+	if (typeof origSetScrollSpeed === "function") {
+		proto.setScrollSpeed = function (sx: number, sy: number) {
+			const res = origSetScrollSpeed.call(this, sx, sy);
+			if (this.scrolling != null && this.scrolling > -1) {
+				activeDragScrollIntervals.add(this.scrolling);
+			}
+			return res;
+		};
+	}
+
+	const origScroll = proto.scroll;
+	if (typeof origScroll === "function") {
+		proto.scroll = function () {
+			// If mouse button is not physically held down, kill the interval immediately
+			const lastEvent = this.lastEvent as MouseEvent | undefined;
+			const hasButton =
+				lastEvent && typeof lastEvent.buttons === "number"
+					? lastEvent.buttons > 0
+					: isGlobalMouseDown;
+
+			if (!hasButton || !isGlobalMouseDown) {
+				if (this.scrolling != null && this.scrolling > -1) {
+					activeDragScrollIntervals.delete(this.scrolling);
+					try {
+						clearInterval(this.scrolling);
+					} catch {
+						// ignore
+					}
+					this.scrolling = -1;
+					this.scrollSpeed = { x: 0, y: 0 };
+				}
+				if (typeof this.destroy === "function") {
+					try {
+						this.destroy();
+					} catch {
+						// ignore
+					}
+				}
+				return;
+			}
+
+			try {
+				origScroll.call(this);
+			} catch {
+				if (this.scrolling != null && this.scrolling > -1) {
+					activeDragScrollIntervals.delete(this.scrolling);
+					try {
+						clearInterval(this.scrolling);
+					} catch {
+						// ignore
+					}
+					this.scrolling = -1;
+					this.scrollSpeed = { x: 0, y: 0 };
+				}
+			}
+		};
+	}
+
+	const origDestroy = proto.destroy;
+	if (typeof origDestroy === "function") {
+		proto.destroy = function () {
+			if (this.scrolling != null && this.scrolling > -1) {
+				activeDragScrollIntervals.delete(this.scrolling);
+				try {
+					clearInterval(this.scrolling);
+				} catch {
+					// ignore
+				}
+				this.scrolling = -1;
+				this.scrollSpeed = { x: 0, y: 0 };
+			}
+			return origDestroy.call(this);
+		};
+	}
+}
+
 interface InternalMouseSelection {
 	scrolling?: number;
 	scrollSpeed?: { x: number; y: number };
@@ -1753,7 +2052,29 @@ export function preventStuckAutoScrollExtension(): Extension {
 			constructor(view: EditorView) {
 				const win = view.dom.ownerDocument?.defaultView ?? window;
 
+				const inputState = (view as unknown as InternalEditorView)
+					.inputState as {
+					_vaultCodeHooked?: boolean;
+					startMouseSelection?: (mouseSel: unknown) => void;
+				} | undefined;
+
+				if (
+					inputState &&
+					!inputState._vaultCodeHooked &&
+					typeof inputState.startMouseSelection === "function"
+				) {
+					inputState._vaultCodeHooked = true;
+					const origStart =
+						inputState.startMouseSelection.bind(inputState);
+					inputState.startMouseSelection = (mSel: unknown) => {
+						patchMouseSelectionPrototype(mSel);
+						return origStart(mSel);
+					};
+				}
+
 				const onGlobalUp = (e: MouseEvent | PointerEvent) => {
+					isGlobalMouseDown = false;
+					clearAllDragScrollIntervals();
 					if (e.buttons === 0 || e.button === 0) {
 						stopInternalMouseSelection(view, true);
 					}
@@ -1761,20 +2082,25 @@ export function preventStuckAutoScrollExtension(): Extension {
 
 				const onGlobalMove = (e: MouseEvent | PointerEvent) => {
 					if (e.buttons === 0) {
-						const inputState = (view as unknown as InternalEditorView)
-							.inputState;
-						if (inputState?.mouseSelection) {
+						isGlobalMouseDown = false;
+						clearAllDragScrollIntervals();
+						const currentInputState = (
+							view as unknown as InternalEditorView
+						).inputState;
+						if (currentInputState?.mouseSelection) {
 							stopInternalMouseSelection(view, false);
 						}
 					}
 				};
 
 				const onCancel = () => {
+					clearAllDragScrollIntervals();
 					stopInternalMouseSelection(view, false);
 				};
 
 				const onGlobalKeyDown = (e: KeyboardEvent) => {
 					if (e.key === "Escape") {
+						clearAllDragScrollIntervals();
 						stopInternalMouseSelection(view, false);
 					}
 				};
@@ -1783,6 +2109,7 @@ export function preventStuckAutoScrollExtension(): Extension {
 					if (e.button === 1) {
 						// Prevent Chromium middle-click autoscroll mode
 						e.preventDefault();
+						clearAllDragScrollIntervals();
 						stopInternalMouseSelection(view, false);
 					}
 				};
@@ -1825,6 +2152,7 @@ export function preventStuckAutoScrollExtension(): Extension {
 			}
 
 			destroy() {
+				clearAllDragScrollIntervals();
 				for (const cleanup of this.cleanups) {
 					cleanup();
 				}
@@ -1837,7 +2165,7 @@ export function preventStuckAutoScrollExtension(): Extension {
 /* ── Dotfile & Code Editor View ────────────────────────────── */
 
 export class DotfileView extends TextFileView {
-	private editor: EditorView | null = null;
+	public editor: EditorView | null = null;
 	private editorEl: HTMLElement | null = null;
 	private previewEl: HTMLElement | null = null;
 	private langEl: HTMLElement | null = null;
@@ -2020,9 +2348,7 @@ export class DotfileView extends TextFileView {
 		if (this.isPreviewMode) {
 			this.toggleViewMode();
 		}
-		if (this.editor) {
-			gotoLine(this.editor);
-		}
+		new GotoLineModal(this.app, this).open();
 	}
 
 	async saveExplicitly(): Promise<void> {
@@ -2345,7 +2671,18 @@ export class DotfileView extends TextFileView {
 					// VS Code muscle memory parity
 					{
 						key: "Ctrl-g",
-						run: gotoLine,
+						run: () => {
+							this.openGotoLine();
+							return true;
+						},
+						preventDefault: true,
+					},
+					{
+						key: "Mod-Alt-g",
+						run: () => {
+							this.openGotoLine();
+							return true;
+						},
 						preventDefault: true,
 					},
 					{

@@ -62,6 +62,10 @@ export const es: TranslationSchema = {
 	modalReplaceAllMessage: "¿Seguro que quieres reemplazar las {0} coincidencias de «{1}» por «{2}»?",
 	modalButtonReplaceAll: "Reemplazar todo",
 
+	// Modals - Go to Line
+	modalGotoLineDesc: "Línea {0} de {1}",
+	modalButtonGo: "Ir",
+
 	// Callouts
 	calloutBinaryTitle: "Formato binario no compatible",
 	calloutBinaryDesc: "Este archivo ({0}) no se puede abrir en el editor de código para protegerlo de posibles corrupciones binarias.",

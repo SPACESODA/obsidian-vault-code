@@ -62,6 +62,10 @@ export const zhTw: TranslationSchema = {
 	modalReplaceAllMessage: "確定要將全部 {0} 個「{1}」取代為「{2}」嗎？",
 	modalButtonReplaceAll: "全部取代",
 
+	// Modals - Go to Line
+	modalGotoLineDesc: "第 {0} 行，共 {1} 行",
+	modalButtonGo: "跳轉",
+
 	// Callouts
 	calloutBinaryTitle: "不支援的二進位格式",
 	calloutBinaryDesc: "無法在程式碼編輯器中開啟此檔案（{0}），以防止二進位資料損壞。",

@@ -62,6 +62,10 @@ export const ja: TranslationSchema = {
 	modalReplaceAllMessage: "{0} 件の一致する「{1}」を「{2}」にすべて置換しますか？",
 	modalButtonReplaceAll: "すべて置換",
 
+	// Modals - Go to Line
+	modalGotoLineDesc: "行 {0} / 全 {1} 行",
+	modalButtonGo: "移動",
+
 	// Callouts
 	calloutBinaryTitle: "サポートされていないバイナリ形式",
 	calloutBinaryDesc: "バイナリ破損を防ぐため、このファイル（{0}）をコードエディタで開くことはできません。",

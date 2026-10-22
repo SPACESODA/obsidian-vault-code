@@ -62,6 +62,10 @@ export const ko: TranslationSchema = {
 	modalReplaceAllMessage: "{0}개의 \"{1}\" 일치 항목을 \"{2}\"(으)로 모두 바꾸시겠습니까?",
 	modalButtonReplaceAll: "모두 바꾸기",
 
+	// Modals - Go to Line
+	modalGotoLineDesc: "{1}행 중 {0}행",
+	modalButtonGo: "이동",
+
 	// Callouts
 	calloutBinaryTitle: "지원되지 않는 바이너리 형식",
 	calloutBinaryDesc: "데이터 손상을 방지하기 위해 이 파일({0})은 코드 편집기에서 열 수 없습니다.",
