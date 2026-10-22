@@ -14,6 +14,7 @@ import {
 	OpenViewState,
 	Platform,
 	setIcon,
+	getIcon,
 	normalizePath,
 	Scope,
 	ViewStateResult,
@@ -88,6 +89,19 @@ import { languages } from "@codemirror/language-data";
 import { t, setLanguage, SUPPORTED_LANGUAGES } from "./i18n";
 
 /* ── View type constants ───────────────────────────────────── */
+
+/**
+ * Sets the code editor icon, preferring `</>` (`code-xml` / `code-2`) over `<>` (`code`).
+ */
+export function setCodeIcon(el: HTMLElement): void {
+	if (getIcon("code-xml")) {
+		setIcon(el, "code-xml");
+	} else if (getIcon("code-2")) {
+		setIcon(el, "code-2");
+	} else {
+		setIcon(el, "code");
+	}
+}
 
 export const VIEW_TYPE_DOTFILE = "vault-code-editor";
 
@@ -2665,7 +2679,11 @@ export class DotfileView extends TextFileView {
 		if (this.viewToggleBtnEl) {
 			this.viewToggleBtnEl.show();
 			if (this.viewToggleIconEl) {
-				setIcon(this.viewToggleIconEl, this.isPreviewMode ? "code" : "eye");
+				if (this.isPreviewMode) {
+					setCodeIcon(this.viewToggleIconEl);
+				} else {
+					setIcon(this.viewToggleIconEl, "eye");
+				}
 			}
 			if (this.viewToggleTextEl) {
 				this.viewToggleTextEl.setText(
@@ -3422,7 +3440,7 @@ export default class VaultCodePlugin extends Plugin {
 				? t("viewToggleTooltip")
 				: t("contextEditInCodeEditor"),
 		);
-		setIcon(btn, "code");
+		setCodeIcon(btn);
 
 		btn.addEventListener("click", (evt: MouseEvent) => {
 			evt.preventDefault();
