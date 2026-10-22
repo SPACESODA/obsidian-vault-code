@@ -19,6 +19,7 @@ import {
 	normalizePath,
 	Scope,
 	ViewStateResult,
+	requestUrl,
 } from "obsidian";
 import {
 	EditorView,
@@ -3258,6 +3259,314 @@ export class DotfileView extends TextFileView {
 		}
 	}
 
+	private static cssCache = new Map<string, string>();
+
+	private resolveCssUrls(css: string, baseUrl: string): string {
+		return css.replace(
+			/url\(\s*(['"]?)([^'"]+)\1\s*\)/gi,
+			(match, quote, relUrl) => {
+				const trimmed = (relUrl as string).trim();
+				if (
+					trimmed.startsWith("data:") ||
+					trimmed.startsWith("blob:") ||
+					trimmed.startsWith("http://") ||
+					trimmed.startsWith("https://")
+				) {
+					return match;
+				}
+				if (trimmed.startsWith("//")) {
+					return `url(${quote}https:${trimmed}${quote})`;
+				}
+				try {
+					const resolved = new URL(trimmed, baseUrl).href;
+					return `url(${quote}${resolved}${quote})`;
+				} catch {
+					return match;
+				}
+			},
+		);
+	}
+
+	private async resolveCssImports(
+		css: string,
+		baseUrl: string,
+		depth = 0,
+	): Promise<string> {
+		if (depth > 2) return css;
+		const importRegex =
+			/@import\s+(?:url\(\s*(['"]?)([^'"]+)\1\s*\)|(['"])([^'"]+)\3)\s*;/gi;
+		const matches = [...css.matchAll(importRegex)];
+		if (matches.length === 0) return css;
+
+		let resultCss = css;
+		for (const m of matches) {
+			const rawUrl = (m[2] ?? m[4] ?? "").trim();
+			if (!rawUrl) continue;
+			let importUrl = rawUrl;
+			if (importUrl.startsWith("//")) {
+				importUrl = "https:" + importUrl;
+			} else if (
+				!importUrl.startsWith("http://") &&
+				!importUrl.startsWith("https://")
+			) {
+				try {
+					importUrl = new URL(importUrl, baseUrl).href;
+				} catch {
+					continue;
+				}
+			}
+
+			let importedCss = DotfileView.cssCache.get(importUrl);
+			if (!importedCss) {
+				try {
+					const resp = await requestUrl({ url: importUrl, throw: false });
+					if (resp.status >= 200 && resp.status < 300) {
+						importedCss = this.resolveCssUrls(resp.text, importUrl);
+						importedCss = await this.resolveCssImports(
+							importedCss,
+							importUrl,
+							depth + 1,
+						);
+						DotfileView.cssCache.set(importUrl, importedCss);
+					}
+				} catch {
+					// fallback or ignore
+				}
+			}
+			if (importedCss) {
+				resultCss = resultCss.replace(
+					m[0],
+					`/* @import ${importUrl} */\n${importedCss}\n`,
+				);
+			}
+		}
+		return resultCss;
+	}
+
+	private async prepareAndInlineHtml(
+		content: string,
+		localBaseUrl?: string,
+	): Promise<string> {
+		let htmlContent = content;
+
+		// 1. Detect remote web origin if available
+		let webOrigin = "";
+		const baseMatch = htmlContent.match(
+			/<base\b[^>]+href=["'](https?:\/\/[^"'/]+)/i,
+		);
+		const canonicalMatch =
+			htmlContent.match(
+				/<link\b[^>]+rel=["']canonical["'][^>]+href=["'](https?:\/\/[^"'/]+)/i,
+			) ||
+			htmlContent.match(
+				/<link\b[^>]+href=["'](https?:\/\/[^"'/]+)[^>]+rel=["']canonical["']/i,
+			);
+		const ogMatch =
+			htmlContent.match(
+				/<meta\b[^>]+property=["']og:url["'][^>]+content=["'](https?:\/\/[^"'/]+)/i,
+			) ||
+			htmlContent.match(
+				/<meta\b[^>]+content=["'](https?:\/\/[^"'/]+)[^>]+property=["']og:url["']/i,
+			);
+		const savedMatch = htmlContent.match(
+			/saved from url=\(\d+\)(https?:\/\/[^"'\s/]+)/i,
+		);
+
+		if (baseMatch?.[1]) {
+			webOrigin = baseMatch[1];
+		} else if (canonicalMatch?.[1]) {
+			webOrigin = canonicalMatch[1];
+		} else if (ogMatch?.[1]) {
+			webOrigin = ogMatch[1];
+		} else if (savedMatch?.[1]) {
+			webOrigin = savedMatch[1];
+		} else {
+			const assetOrigins = [
+				...htmlContent.matchAll(
+					/(?:src|href)=["'](https?:\/\/[a-zA-Z0-9.-]+)/gi,
+				),
+			]
+				.map((m) => m[1])
+				.filter(
+					(url): url is string =>
+						typeof url === "string" &&
+						!url.includes("google") &&
+						!url.includes("cdnjs") &&
+						!url.includes("jsdelivr") &&
+						!url.includes("unpkg"),
+				);
+			if (assetOrigins.length > 0) {
+				const counts = new Map<string, number>();
+				for (const o of assetOrigins) {
+					counts.set(o, (counts.get(o) ?? 0) + 1);
+				}
+				let best = "";
+				let maxCount = 0;
+				for (const [o, count] of counts.entries()) {
+					if (count > maxCount) {
+						best = o;
+						maxCount = count;
+					}
+				}
+				if (best) webOrigin = best;
+			}
+		}
+
+		// 2. Upgrade protocol-relative URLs (//...) to https://
+		htmlContent = htmlContent.replace(
+			/(src|href|action|poster|srcset)\s*=\s*(["'])\/\/([^"'\s>]+)\2/gi,
+			"$1=$2https://$3$2",
+		);
+		htmlContent = htmlContent.replace(
+			/url\(\s*(["']?)\/\/([^)"'\s]+)\1\s*\)/gi,
+			"url($1https://$2$1)",
+		);
+		htmlContent = htmlContent.replace(
+			/@import\s+(["'])\/\/([^"'\s;]+)\1/gi,
+			"@import $1https://$2$1",
+		);
+
+		// 3. Rewrite root-relative URLs (/path) if web origin is known
+		if (webOrigin) {
+			htmlContent = htmlContent.replace(
+				/(src|href|action|poster)\s*=\s*(["'])\/([^/'"\s>][^'"\s>]*)\2/gi,
+				`$1=$2${webOrigin}/$3$2`,
+			);
+			htmlContent = htmlContent.replace(
+				/url\(\s*(["']?)\/([^/)'"\s][^)'"\s]*)\1\s*\)/gi,
+				`url($1${webOrigin}/$2$1)`,
+			);
+			htmlContent = htmlContent.replace(
+				/@import\s+(["'])\/([^/'"\s;][^'"\s;]*)\1/gi,
+				`@import $1${webOrigin}/$2$1`,
+			);
+		}
+
+		// 4. Strip integrity attributes to prevent SRI mismatches
+		htmlContent = htmlContent.replace(
+			/\s+integrity=(?:"[^"]*"|'[^']*'|[^\s>]+)/gi,
+			"",
+		);
+
+		// 5. Find external stylesheet links and inline them as <style> tags
+		// (Obsidian's host CSP restricts external <link rel="stylesheet">, but allows 'unsafe-inline' <style>)
+		const linkRegex = /<link\b[^>]*>/gi;
+		const linkMatches = [...htmlContent.matchAll(linkRegex)];
+		const externalStylesheets: { tag: string; href: string }[] = [];
+
+		for (const m of linkMatches) {
+			const tag = m[0];
+			const isStylesheet =
+				/rel=["'](?:[^"']*\s+)?stylesheet(?:\s+[^"']*)?["']/i.test(tag) ||
+				(/rel=["']preload["']/i.test(tag) && /as=["']style["']/i.test(tag));
+			if (!isStylesheet) continue;
+
+			const hrefMatch = tag.match(/href=["']([^"']+)["']/i);
+			if (!hrefMatch?.[1]) continue;
+			let href = hrefMatch[1].trim();
+			if (href.startsWith("//")) {
+				href = "https:" + href;
+			} else if (href.startsWith("/") && webOrigin) {
+				href = `${webOrigin}${href}`;
+			}
+
+			if (href.startsWith("http://") || href.startsWith("https://")) {
+				externalStylesheets.push({ tag, href });
+			}
+		}
+
+		// Fetch missing stylesheets concurrently
+		await Promise.all(
+			externalStylesheets.map(async ({ href }) => {
+				if (DotfileView.cssCache.has(href)) return;
+				try {
+					const resp = await requestUrl({ url: href, throw: false });
+					if (resp.status >= 200 && resp.status < 300) {
+						let css = resp.text;
+						css = this.resolveCssUrls(css, href);
+						css = await this.resolveCssImports(css, href);
+						DotfileView.cssCache.set(href, css);
+						return;
+					}
+				} catch {
+					// fallback to fetch
+				}
+				try {
+					const res = await window.fetch(href);
+					if (res.ok) {
+						let css = await res.text();
+						css = this.resolveCssUrls(css, href);
+						css = await this.resolveCssImports(css, href);
+						DotfileView.cssCache.set(href, css);
+					}
+				} catch {
+					// ignore fetch failure
+				}
+			}),
+		);
+
+		// Replace link tags with inline <style>
+		for (const { tag, href } of externalStylesheets) {
+			const inlinedCss = DotfileView.cssCache.get(href);
+			if (inlinedCss) {
+				const styleTag = `<style data-source="${href}">\n${inlinedCss}\n</style>`;
+				htmlContent = htmlContent.replace(tag, styleTag);
+			}
+		}
+
+		// 6. Network shim for runtime fetch/xhr
+		const shimScript = `<script>
+(function() {
+  function fixUrl(url) {
+    if (typeof url === "string") {
+      var m = url.match(/^(?:app|file|capacitor):\\/\\/([a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})(\\/.*)?$/);
+      if (m && m[1] !== "local" && m[1] !== "localhost" && m[1] !== "obsidian.md") {
+        return "https://" + m[1] + (m[2] || "/");
+      }
+      if (url.startsWith("//")) {
+        return "https:" + url;
+      }
+    }
+    return url;
+  }
+  var origFetch = window.fetch;
+  if (origFetch) {
+    window.fetch = function(resource, init) {
+      if (typeof resource === "string") {
+        resource = fixUrl(resource);
+      } else if (resource && resource.url) {
+        try {
+          resource = new Request(fixUrl(resource.url), resource);
+        } catch(e) {}
+      }
+      return origFetch.call(this, resource, init);
+    };
+  }
+  var origOpen = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function(method, url) {
+    arguments[1] = fixUrl(url);
+    return origOpen.apply(this, arguments);
+  };
+})();
+</script>`;
+
+		// 7. Local base tag for relative local resources
+		let baseTag = "";
+		if (localBaseUrl) {
+			htmlContent = htmlContent.replace(/<base\b[^>]*>/gi, "");
+			baseTag = `<base href="${localBaseUrl}">`;
+		}
+
+		const injection = `${shimScript}${baseTag}`;
+		if (/<head\b[^>]*>/i.test(htmlContent)) {
+			htmlContent = htmlContent.replace(/<head\b[^>]*>/i, `$&${injection}`);
+		} else {
+			htmlContent = `${injection}${htmlContent}`;
+		}
+
+		return htmlContent;
+	}
+
 	private async renderHtmlPreview(content: string): Promise<void> {
 		if (!this.previewEl) return;
 
@@ -3270,12 +3579,12 @@ export class DotfileView extends TextFileView {
 			return;
 		}
 
-		// If user has unsaved edits in editor, persist them before loading the preview
-		if (this.isDirty()) {
-			await this.save();
+		let baseUrl: string | undefined;
+		if (this.file) {
+			const fileUrl = this.app.vault.getResourcePath(this.file);
+			const cleanUrl = fileUrl.split("?")[0] ?? fileUrl;
+			baseUrl = cleanUrl.substring(0, cleanUrl.lastIndexOf("/") + 1);
 		}
-
-		if (!this.previewEl || !this.isPreviewMode) return;
 
 		const container = this.previewEl.createDiv({
 			cls: "hidden-files-html-container",
@@ -3284,24 +3593,19 @@ export class DotfileView extends TextFileView {
 			cls: "hidden-files-html-iframe",
 			attr: {
 				title: this.file?.name ?? "HTML preview",
-				referrerpolicy: "no-referrer",
 			},
 		});
 
-		// allow-same-origin is essential so Electron tracks o.frame in webRequest,
-		// preventing Obsidian's main process from throwing TypeError on c.origin
+		// Sandbox allowing scripts, forms, modals, and popups with same-origin
 		iframe.setAttribute(
 			"sandbox",
 			"allow-scripts allow-forms allow-modals allow-same-origin allow-popups",
 		);
 
-		if (this.file && this.file.extension?.toLowerCase() !== "mjml") {
-			const fileUrl = this.app.vault.getResourcePath(this.file);
-			const sep = fileUrl.includes("?") ? "&" : "?";
-			iframe.src = `${fileUrl}${sep}vault-code-refresh=${Date.now()}`;
-		} else {
-			iframe.srcdoc = content;
-		}
+		const inlinedHtml = await this.prepareAndInlineHtml(content, baseUrl);
+
+		if (!this.previewEl || !this.isPreviewMode) return;
+		iframe.srcdoc = inlinedHtml;
 	}
 
 	private async renderMjmlPreview(content: string): Promise<void> {
