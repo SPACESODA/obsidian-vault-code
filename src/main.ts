@@ -817,7 +817,7 @@ class CreateFileModal extends Modal {
 			this.clearError();
 		});
 
-		setTimeout(() => {
+		window.setTimeout(() => {
 			this.inputEl.focus();
 		}, 50);
 	}
@@ -994,7 +994,7 @@ class RenameModal extends Modal {
 			this.clearError();
 		});
 
-		setTimeout(() => {
+		window.setTimeout(() => {
 			this.inputEl.focus();
 			// Select only the basename by default if it is a file with extension
 			if (this.file instanceof TFile && this.file.extension) {
@@ -1095,8 +1095,7 @@ class ModernSearchPanel implements Panel {
 		this.isWholeWord = currentQuery.wholeWord;
 		this.query = currentQuery;
 
-		this.dom = document.createElement("div");
-		this.dom.className = "hidden-files-search-panel";
+		this.dom = createEl("div", { cls: "hidden-files-search-panel" });
 
 		// Row 1: Search row
 		const searchRow = this.dom.createDiv({
@@ -1632,7 +1631,7 @@ export const smartNewlineAndIndent: Command = (view: EditorView) => {
 		const isVoidOrSelfClosing =
 			Boolean(openTagName) &&
 			(trimmedBefore.endsWith("/>") ||
-				VOID_HTML_TAGS.has(openTagName!));
+				(openTagName ? VOID_HTML_TAGS.has(openTagName) : false));
 		const isTagClosedSameLine =
 			Boolean(openTagName && tagOpenMatch) &&
 			new RegExp(`</${openTagName}>`, "i").test(
@@ -1738,7 +1737,7 @@ if (typeof window !== "undefined") {
 function clearAllDragScrollIntervals(): void {
 	for (const id of activeDragScrollIntervals) {
 		try {
-			clearInterval(id);
+			window.clearInterval(id);
 		} catch {
 			// ignore
 		}
@@ -1790,7 +1789,7 @@ function patchMouseSelectionPrototype(mouseSel: unknown): void {
 				if (this.scrolling != null && this.scrolling > -1) {
 					activeDragScrollIntervals.delete(this.scrolling);
 					try {
-						clearInterval(this.scrolling);
+						window.clearInterval(this.scrolling);
 					} catch {
 						// ignore
 					}
@@ -1813,7 +1812,7 @@ function patchMouseSelectionPrototype(mouseSel: unknown): void {
 				if (this.scrolling != null && this.scrolling > -1) {
 					activeDragScrollIntervals.delete(this.scrolling);
 					try {
-						clearInterval(this.scrolling);
+						window.clearInterval(this.scrolling);
 					} catch {
 						// ignore
 					}
@@ -1830,7 +1829,7 @@ function patchMouseSelectionPrototype(mouseSel: unknown): void {
 			if (this.scrolling != null && this.scrolling > -1) {
 				activeDragScrollIntervals.delete(this.scrolling);
 				try {
-					clearInterval(this.scrolling);
+					window.clearInterval(this.scrolling);
 				} catch {
 					// ignore
 				}
@@ -1891,7 +1890,7 @@ function stopInternalMouseSelection(
 
 	if (mouseSel.scrolling != null && mouseSel.scrolling > -1) {
 		try {
-			clearInterval(mouseSel.scrolling);
+			window.clearInterval(mouseSel.scrolling);
 			mouseSel.scrolling = -1;
 		} catch {
 			// ignore
@@ -2137,21 +2136,12 @@ export class DotfileView extends TextFileView {
 	}
 
 	override async setState(state: unknown, result: ViewStateResult): Promise<void> {
-		if (
-			state &&
-			typeof state === "object" &&
-			"file" in state &&
-			typeof (state as { file: unknown }).file === "string"
-		) {
-			this.filePath = (state as { file: string }).file;
+		const s = state as Record<string, unknown> | null | undefined;
+		if (s && typeof s.file === "string") {
+			this.filePath = s.file;
 		}
-		if (
-			state &&
-			typeof state === "object" &&
-			"preview" in state &&
-			typeof (state as { preview: unknown }).preview === "boolean"
-		) {
-			this.isPreviewMode = (state as { preview: boolean }).preview;
+		if (s && typeof s.preview === "boolean") {
+			this.isPreviewMode = s.preview;
 		}
 		await super.setState(state, result);
 	}
@@ -2322,7 +2312,7 @@ export class DotfileView extends TextFileView {
 			}
 		});
 
-		setTimeout(() => {
+		window.setTimeout(() => {
 			if (this.gotoLineInputEl) {
 				this.gotoLineInputEl.focus();
 				this.gotoLineInputEl.select();
@@ -2650,8 +2640,9 @@ export class DotfileView extends TextFileView {
 			history(),
 			foldGutter({
 				markerDOM: (open: boolean) => {
-					const el = document.createElement("div");
-					el.className = `cm-fold-marker ${open ? "is-open" : "is-closed"}`;
+					const el = createEl("div", {
+						cls: `cm-fold-marker ${open ? "is-open" : "is-closed"}`,
+					});
 					setIcon(el, open ? "chevron-down" : "chevron-right");
 					return el;
 				},
@@ -3825,7 +3816,7 @@ export default class VaultCodePlugin extends Plugin {
 		const view = leaf.view;
 		const actionsEl = (view as unknown as { actionsEl?: HTMLElement })
 			?.actionsEl;
-		if (!actionsEl || !(actionsEl instanceof HTMLElement)) return;
+		if (!actionsEl || !actionsEl.instanceOf(HTMLElement)) return;
 
 		const file = (view as { file?: TFile }).file;
 		const isMarkdown = Boolean(file && this.isMarkdownFile(file));
@@ -3854,16 +3845,16 @@ export default class VaultCodePlugin extends Plugin {
 			return;
 		}
 
-		const btn = document.createElement("button");
-		btn.className = `clickable-icon view-action vault-code-header-toggle-btn${
-			isCodeEditor ? " is-active" : ""
-		}`;
-		btn.setAttribute(
-			"aria-label",
-			isCodeEditor
-				? t("viewToggleTooltip")
-				: t("contextEditInCodeEditor"),
-		);
+		const btn = createEl("button", {
+			cls: `clickable-icon view-action vault-code-header-toggle-btn${
+				isCodeEditor ? " is-active" : ""
+			}`,
+			attr: {
+				"aria-label": isCodeEditor
+					? t("viewToggleTooltip")
+					: t("contextEditInCodeEditor"),
+			},
+		});
 		setCodeIcon(btn);
 
 		btn.addEventListener("click", (evt: MouseEvent) => {
@@ -4028,7 +4019,7 @@ export default class VaultCodePlugin extends Plugin {
 			this.originalIsExtensionRegistered = viewRegistry.isExtensionRegistered.bind(viewRegistry);
 		}
 		const origIsRegistered = this.originalIsExtensionRegistered;
-		// eslint-disable-next-line @typescript-eslint/no-this-alias
+		// eslint-disable-next-line @typescript-eslint/no-this-alias -- Needed to preserve plugin reference in patched method
 		const plugin = this;
 
 		viewRegistry.getTypeByExtension = (extension?: string) => {
@@ -4100,7 +4091,7 @@ export default class VaultCodePlugin extends Plugin {
 		if (!this.originalOpenFile) {
 			this.originalOpenFile = proto.openFile;
 			const origOpenFile = this.originalOpenFile;
-			// eslint-disable-next-line @typescript-eslint/no-this-alias
+			// eslint-disable-next-line @typescript-eslint/no-this-alias -- Needed to preserve plugin reference in patched method
 			const plugin = this;
 
 			proto.openFile = async function (
@@ -4175,7 +4166,7 @@ export default class VaultCodePlugin extends Plugin {
 		if (!this.originalDetach) {
 			this.originalDetach = proto.detach;
 			const origDetach = this.originalDetach;
-			// eslint-disable-next-line @typescript-eslint/no-this-alias
+			// eslint-disable-next-line @typescript-eslint/no-this-alias -- Needed to preserve plugin reference in patched method
 			const plugin = this;
 
 			proto.detach = function (this: WorkspaceLeaf): void {
@@ -4504,29 +4495,31 @@ export default class VaultCodePlugin extends Plugin {
 						item.el?.classList.contains("is-selected");
 
 					if (isExplicitlySelected && item.file) {
-						if (item.file instanceof TFolder) {
-							return item.file;
+						const f = item.file;
+						if (f instanceof TFolder) {
+							return f;
 						}
-						if (item.file instanceof TFile && item.file.parent) {
-							return item.file.parent;
+						if (f instanceof TFile && f.parent instanceof TFolder) {
+							return f.parent;
 						}
 					}
 				}
 			}
 
 			if (view?.selectedFile) {
-				if (view.selectedFile instanceof TFolder) {
-					return view.selectedFile;
+				const sf = view.selectedFile;
+				if (sf instanceof TFolder) {
+					return sf;
 				}
-				if (view.selectedFile.parent) {
-					return view.selectedFile.parent;
+				if (sf instanceof TFile && sf.parent instanceof TFolder) {
+					return sf.parent;
 				}
 			}
 		}
 
 		// 2. Priority: Active file open in workspace editor
 		const activeFile = this.app.workspace.getActiveFile();
-		if (activeFile && activeFile.parent) {
+		if (activeFile && activeFile.parent instanceof TFolder) {
 			return activeFile.parent;
 		}
 
@@ -4550,11 +4543,12 @@ export default class VaultCodePlugin extends Plugin {
 						item.el?.classList.contains("is-active");
 
 					if (isActive && item.file) {
-						if (item.file instanceof TFolder) {
-							return item.file;
+						const f = item.file;
+						if (f instanceof TFolder) {
+							return f;
 						}
-						if (item.file instanceof TFile && item.file.parent) {
-							return item.file.parent;
+						if (f instanceof TFile && f.parent instanceof TFolder) {
+							return f.parent;
 						}
 					}
 				}
@@ -4749,7 +4743,7 @@ export default class VaultCodePlugin extends Plugin {
 
 		let file = this.app.vault.getAbstractFileByPath(normalized);
 		for (let i = 0; i < 10 && !(file instanceof TFile); i++) {
-			await new Promise((resolve) => setTimeout(resolve, 50));
+			await new Promise((resolve) => window.setTimeout(resolve, 50));
 			file = this.app.vault.getAbstractFileByPath(normalized);
 		}
 
@@ -4864,7 +4858,7 @@ export default class VaultCodePlugin extends Plugin {
 			this: TFile,
 			newName: string,
 		): string {
-			// eslint-disable-next-line no-control-regex
+			// eslint-disable-next-line no-control-regex -- Needed to strip control characters from filename
 			let cleanName = newName.replace(/[\x00-\x1F]/g, " ").trim();
 			if (!cleanName) return "";
 
@@ -4932,7 +4926,7 @@ export default class VaultCodePlugin extends Plugin {
 			| undefined;
 		if (!fileExplorerView) return;
 
-		// eslint-disable-next-line @typescript-eslint/no-this-alias
+		// eslint-disable-next-line @typescript-eslint/no-this-alias -- Needed to preserve plugin reference in patched method
 		const plugin = this;
 
 		const viewProto = Object.getPrototypeOf(fileExplorerView) as Record<
@@ -5081,7 +5075,7 @@ export default class VaultCodePlugin extends Plugin {
 		item: unknown,
 		input: string,
 	): Promise<boolean> {
-		// eslint-disable-next-line no-control-regex
+		// eslint-disable-next-line no-control-regex -- Needed to strip control characters from folder input
 		const cleanInput = input.replace(/[\x00-\x1F]/g, " ").trim();
 		if (!cleanInput) {
 			view.displayError?.("Folder name cannot be empty.", item);
@@ -5190,13 +5184,13 @@ export default class VaultCodePlugin extends Plugin {
 
 		// 1. Patch PO.prototype (so dotfiles display full name and hide tag badge)
 		let poProto: Record<string, unknown> | null = Object.getPrototypeOf(
-			fileItem as object,
+			fileItem,
 		) as Record<string, unknown> | null;
 		while (poProto && poProto !== Object.prototype) {
 			if (Object.prototype.hasOwnProperty.call(poProto, "getTitle")) {
 				break;
 			}
-			poProto = Object.getPrototypeOf(poProto as object) as Record<
+			poProto = Object.getPrototypeOf(poProto) as Record<
 				string,
 				unknown
 			> | null;
@@ -5265,13 +5259,13 @@ export default class VaultCodePlugin extends Plugin {
 		// 2. Patch DO.prototype for inline startRename
 		if (!this.fileItemProtoPatched) {
 			let curr: Record<string, unknown> | null = Object.getPrototypeOf(
-				fileItem as object,
+				fileItem,
 			) as Record<string, unknown> | null;
 			while (curr && curr !== Object.prototype) {
 				if (Object.prototype.hasOwnProperty.call(curr, "startRename")) {
 					break;
 				}
-				curr = Object.getPrototypeOf(curr as object) as Record<
+				curr = Object.getPrototypeOf(curr) as Record<
 					string,
 					unknown
 				> | null;

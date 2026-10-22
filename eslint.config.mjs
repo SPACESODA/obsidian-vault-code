@@ -10,6 +10,13 @@ export default tseslint.config(
 			globals: {
 				...globals.browser,
 				...globals.node,
+				createEl: "readonly",
+				createDiv: "readonly",
+				createSpan: "readonly",
+				createSvg: "readonly",
+				createFragment: "readonly",
+				activeDocument: "readonly",
+				activeWindow: "readonly",
 			},
 			parserOptions: {
 				project: "./tsconfig.eslint.json",

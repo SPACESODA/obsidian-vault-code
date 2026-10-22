@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 jobs:
   build:
@@ -21,10 +23,16 @@ jobs:
       - run: npm install --legacy-peer-deps
       - run: npm run build
 
+      - name: Attest Build Provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            main.js
+            styles.css
+
       - uses: softprops/action-gh-release@v2
         with:
           files: |
             main.js
             manifest.json
             styles.css
-            versions.json
