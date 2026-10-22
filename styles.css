@@ -1006,6 +1006,15 @@
 		width: 15px;
 		height: 15px;
 	}
+	.hidden-files-editor-wrapper .cm-dialog.cm-goto-line {
+		padding: 6px 10px;
+		gap: 6px;
+		flex-wrap: wrap;
+	}
+	.hidden-files-editor-wrapper .cm-dialog.cm-goto-line .cm-textfield {
+		width: 80px;
+		flex: 1 1 auto;
+	}
 	.hidden-files-modal-buttons {
 		flex-direction: column-reverse;
 		align-items: stretch;
