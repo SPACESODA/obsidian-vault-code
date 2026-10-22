@@ -3,7 +3,7 @@
 	"name": "Vault Code",
 	"version": "2.0.4",
 	"minAppVersion": "1.5.8",
-	"description": "Turn your vault into a lightweight IDE and code editor. Reveal hidden dotfiles, edit over 70 programming languages, live-preview HTML and SVG, and search and replace with zero bloat.",
+	"description": "Turn your vault into a lightweight IDE and code editor. Reveal hidden dotfiles, edit over 70 programming languages, live-preview HTML, SVG, and MJML, and search and replace with zero bloat.",
 	"author": "SPACESODA",
 	"authorUrl": "https://github.com/SPACESODA",
 	"isDesktopOnly": false

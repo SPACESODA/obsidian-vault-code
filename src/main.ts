@@ -3261,6 +3261,21 @@ export class DotfileView extends TextFileView {
 
 	private static cssCache = new Map<string, string>();
 
+	public static clearCssCache(): void {
+		DotfileView.cssCache.clear();
+	}
+
+	private static setCssCache(key: string, value: string): void {
+		if (DotfileView.cssCache.size >= 100) {
+			const iter = DotfileView.cssCache.keys();
+			const next = iter.next();
+			if (!next.done && typeof next.value === "string") {
+				DotfileView.cssCache.delete(next.value);
+			}
+		}
+		DotfileView.cssCache.set(key, value);
+	}
+
 	private resolveCssUrls(css: string, baseUrl: string): string {
 		return css.replace(
 			/url\(\s*(['"]?)([^'"]+)\1\s*\)/gi,
@@ -3327,7 +3342,7 @@ export class DotfileView extends TextFileView {
 							importUrl,
 							depth + 1,
 						);
-						DotfileView.cssCache.set(importUrl, importedCss);
+						DotfileView.setCssCache(importUrl, importedCss);
 					}
 				} catch {
 					// fallback or ignore
@@ -3485,7 +3500,7 @@ export class DotfileView extends TextFileView {
 						let css = resp.text;
 						css = this.resolveCssUrls(css, href);
 						css = await this.resolveCssImports(css, href);
-						DotfileView.cssCache.set(href, css);
+						DotfileView.setCssCache(href, css);
 						return;
 					}
 				} catch {
@@ -3497,7 +3512,7 @@ export class DotfileView extends TextFileView {
 						let css = await res.text();
 						css = this.resolveCssUrls(css, href);
 						css = await this.resolveCssImports(css, href);
-						DotfileView.cssCache.set(href, css);
+						DotfileView.setCssCache(href, css);
 					}
 				} catch {
 					// ignore fetch failure
@@ -4231,6 +4246,8 @@ export default class VaultCodePlugin extends Plugin {
 			)?.actionsEl;
 			actionsEl?.querySelector(".vault-code-header-toggle-btn")?.remove();
 		});
+
+		DotfileView.clearCssCache();
 	}
 
 	/* ── editability & extension handling ──────────────────── */

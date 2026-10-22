@@ -636,16 +636,26 @@ input.hidden-files-search-input,
 }
 
 /* Mobile responsive layout for search & replace panel */
+body.is-phone .hidden-files-search-panel,
 @media (max-width: 600px) {
 	.hidden-files-search-panel {
 		padding: 4px 8px;
 		gap: 4px;
 	}
+}
+
+body.is-phone .hidden-files-search-row,
+body.is-phone .hidden-files-replace-row,
+@media (max-width: 600px) {
 	.hidden-files-search-row,
 	.hidden-files-replace-row {
 		gap: 4px;
 		flex-wrap: nowrap;
 	}
+}
+
+body.is-phone .hidden-files-search-chevron-btn,
+@media (max-width: 600px) {
 	.hidden-files-search-chevron-btn {
 		width: 22px;
 		height: 22px;
@@ -653,39 +663,76 @@ input.hidden-files-search-input,
 		min-height: 22px;
 		margin-top: 2px;
 	}
+}
+
+body.is-phone .hidden-files-search-chevron-btn svg,
+@media (max-width: 600px) {
 	.hidden-files-search-chevron-btn svg {
 		width: 13px;
 		height: 13px;
 	}
+}
+
+body.is-phone .hidden-files-replace-row,
+@media (max-width: 600px) {
 	.hidden-files-replace-row {
 		padding-left: 26px;
 	}
+}
+
+body.is-phone .hidden-files-search-input-wrapper,
+body.is-phone .hidden-files-replace-input-wrapper,
+@media (max-width: 600px) {
 	.hidden-files-search-input-wrapper,
 	.hidden-files-replace-input-wrapper {
 		min-width: 60px;
 		min-height: 26px;
 		padding: 2px 4px 2px 6px;
 	}
+}
+
+body.is-phone .hidden-files-search-input-wrapper textarea.hidden-files-search-input,
+body.is-phone .hidden-files-replace-input-wrapper textarea.hidden-files-search-input,
+@media (max-width: 600px) {
 	.hidden-files-search-input-wrapper textarea.hidden-files-search-input,
 	.hidden-files-replace-input-wrapper textarea.hidden-files-search-input {
 		font-size: 11px;
 		min-height: 20px;
 	}
+}
+
+body.is-phone .hidden-files-search-toggles,
+@media (max-width: 600px) {
 	.hidden-files-search-toggles {
 		gap: 1px;
 	}
+}
+
+body.is-phone .hidden-files-search-toggle-btn,
+@media (max-width: 600px) {
 	.hidden-files-search-toggle-btn {
 		font-size: 10px;
 		padding: 0 3px;
 		height: 18px;
 		min-width: 18px;
 	}
+}
+
+body.is-phone .hidden-files-search-actions,
+body.is-phone .hidden-files-replace-actions,
+@media (max-width: 600px) {
 	.hidden-files-search-actions,
 	.hidden-files-replace-actions {
 		gap: 2px;
 		width: 76px;
 		min-width: 76px;
 	}
+}
+
+body.is-phone .hidden-files-search-actions .clickable-icon,
+body.is-phone .hidden-files-replace-actions .clickable-icon,
+body.is-phone .hidden-files-search-action-icon,
+@media (max-width: 600px) {
 	.hidden-files-search-actions .clickable-icon,
 	.hidden-files-replace-actions .clickable-icon,
 	.hidden-files-search-action-icon {
@@ -694,6 +741,12 @@ input.hidden-files-search-input,
 		min-width: 24px;
 		min-height: 24px;
 	}
+}
+
+body.is-phone .hidden-files-search-actions .clickable-icon svg,
+body.is-phone .hidden-files-replace-actions .clickable-icon svg,
+body.is-phone .hidden-files-search-action-icon svg,
+@media (max-width: 600px) {
 	.hidden-files-search-actions .clickable-icon svg,
 	.hidden-files-replace-actions .clickable-icon svg,
 	.hidden-files-search-action-icon svg {
@@ -1198,6 +1251,9 @@ body.is-phone .modal:has(.hidden-files-confirm-modal) {
 	align-self: flex-start;
 	margin-top: calc(env(safe-area-inset-top, 20px) + 20px);
 	margin-bottom: auto;
+	max-height: calc(100vh - 120px);
+	max-height: calc(100dvh - 120px);
+	overflow-y: auto;
 }
 
 @media (max-width: 540px) {
@@ -1338,6 +1394,57 @@ body.is-phone .modal:has(.hidden-files-confirm-modal) {
 		width: 15px;
 		height: 15px;
 	}
+}
+
+/* Phone layout for header actions across portrait and landscape */
+body.is-phone .hidden-files-editor-header {
+	padding: 4px 8px;
+}
+
+body.is-phone .hidden-files-editor-header-left {
+	gap: 6px;
+	min-width: 0;
+	flex: 1 1 auto;
+}
+
+body.is-phone .hidden-files-editor-lang {
+	display: none;
+}
+
+body.is-phone .hidden-files-editor-header-right {
+	gap: 4px;
+	flex-shrink: 0;
+}
+
+body.is-phone .hidden-files-editor-header-right .hidden-files-btn-text {
+	display: none;
+}
+
+body.is-phone .hidden-files-editor-search-btn.clickable-icon,
+body.is-phone .hidden-files-editor-wrap-btn.clickable-icon,
+body.is-phone .hidden-files-editor-save-btn,
+body.is-phone .hidden-files-editor-view-toggle-btn {
+	min-height: 28px;
+	min-width: 28px;
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	box-sizing: border-box;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+}
+
+body.is-phone .hidden-files-btn-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
+body.is-phone .hidden-files-btn-icon svg {
+	width: 15px;
+	height: 15px;
 }
 
 /* Hide empty file tag badges (e.g. for extensionless files or dotfiles) */

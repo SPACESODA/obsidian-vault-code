@@ -6,7 +6,7 @@ A lightweight code editor and hidden file manager for Obsidian.
 
 Obsidian is where you think, write, and organize your knowledge. But the moment you need to tweak a Python script, check a `.env` file, or preview an HTML mock-up, you're usually forced to jump out to VS Code or another window.
 
-**Vault Code keeps you in flow.** It turns your vault into a fast, focused developer workspace where you can view hidden dotfiles, edit code across 70+ languages, and live-preview HTML and SVG files—all while feeling completely native to your Obsidian theme.
+**Vault Code keeps you in flow.** It turns your vault into a fast, focused developer workspace where you can view hidden dotfiles, edit code across 70+ languages, and live-preview HTML, SVG, and MJML files—all while feeling completely native to your Obsidian theme.
 
 Vault Code automatically adapts to your Obsidian display language: English, 繁體中文, 简体中文, 日本語, 한국어, Español, Français, Italiano, Deutsch, and Русский.
 
@@ -27,9 +27,10 @@ Obsidian normally hides dotfiles from view. Vault Code lets you peek behind the 
 * Open extensionless files like `Makefile`, `Dockerfile`, `LICENSE`, and `CNAME`.
 * Need to hide noisy build caches? Add `.git`, `node_modules`, or custom patterns in settings to keep your sidebar tidy.
 
-### 🌐 Live visual preview for HTML & SVG
-Turn Obsidian into a playground for web designs and vector graphics:
-* Press <kbd>Cmd</kbd> / <kbd>Ctrl</kbd> + <kbd>E</kbd> on any HTML file to toggle between raw code and a live rendered page. Relative links to local CSS, scripts, and vault images work automatically.
+### 🌐 Live visual preview for HTML, SVG & MJML
+Turn Obsidian into a playground for web designs, vector graphics, and responsive emails:
+* Press <kbd>Cmd</kbd> / <kbd>Ctrl</kbd> + <kbd>E</kbd> on any HTML or MJML file to toggle between raw code and a live rendered preview. Relative links to local CSS, scripts, and vault images work automatically, and external CDN stylesheets are inlined securely.
+* Live-render responsive email templates with built-in MJML support.
 * View and inspect vector SVG graphics directly, or switch to XML mode to tweak paths and colors.
 
 ### 🔍 Search & replace without friction
@@ -63,7 +64,7 @@ Right-click any file or folder in your file explorer to:
 | <kbd>Shift</kbd> + <kbd>Option</kbd> / <kbd>Alt</kbd> + <kbd>↑</kbd> / <kbd>↓</kbd> | Duplicate line up / down | In code editor |
 | <kbd>Cmd</kbd> / <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>K</kbd> | Delete line | In code editor |
 | <kbd>Alt</kbd> + <kbd>Z</kbd> | Toggle line wrapping | In code editor |
-| <kbd>Cmd</kbd> / <kbd>Ctrl</kbd> + <kbd>E</kbd> | Toggle code / live preview | HTML & SVG files |
+| <kbd>Cmd</kbd> / <kbd>Ctrl</kbd> + <kbd>E</kbd> | Toggle code / live preview | HTML, SVG & MJML files |
 | <kbd>Cmd</kbd> / <kbd>Ctrl</kbd> + <kbd>S</kbd> | Save file | In code editor |
 | <kbd>Esc</kbd> | Close search bar or dismiss popups | Anywhere |
 
