@@ -497,7 +497,7 @@ const DEFAULT_SETTINGS: VaultCodeSettings = {
 	language: "auto",
 	tabSize: "auto",
 	indentWithTabs: "auto",
-	lineWrapping: false,
+	lineWrapping: true,
 };
 
 interface IgnoreRule {
@@ -2510,7 +2510,7 @@ export class DotfileView extends TextFileView {
 		const { contentEl } = this;
 		contentEl.empty();
 		contentEl.addClass("hidden-files-editor-container");
-		this.isLineWrapping = this.plugin.settings.lineWrapping ?? false;
+		this.isLineWrapping = this.plugin.settings.lineWrapping ?? true;
 
 		// Header bar with filename, language badge, and live position
 		const headerEl = contentEl.createDiv({
@@ -5668,7 +5668,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 			.setDesc(t("settingsLineWrappingDesc"))
 			.addToggle((toggle) =>
 				toggle
-					.setValue(this.plugin.settings.lineWrapping ?? false)
+					.setValue(this.plugin.settings.lineWrapping ?? true)
 					.onChange(async (value) => {
 						this.plugin.settings.lineWrapping = value;
 						await this.plugin.saveSettings();
