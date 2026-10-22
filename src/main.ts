@@ -10,6 +10,7 @@ import {
 	TFolder,
 	TAbstractFile,
 	TextAreaComponent,
+	ButtonComponent,
 	Modal,
 	OpenViewState,
 	Platform,
@@ -489,7 +490,8 @@ interface VaultCodeSettings {
 	customFileExtensions: string;
 	preventAutoOpenUnsupported: boolean;
 	openUnsupportedOnDoubleClick: boolean;
-	ignoredPaths: string;
+	useObsidianIgnore: boolean;
+	useGitIgnore: boolean;
 	language: string;
 	tabSize: string;
 	indentWithTabs: string;
@@ -499,10 +501,10 @@ interface VaultCodeSettings {
 const DEFAULT_EXTENSIONS =
 	"astro, bash, bat, bib, c, cjs, cmd, cpp, cs, css, csv, dart, diff, email, eml, fish, go, gql, graphql, h, handlebars, hbs, hpp, htm, html, ini, java, jl, js, json, json5, jsonc, jsx, kt, less, liquid, log, lua, mdx, mjml, mjs, patch, php, pine, prisma, ps1, py, r, rb, rs, sass, scss, sh, sql, svelte, svg, swift, tex, toml, ts, tsx, tsv, txt, vue, xml, yaml, yml, zig, zsh";
 
-const DEFAULT_IGNORED_PATHS = `# Obsidian & Git
-.obsidian
-.git
-.trash
+export const DEFAULT_OBSIDIANIGNORE_CONTENT = `# Obsidian & Git
+.obsidian/
+.git/
+.trash/
 
 # macOS
 .DS_Store
@@ -510,7 +512,8 @@ const DEFAULT_IGNORED_PATHS = `# Obsidian & Git
 
 # Windows
 Thumbs.db
-desktop.ini`;
+desktop.ini
+`;
 
 const DEFAULT_SETTINGS: VaultCodeSettings = {
 	showAllFileTypes: true,
@@ -521,7 +524,8 @@ const DEFAULT_SETTINGS: VaultCodeSettings = {
 	customFileExtensions: DEFAULT_EXTENSIONS,
 	preventAutoOpenUnsupported: true,
 	openUnsupportedOnDoubleClick: true,
-	ignoredPaths: DEFAULT_IGNORED_PATHS,
+	useObsidianIgnore: true,
+	useGitIgnore: false,
 	language: "auto",
 	tabSize: "auto",
 	indentWithTabs: "auto",
@@ -3331,6 +3335,9 @@ export default class VaultCodePlugin extends Plugin {
 		| null = null;
 	private lastUnsupportedClickFile: string | null = null;
 	private lastUnsupportedClickTime = 0;
+	cachedObsidianIgnoreRules: IgnoreRule[] = [];
+	cachedGitIgnoreRules: IgnoreRule[] = [];
+	settingsTab: VaultCodeSettingTab | null = null;
 
 	async onload() {
 		this.registerView(
@@ -3339,6 +3346,22 @@ export default class VaultCodePlugin extends Plugin {
 		);
 
 		await this.loadSettings();
+
+		// Auto-create .obsidianignore if enabled and missing on startup
+		if (this.settings.useObsidianIgnore) {
+			try {
+				const exists = await this.app.vault.adapter.exists(".obsidianignore");
+				if (!exists) {
+					await this.app.vault.adapter.write(
+						".obsidianignore",
+						DEFAULT_OBSIDIANIGNORE_CONTENT,
+					);
+				}
+			} catch (e) {
+				console.error("Vault Code: Failed to auto-create .obsidianignore", e);
+			}
+		}
+		await this.reloadAllIgnoreRules();
 
 		this.previousShowUnsupportedFiles =
 			(this.app.vault.getConfig("showUnsupportedFiles") as boolean) ??
@@ -3352,6 +3375,29 @@ export default class VaultCodePlugin extends Plugin {
 		this.patchFileManagerPrompt();
 
 		this.registerDomEvent(window, "input", this.onInputCapture, true);
+
+		// Watch for ignore file changes at vault root
+		this.registerEvent(
+			this.app.vault.on("create", (file) => {
+				void this.handleIgnoreFileEvent(file.path);
+			}),
+		);
+		this.registerEvent(
+			this.app.vault.on("modify", (file) => {
+				void this.handleIgnoreFileEvent(file.path);
+			}),
+		);
+		this.registerEvent(
+			this.app.vault.on("delete", (file) => {
+				void this.handleIgnoreFileEvent(file.path);
+			}),
+		);
+		this.registerEvent(
+			this.app.vault.on("rename", (file, oldPath) => {
+				void this.handleIgnoreFileEvent(file.path);
+				void this.handleIgnoreFileEvent(oldPath);
+			}),
+		);
 
 		this.app.workspace.onLayoutReady(async () => {
 			this.patchFileExplorer();
@@ -4345,46 +4391,109 @@ export default class VaultCodePlugin extends Plugin {
 		return this.app.vault.adapter as unknown as PrivateAdapter;
 	}
 
-	private cachedIgnoreRules: IgnoreRule[] | null = null;
-
-	getIgnoreRules(): IgnoreRule[] {
-		if (!this.cachedIgnoreRules) {
-			this.cachedIgnoreRules = parseGitignore(
-				this.settings.ignoredPaths || "",
-			);
+	async loadObsidianIgnoreRules(): Promise<void> {
+		if (!this.settings.useObsidianIgnore) {
+			this.cachedObsidianIgnoreRules = [];
+			return;
 		}
-		return this.cachedIgnoreRules;
+
+		try {
+			const exists = await this.app.vault.adapter.exists(".obsidianignore");
+			if (exists) {
+				const content = await this.app.vault.adapter.read(".obsidianignore");
+				this.cachedObsidianIgnoreRules = parseGitignore(content);
+			} else {
+				this.cachedObsidianIgnoreRules = [];
+			}
+		} catch (e) {
+			console.error("Vault Code: Failed to read .obsidianignore", e);
+			this.cachedObsidianIgnoreRules = [];
+		}
 	}
 
-	invalidateIgnoreRules(): void {
-		this.cachedIgnoreRules = null;
+	async loadGitIgnoreRules(): Promise<void> {
+		if (!this.settings.useGitIgnore) {
+			this.cachedGitIgnoreRules = [];
+			return;
+		}
+
+		try {
+			const exists = await this.app.vault.adapter.exists(".gitignore");
+			if (exists) {
+				const content = await this.app.vault.adapter.read(".gitignore");
+				this.cachedGitIgnoreRules = parseGitignore(content);
+			} else {
+				this.cachedGitIgnoreRules = [];
+			}
+		} catch (e) {
+			console.error("Vault Code: Failed to read .gitignore", e);
+			this.cachedGitIgnoreRules = [];
+		}
+	}
+
+	async reloadAllIgnoreRules(): Promise<void> {
+		await Promise.all([
+			this.loadObsidianIgnoreRules(),
+			this.loadGitIgnoreRules(),
+		]);
 	}
 
 	isPathIgnored(path: string, isDirectory = false): boolean {
-		const rules = this.getIgnoreRules();
-		if (!rules.length) return false;
-
 		const normalized = normalizePath(path).replace(/^\/+|\/+$/g, "");
 		if (!normalized) return false;
 
+		// Never ignore the ignore files themselves at vault root
+		if (normalized === ".obsidianignore" || normalized === ".gitignore") {
+			return false;
+		}
+
 		let ignored = false;
-		for (const rule of rules) {
-			if (rule.dirOnly && !isDirectory) {
-				continue;
-			}
-			if (rule.regex.test(normalized)) {
-				ignored = !rule.negate;
+
+		// 1. Check .gitignore rules if enabled
+		if (this.settings.useGitIgnore && this.cachedGitIgnoreRules.length > 0) {
+			for (const rule of this.cachedGitIgnoreRules) {
+				if (rule.dirOnly && !isDirectory) {
+					continue;
+				}
+				if (rule.regex.test(normalized)) {
+					ignored = !rule.negate;
+				}
 			}
 		}
+
+		// 2. Check .obsidianignore rules if enabled (takes precedence over .gitignore)
+		if (
+			this.settings.useObsidianIgnore &&
+			this.cachedObsidianIgnoreRules.length > 0
+		) {
+			for (const rule of this.cachedObsidianIgnoreRules) {
+				if (rule.dirOnly && !isDirectory) {
+					continue;
+				}
+				if (rule.regex.test(normalized)) {
+					ignored = !rule.negate;
+				}
+			}
+		}
+
 		return ignored;
 	}
 
-	async applyIgnoredPathsUpdate(): Promise<void> {
-		this.invalidateIgnoreRules();
-		this.applyFileExplorerFiltering();
-
-		if (this.settings.showHiddenFiles) {
-			await this.rescanVault();
+	async handleIgnoreFileEvent(path: string): Promise<void> {
+		const norm = normalizePath(path).replace(/^\/+/, "");
+		if (norm === ".obsidianignore") {
+			await this.loadObsidianIgnoreRules();
+			this.applyFileExplorerFiltering();
+			if (this.settings.showHiddenFiles) {
+				await this.rescanVault();
+			}
+			this.settingsTab?.updateIgnoreButtons();
+		} else if (norm === ".gitignore") {
+			await this.loadGitIgnoreRules();
+			this.applyFileExplorerFiltering();
+			if (this.settings.showHiddenFiles) {
+				await this.rescanVault();
+			}
 		}
 	}
 
@@ -4484,7 +4593,7 @@ export default class VaultCodePlugin extends Plugin {
 	}
 
 	/** Trigger a full vault rescan so all dotfiles and dotfolders across root and subfolders are revealed. */
-	private async rescanVault(): Promise<void> {
+	async rescanVault(): Promise<void> {
 		const adapter = this.adapter();
 		if (!adapter.listRecursive) return;
 
@@ -5471,10 +5580,21 @@ export default class VaultCodePlugin extends Plugin {
 
 class VaultCodeSettingTab extends PluginSettingTab {
 	plugin: VaultCodePlugin;
+	updateButtonState?: () => Promise<void>;
 
 	constructor(app: App, plugin: VaultCodePlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
+	}
+
+	updateIgnoreButtons(): void {
+		void this.updateButtonState?.();
+	}
+
+	override hide(): void {
+		this.updateButtonState = undefined;
+		this.plugin.settingsTab = null;
+		super.hide();
 	}
 
 	getSettingDefinitions(): unknown[] {
@@ -5482,6 +5602,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 	}
 
 	display(): void {
+		this.plugin.settingsTab = this;
 		const { containerEl } = this;
 		containerEl.empty();
 		containerEl.addClass("hidden-files-settings");
@@ -5581,41 +5702,101 @@ class VaultCodeSettingTab extends PluginSettingTab {
 				);
 		}
 
-		let ignoredPathsTextArea: TextAreaComponent | null = null;
+		let obsidianIgnoreButton: ButtonComponent | null = null;
+
+		const updateButtonState = async () => {
+			if (!obsidianIgnoreButton) return;
+			try {
+				const exists = await this.app.vault.adapter.exists(".obsidianignore");
+				if (exists) {
+					obsidianIgnoreButton.setButtonText(t("settingsButtonCopyDefault"));
+					obsidianIgnoreButton.setTooltip(t("settingsTooltipCopyDefault"));
+				} else {
+					obsidianIgnoreButton.setButtonText(t("settingsButtonCreateDefault"));
+					obsidianIgnoreButton.setTooltip(t("settingsTooltipCreateDefault"));
+				}
+			} catch {
+				// ignore
+			}
+		};
+
+		this.updateButtonState = updateButtonState;
 
 		new Setting(containerEl)
-			.setName(t("settingsIgnoredPathsName"))
-			.setDesc(t("settingsIgnoredPathsDesc"))
-			.setClass("hidden-files-extensions-setting")
-			.addTextArea((text) => {
-				ignoredPathsTextArea = text;
-				text
-					.setPlaceholder(t("settingsIgnoredPathsPlaceholder"))
-					.setValue(this.plugin.settings.ignoredPaths)
-					.onChange(async (value) => {
-						this.plugin.settings.ignoredPaths = value;
-						await this.plugin.saveSettings();
-						await this.plugin.applyIgnoredPathsUpdate();
-					});
-				text.inputEl.addClass("hidden-files-extensions-textarea");
-				text.inputEl.rows = 8;
-				text.inputEl.cols = 35;
-			})
-			.addButton((button) =>
-				button
-					.setButtonText(t("settingsButtonResetDefault"))
-					.setTooltip(t("settingsTooltipResetIgnored"))
-					.onClick(async () => {
-						this.plugin.settings.ignoredPaths =
-							DEFAULT_IGNORED_PATHS;
-						await this.plugin.saveSettings();
-						if (ignoredPathsTextArea) {
-							ignoredPathsTextArea.setValue(
-								DEFAULT_IGNORED_PATHS,
+			.setName(t("settingsObsidianIgnoreName"))
+			.setDesc(t("settingsObsidianIgnoreDesc"))
+			.addButton((button) => {
+				obsidianIgnoreButton = button;
+				button.onClick(async () => {
+					try {
+						const exists = await this.app.vault.adapter.exists(".obsidianignore");
+						if (!exists) {
+							await this.app.vault.adapter.write(
+								".obsidianignore",
+								DEFAULT_OBSIDIANIGNORE_CONTENT,
 							);
+							await this.plugin.loadObsidianIgnoreRules();
+							this.plugin.applyFileExplorerFiltering();
+							if (this.plugin.settings.showHiddenFiles) {
+								await this.plugin.rescanVault();
+							}
+							new Notice(t("settingsNoticeCreatedObsidianIgnore"));
+							await updateButtonState();
+						} else {
+							try {
+								await navigator.clipboard.writeText(
+									DEFAULT_OBSIDIANIGNORE_CONTENT,
+								);
+								new Notice(t("settingsNoticeCopiedDefaultIgnore"));
+							} catch (err) {
+								console.error("Vault Code: Clipboard copy failed", err);
+							}
 						}
-						await this.plugin.applyIgnoredPathsUpdate();
-						new Notice(t("noticeIgnoredPathsReset"));
+					} catch (e) {
+						console.error("Vault Code: Failed to handle .obsidianignore button", e);
+					}
+				});
+				void updateButtonState();
+			})
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.useObsidianIgnore)
+					.onChange(async (value) => {
+						this.plugin.settings.useObsidianIgnore = value;
+						await this.plugin.saveSettings();
+						if (value) {
+							const exists = await this.app.vault.adapter.exists(".obsidianignore");
+							if (!exists) {
+								await this.app.vault.adapter.write(
+									".obsidianignore",
+									DEFAULT_OBSIDIANIGNORE_CONTENT,
+								);
+								new Notice(t("settingsNoticeCreatedObsidianIgnore"));
+								await updateButtonState();
+							}
+						}
+						await this.plugin.loadObsidianIgnoreRules();
+						this.plugin.applyFileExplorerFiltering();
+						if (this.plugin.settings.showHiddenFiles) {
+							await this.plugin.rescanVault();
+						}
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName(t("settingsGitIgnoreName"))
+			.setDesc(t("settingsGitIgnoreDesc"))
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.useGitIgnore)
+					.onChange(async (value) => {
+						this.plugin.settings.useGitIgnore = value;
+						await this.plugin.saveSettings();
+						await this.plugin.loadGitIgnoreRules();
+						this.plugin.applyFileExplorerFiltering();
+						if (this.plugin.settings.showHiddenFiles) {
+							await this.plugin.rescanVault();
+						}
 					}),
 			);
 
@@ -5796,7 +5977,8 @@ class VaultCodeSettingTab extends PluginSettingTab {
 						setLanguage(this.plugin.settings.language);
 						await this.plugin.saveSettings();
 						this.plugin.applyShowAllFileTypes();
-						await this.plugin.applyIgnoredPathsUpdate();
+						await this.plugin.reloadAllIgnoreRules();
+						this.plugin.applyFileExplorerFiltering();
 						if (this.plugin.settings.showHiddenFiles) {
 							await this.plugin.enableHiddenFiles();
 						} else {
