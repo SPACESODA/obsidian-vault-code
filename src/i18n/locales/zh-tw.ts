@@ -6,7 +6,7 @@ export const zhTw: TranslationSchema = {
 	viewToggleCode: "原始碼",
 	viewToggleRendered: "預覽",
 	viewToggleTooltip: "切換原始碼與預覽檢視",
-	editorLineWrapToggle: "切換自動換行 (Alt+Z)",
+	editorLineWrapToggle: "切換自動換行",
 	saveChanges: "儲存",
 	saveChangesTooltip: "儲存變更",
 	saved: "已儲存",

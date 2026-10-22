@@ -4,7 +4,7 @@ export const en = {
 	viewToggleCode: "Code",
 	viewToggleRendered: "Preview",
 	viewToggleTooltip: "Switch between code and preview",
-	editorLineWrapToggle: "Toggle line wrapping (Alt+Z)",
+	editorLineWrapToggle: "Toggle line wrapping",
 	saveChanges: "Save",
 	saveChangesTooltip: "Save changes",
 	saved: "Saved",

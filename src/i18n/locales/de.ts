@@ -6,7 +6,7 @@ export const de: TranslationSchema = {
 	viewToggleCode: "Code",
 	viewToggleRendered: "Vorschau",
 	viewToggleTooltip: "Zwischen Code- und Vorschauansicht wechseln",
-	editorLineWrapToggle: "Zeilenumbruch umschalten (Alt+Z)",
+	editorLineWrapToggle: "Zeilenumbruch umschalten",
 	saveChanges: "Speichern",
 	saveChangesTooltip: "Änderungen speichern",
 	saved: "Gespeichert",

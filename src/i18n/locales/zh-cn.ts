@@ -6,7 +6,7 @@ export const zhCn: TranslationSchema = {
 	viewToggleCode: "源码",
 	viewToggleRendered: "预览",
 	viewToggleTooltip: "切换源码与预览视图",
-	editorLineWrapToggle: "切换自动换行 (Alt+Z)",
+	editorLineWrapToggle: "切换自动换行",
 	saveChanges: "保存",
 	saveChangesTooltip: "保存更改",
 	saved: "已保存",

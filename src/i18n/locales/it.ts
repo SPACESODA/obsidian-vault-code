@@ -6,7 +6,7 @@ export const it: TranslationSchema = {
 	viewToggleCode: "Codice",
 	viewToggleRendered: "Anteprima",
 	viewToggleTooltip: "Passa dalla visualizzazione codice a quella anteprima",
-	editorLineWrapToggle: "Attiva/disattiva a capo automatico (Alt+Z)",
+	editorLineWrapToggle: "Attiva/disattiva a capo automatico",
 	saveChanges: "Salva",
 	saveChangesTooltip: "Salva modifiche",
 	saved: "Salvato",

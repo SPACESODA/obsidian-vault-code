@@ -2202,14 +2202,12 @@ export class DotfileView extends TextFileView {
 				this.saveBtnEl.addClass("is-dirty");
 				if (this.saveIconEl) setIcon(this.saveIconEl, "save");
 				if (this.saveTextEl) this.saveTextEl.setText(t("saveChanges"));
-				this.saveBtnEl.title = t("saveChangesTooltip");
 				this.saveBtnEl.setAttribute("aria-label", t("saveChangesTooltip"));
 			} else {
 				this.saveBtnEl.removeClass("is-dirty");
 				this.saveBtnEl.addClass("is-saved");
 				if (this.saveIconEl) setIcon(this.saveIconEl, "check");
 				if (this.saveTextEl) this.saveTextEl.setText(t("saved"));
-				this.saveBtnEl.title = t("saved");
 				this.saveBtnEl.setAttribute("aria-label", t("saved"));
 			}
 		}
@@ -2330,7 +2328,6 @@ export class DotfileView extends TextFileView {
 		});
 		setIcon(this.searchBtnEl, "search");
 		const searchTooltip = `${t("searchFindAriaLabel")} / ${t("searchReplace")}`;
-		this.searchBtnEl.title = searchTooltip;
 		this.searchBtnEl.setAttribute("aria-label", searchTooltip);
 		this.searchBtnEl.addEventListener("click", () => {
 			this.toggleSearch();
@@ -2754,7 +2751,6 @@ export class DotfileView extends TextFileView {
 	private updateLineWrappingUI(): void {
 		if (!this.lineWrapBtnEl) return;
 		this.lineWrapBtnEl.toggleClass("is-active", this.isLineWrapping);
-		this.lineWrapBtnEl.title = t("editorLineWrapToggle");
 		this.lineWrapBtnEl.setAttribute("aria-label", t("editorLineWrapToggle"));
 	}
 
@@ -2794,7 +2790,6 @@ export class DotfileView extends TextFileView {
 				);
 			}
 			const tooltip = t("viewToggleTooltip");
-			this.viewToggleBtnEl.title = tooltip;
 			this.viewToggleBtnEl.setAttribute("aria-label", tooltip);
 			this.viewToggleBtnEl.toggleClass("is-active", this.isPreviewMode);
 		}

@@ -6,7 +6,7 @@ export const fr: TranslationSchema = {
 	viewToggleCode: "Code",
 	viewToggleRendered: "Aperçu",
 	viewToggleTooltip: "Basculer entre la vue code et la vue aperçu",
-	editorLineWrapToggle: "Activer/désactiver le retour à la ligne (Alt+Z)",
+	editorLineWrapToggle: "Activer/désactiver le retour à la ligne",
 	saveChanges: "Enregistrer",
 	saveChangesTooltip: "Enregistrer les modifications",
 	saved: "Enregistré",

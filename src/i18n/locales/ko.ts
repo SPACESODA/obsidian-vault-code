@@ -6,7 +6,7 @@ export const ko: TranslationSchema = {
 	viewToggleCode: "코드",
 	viewToggleRendered: "미리보기",
 	viewToggleTooltip: "코드 및 미리보기 보기 전환",
-	editorLineWrapToggle: "자동 줄 바꿈 전환 (Alt+Z)",
+	editorLineWrapToggle: "자동 줄 바꿈 전환",
 	saveChanges: "저장",
 	saveChangesTooltip: "변경 사항 저장",
 	saved: "저장됨",

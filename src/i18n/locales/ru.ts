@@ -6,7 +6,7 @@ export const ru: TranslationSchema = {
 	viewToggleCode: "Код",
 	viewToggleRendered: "Просмотр",
 	viewToggleTooltip: "Переключение между режимами кода и просмотра",
-	editorLineWrapToggle: "Переключить перенос строк (Alt+Z)",
+	editorLineWrapToggle: "Переключить перенос строк",
 	saveChanges: "Сохранить",
 	saveChangesTooltip: "Сохранить изменения",
 	saved: "Сохранено",

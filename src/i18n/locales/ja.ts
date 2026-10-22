@@ -6,7 +6,7 @@ export const ja: TranslationSchema = {
 	viewToggleCode: "コード",
 	viewToggleRendered: "プレビュー",
 	viewToggleTooltip: "コードとプレビューの切り替え",
-	editorLineWrapToggle: "行の折り返しを切り替え (Alt+Z)",
+	editorLineWrapToggle: "行の折り返しを切り替え",
 	saveChanges: "保存",
 	saveChangesTooltip: "変更を保存",
 	saved: "保存済み",
