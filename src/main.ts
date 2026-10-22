@@ -165,43 +165,54 @@ export const BINARY_EXTENSIONS = new Set([
 	"pyc", "pyo", "wasm", "node", "apk", "aab", "ipa",
 ]);
 
-/* ── Native syntax highlighting style ─────────────────────── */
+/* ── VS Code Syntax Highlighting Style ───────────────────────── */
 
 export const vaultCodeHighlightStyle = HighlightStyle.define([
-	// Keywords & Language constructs
+	// Control keywords (if, return, for, while, switch, import, export, from, await, try, catch)
+	{
+		tag: [
+			tags.controlKeyword,
+			tags.moduleKeyword,
+		],
+		color: "var(--vc-control, #c586c0)",
+	},
+
+	// General Keywords & Language constructs (const, let, var, function, class, new, typeof)
 	{
 		tag: [
 			tags.keyword,
-			tags.controlKeyword,
 			tags.definitionKeyword,
-			tags.moduleKeyword,
 			tags.operatorKeyword,
 			tags.modifier,
 		],
-		color: "var(--code-keyword, var(--color-pink, #ff7b72))",
-		fontWeight: "500",
+		color: "var(--vc-keyword, #569cd6)",
 	},
 	{
 		tag: [tags.self],
-		color: "var(--code-keyword, var(--color-pink, #ff7b72))",
+		color: "var(--vc-keyword, #569cd6)",
 		fontStyle: "italic",
 	},
 
 	// HTML / XML / SVG Elements & Tags
 	{
 		tag: tags.tagName,
-		color: "var(--code-tag, var(--color-red, #ff7b72))",
-		fontWeight: "500",
+		color: "var(--vc-tag, #569cd6)",
 	},
 	{
-		tag: [tags.angleBracket, tags.bracket],
-		color: "var(--code-punctuation, var(--text-muted, #8b949e))",
+		tag: [tags.angleBracket],
+		color: "var(--vc-tag-bracket, #808080)",
 	},
 
-	// HTML / XML Attributes & Object Properties
+	// HTML / XML Attributes
 	{
-		tag: [tags.attributeName, tags.propertyName],
-		color: "var(--code-property, var(--color-cyan, #79c0ff))",
+		tag: [tags.attributeName],
+		color: "var(--vc-attribute, #9cdcfe)",
+	},
+
+	// Object Properties & JSON keys
+	{
+		tag: [tags.propertyName],
+		color: "var(--vc-property, #9cdcfe)",
 	},
 
 	// Functions, Methods & Function Definitions
@@ -211,53 +222,67 @@ export const vaultCodeHighlightStyle = HighlightStyle.define([
 			tags.function(tags.propertyName),
 			tags.macroName,
 		],
-		color: "var(--code-function, var(--color-yellow, #e3b341))",
+		color: "var(--vc-function, #dcdcaa)",
 	},
 
 	// Types, Classes, Namespaces & Interfaces
 	{
 		tag: [
 			tags.typeName,
-			tags.className,
+			tags.standard(tags.typeName),
 			tags.namespace,
+			tags.definition(tags.className),
 			tags.changed,
 		],
-		color: "var(--code-function, var(--color-yellow, #ffa657))",
+		color: "var(--vc-type, #4ec9b0)",
 	},
 
-	// Strings & Attribute Values
+	// CSS Selectors & Classes
 	{
-		tag: [tags.string, tags.attributeValue, tags.character],
-		color: "var(--code-string, var(--color-green, #7ee787))",
+		tag: [tags.className],
+		color: "var(--vc-css-selector, #d7ba7d)",
+	},
+
+	// Strings, Characters & Attribute Values
+	{
+		tag: [tags.string, tags.character],
+		color: "var(--vc-string, #ce9178)",
+	},
+	{
+		tag: [tags.attributeValue],
+		color: "var(--vc-string, #ce9178)",
 	},
 	{
 		tag: [tags.special(tags.string), tags.escape],
-		color: "var(--code-important, var(--color-orange, #ffa657))",
+		color: "var(--vc-escape, #d7ba7d)",
 	},
 	{
 		tag: tags.regexp,
-		color: "var(--code-important, var(--color-orange, #ffa657))",
+		color: "var(--vc-regex, #d16969)",
 	},
 
-	// Numbers, Booleans, Null, Constants & Literals
+	// Numbers, Units & Constants
 	{
-		tag: [tags.number, tags.integer, tags.float],
-		color: "var(--code-value, var(--color-purple, #d2a8ff))",
+		tag: [tags.number, tags.integer, tags.float, tags.unit],
+		color: "var(--vc-number, #b5cea8)",
 	},
 	{
-		tag: [tags.bool, tags.null, tags.atom],
-		color: "var(--code-value, var(--color-purple, #d2a8ff))",
-		fontWeight: "500",
+		tag: [tags.bool, tags.null],
+		color: "var(--vc-keyword, #569cd6)",
+	},
+	{
+		tag: [tags.atom],
+		color: "var(--vc-constant, #4fc1ff)",
 	},
 
 	// Operators & Punctuation
 	{
 		tag: [tags.operator, tags.compareOperator, tags.logicOperator, tags.arithmeticOperator],
-		color: "var(--code-operator, var(--color-red, #ff7b72))",
+		color: "var(--vc-operator, #d4d4d4)",
 	},
 	{
-		tag: [tags.punctuation, tags.separator],
-		color: "var(--code-punctuation, var(--text-muted, #8b949e))",
+		tag: [tags.punctuation, tags.separator, tags.bracket],
+		color: "var(--vc-punctuation, #d4d4d4)",
 	},
 
 	// Comments
@@ -268,7 +293,7 @@ export const vaultCodeHighlightStyle = HighlightStyle.define([
 			tags.blockComment,
 			tags.docComment,
 		],
-		color: "var(--code-comment, var(--text-faint, #8b949e))",
+		color: "var(--vc-comment, #6a9955)",
 		fontStyle: "italic",
 	},
 
@@ -280,38 +305,34 @@ export const vaultCodeHighlightStyle = HighlightStyle.define([
 			tags.processingInstruction,
 			tags.annotation,
 		],
-		color: "var(--code-important, var(--color-orange, #ffa657))",
+		color: "var(--vc-meta, #c586c0)",
 	},
 
-	// CSS Units & Colors
-	{
-		tag: tags.unit,
-		color: "var(--code-value, var(--color-purple, #d2a8ff))",
-	},
+	// CSS Colors
 	{
 		tag: tags.color,
-		color: "var(--code-string, var(--color-green, #7ee787))",
+		color: "var(--vc-string, #ce9178)",
 	},
 
 	// Variables & Definitions
 	{
-		tag: tags.definition(tags.variableName),
-		color: "var(--text-accent, var(--color-blue, #58a6ff))",
-	},
-	{
-		tag: tags.variableName,
-		color: "var(--code-normal, var(--text-normal))",
+		tag: [
+			tags.definition(tags.variableName),
+			tags.variableName,
+			tags.special(tags.variableName),
+		],
+		color: "var(--vc-variable, #9cdcfe)",
 	},
 
 	// Markdown / Documentation formatting
 	{
 		tag: tags.heading,
-		color: "var(--text-title-h1, var(--text-normal))",
+		color: "var(--vc-keyword, #569cd6)",
 		fontWeight: "bold",
 	},
 	{
 		tag: tags.link,
-		color: "var(--text-accent, #58a6ff)",
+		color: "var(--vc-string, #ce9178)",
 		textDecoration: "underline",
 	},
 	{
@@ -322,23 +343,27 @@ export const vaultCodeHighlightStyle = HighlightStyle.define([
 		tag: tags.strong,
 		fontWeight: "bold",
 	},
+	{
+		tag: tags.monospace,
+		color: "var(--vc-string, #ce9178)",
+	},
 
 	// Diff / Git
 	{
 		tag: tags.inserted,
-		color: "var(--color-green, #7ee787)",
-		backgroundColor: "rgba(46, 160, 67, 0.15)",
+		color: "var(--vc-type, #4ec9b0)",
+		backgroundColor: "rgba(78, 201, 176, 0.15)",
 	},
 	{
 		tag: tags.deleted,
-		color: "var(--color-red, #ff7b72)",
-		backgroundColor: "rgba(248, 81, 73, 0.15)",
+		color: "#f14c4c",
+		backgroundColor: "rgba(241, 76, 76, 0.15)",
 	},
 
 	// Errors
 	{
 		tag: tags.invalid,
-		color: "var(--text-error, #f85149)",
+		color: "#f14c4c",
 	},
 ]);
 

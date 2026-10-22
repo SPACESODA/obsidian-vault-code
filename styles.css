@@ -1,5 +1,51 @@
 /* Hidden Files Manager — CodeMirror 6 Editor Styles */
 
+/* ── VS Code Syntax Highlighting Theme ─────────────────────── */
+
+.theme-dark {
+	--vc-keyword: #569cd6;
+	--vc-control: #c586c0;
+	--vc-function: #dcdcaa;
+	--vc-type: #4ec9b0;
+	--vc-string: #ce9178;
+	--vc-escape: #d7ba7d;
+	--vc-number: #b5cea8;
+	--vc-comment: #6a9955;
+	--vc-variable: #9cdcfe;
+	--vc-property: #9cdcfe;
+	--vc-tag: #569cd6;
+	--vc-tag-bracket: #808080;
+	--vc-attribute: #9cdcfe;
+	--vc-css-selector: #d7ba7d;
+	--vc-operator: #d4d4d4;
+	--vc-punctuation: #d4d4d4;
+	--vc-regex: #d16969;
+	--vc-meta: #c586c0;
+	--vc-constant: #4fc1ff;
+}
+
+.theme-light {
+	--vc-keyword: #0000ff;
+	--vc-control: #af00db;
+	--vc-function: #795e26;
+	--vc-type: #267f99;
+	--vc-string: #a31515;
+	--vc-escape: #ee0000;
+	--vc-number: #098658;
+	--vc-comment: #008000;
+	--vc-variable: #001080;
+	--vc-property: #001080;
+	--vc-tag: #800000;
+	--vc-tag-bracket: #800000;
+	--vc-attribute: #e50000;
+	--vc-css-selector: #800000;
+	--vc-operator: #000000;
+	--vc-punctuation: #000000;
+	--vc-regex: #811f3f;
+	--vc-meta: #af00db;
+	--vc-constant: #0070c1;
+}
+
 .hidden-files-editor-container {
 	display: flex;
 	flex-direction: column;
