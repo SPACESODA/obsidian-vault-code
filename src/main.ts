@@ -31,8 +31,16 @@ import {
 	keymap,
 	Panel,
 	ViewUpdate,
+	Command,
 } from "@codemirror/view";
-import { EditorState, Extension, Compartment, Prec } from "@codemirror/state";
+import {
+	EditorState,
+	Extension,
+	Compartment,
+	Prec,
+	EditorSelection,
+	countColumn,
+} from "@codemirror/state";
 import {
 	defaultKeymap,
 	history,
@@ -65,6 +73,8 @@ import {
 	HighlightStyle,
 	LanguageDescription,
 	LanguageSupport,
+	indentString,
+	indentUnit,
 } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
 import {
@@ -1618,6 +1628,187 @@ class ModernSearchPanel implements Panel {
 	}
 }
 
+/** HTML void elements that do not require a closing tag. */
+const VOID_HTML_TAGS = new Set([
+	"area",
+	"base",
+	"br",
+	"col",
+	"embed",
+	"hr",
+	"img",
+	"input",
+	"link",
+	"meta",
+	"param",
+	"source",
+	"track",
+	"wbr",
+]);
+
+/**
+ * VS Code-grade smart newline and auto-indentation handler.
+ * Replaces CodeMirror's naive AST-dependent newlineAndIndent to provide:
+ * 1. Bracket & HTML Tag explosion: `{|}`, `[|]`, `(|)`, `<tag>|</tag>`
+ * 2. Predictable block indent: adds 1 indent unit after `{`, `[`, `(`, `:`, unclosed HTML tags, or block keywords (do, then, etc.).
+ * 3. Never adds extra indent after closed constructs: `}`, `};`, `</tag>`, `<span>...</span>`, `end`, etc.
+ * 4. Preserves current line indentation for normal statement lines (never snaps back on parser errors).
+ */
+export const smartNewlineAndIndent: Command = (view: EditorView) => {
+	if (view.state.readOnly) return false;
+	const viewState = view.state;
+
+	const changes = viewState.changeByRange((range) => {
+		const { from } = range;
+		let { to } = range;
+		const line = viewState.doc.lineAt(from);
+
+		// Consume trailing spaces on current line after cursor if only spaces remain
+		while (to < line.to && /\s/.test(line.text[to - line.from] ?? "")) to++;
+
+		const textBefore = line.text.slice(0, from - line.from);
+		const textAfter = line.text.slice(to - line.from);
+		const trimmedBefore = textBefore.trimEnd();
+		const trimmedAfter = textAfter.trimStart();
+
+		const lineIndentStr = /^\s*/.exec(line.text)?.[0] ?? "";
+		const lineIndentCol = countColumn(lineIndentStr, viewState.tabSize);
+		const oneIndentCol =
+			countColumn(viewState.facet(indentUnit), viewState.tabSize) || 4;
+
+		// 1. Bracket & HTML Tag explosion: `{|}`, `[|]`, `(|)`, `<tag>|</tag>`
+		const isBrackets =
+			(trimmedBefore.endsWith("{") && trimmedAfter.startsWith("}")) ||
+			(trimmedBefore.endsWith("[") && trimmedAfter.startsWith("]")) ||
+			(trimmedBefore.endsWith("(") && trimmedAfter.startsWith(")"));
+
+		const tagOpenMatch = trimmedBefore.match(
+			/<([a-zA-Z0-9_-]+)(?:\s+[^<>]*)?>$/,
+		);
+		const tagCloseMatch = trimmedAfter.match(/^<\/([a-zA-Z0-9_-]+)>/);
+		const isTagExplode = Boolean(
+			tagOpenMatch?.[1] &&
+				tagCloseMatch?.[1] &&
+				tagOpenMatch[1].toLowerCase() ===
+					tagCloseMatch[1].toLowerCase() &&
+				!trimmedBefore.endsWith("/>"),
+		);
+
+		if (isBrackets || isTagExplode) {
+			const innerIndent = indentString(
+				viewState,
+				lineIndentCol + oneIndentCol,
+			);
+			const outerIndent = indentString(viewState, lineIndentCol);
+			const textToInsert =
+				viewState.lineBreak +
+				innerIndent +
+				viewState.lineBreak +
+				outerIndent;
+			return {
+				changes: { from, to, insert: textToInsert },
+				range: EditorSelection.cursor(
+					from + viewState.lineBreak.length + innerIndent.length,
+				),
+			};
+		}
+
+		// 2. Block comment continuation (JSDoc / C-style)
+		if (trimmedBefore === "/**" || trimmedBefore === "/*") {
+			const indent = indentString(viewState, lineIndentCol);
+			const textToInsert = viewState.lineBreak + indent + " * ";
+			return {
+				changes: { from, to, insert: textToInsert },
+				range: EditorSelection.cursor(from + textToInsert.length),
+			};
+		}
+		const docCommentMatch = textBefore.match(/^(\s*)\*\s*(.*)$/);
+		if (docCommentMatch && !trimmedBefore.endsWith("*/")) {
+			const commentIndent = docCommentMatch[1];
+			const commentBody = docCommentMatch[2];
+			if (commentBody === "") {
+				// User pressed Enter on an empty comment line " * ", clear the asterisk
+				const textToInsert = viewState.lineBreak + commentIndent;
+				return {
+					changes: { from: line.from, to, insert: textToInsert },
+					range: EditorSelection.cursor(
+						line.from + textToInsert.length,
+					),
+				};
+			}
+			const textToInsert = viewState.lineBreak + commentIndent + "* ";
+			return {
+				changes: { from, to, insert: textToInsert },
+				range: EditorSelection.cursor(from + textToInsert.length),
+			};
+		}
+
+		let nextIndentCol = lineIndentCol;
+
+		// 3. Open block constructs: {, [, (, :, unclosed HTML tag, or block keywords
+		const openBraceCount = (textBefore.match(/\{/g) || []).length;
+		const closeBraceCount = (textBefore.match(/\}/g) || []).length;
+		const openBracketCount = (textBefore.match(/\[/g) || []).length;
+		const closeBracketCount = (textBefore.match(/\]/g) || []).length;
+		const openParenCount = (textBefore.match(/\(/g) || []).length;
+		const closeParenCount = (textBefore.match(/\)/g) || []).length;
+
+		const openTagName = tagOpenMatch?.[1]?.toLowerCase();
+		const isVoidOrSelfClosing =
+			Boolean(openTagName) &&
+			(trimmedBefore.endsWith("/>") ||
+				VOID_HTML_TAGS.has(openTagName!));
+		const isTagClosedSameLine =
+			Boolean(openTagName && tagOpenMatch) &&
+			new RegExp(`</${openTagName}>`, "i").test(
+				line.text.slice(tagOpenMatch!.index),
+			);
+
+		if (
+			trimmedBefore.endsWith("{") ||
+			(openBraceCount > closeBraceCount &&
+				/[{[(]\s*$/.test(textBefore)) ||
+			trimmedBefore.endsWith("[") ||
+			(openBracketCount > closeBracketCount &&
+				/\[\s*$/.test(textBefore)) ||
+			trimmedBefore.endsWith("(") ||
+			(openParenCount > closeParenCount && /\(\s*$/.test(textBefore)) ||
+			(trimmedBefore.endsWith(":") &&
+				!trimmedBefore.startsWith("http:") &&
+				!trimmedBefore.startsWith("https:")) ||
+			/\b(?:do|then|begin|else|elsif|elif)\b$/.test(trimmedBefore) ||
+			(tagOpenMatch && !isVoidOrSelfClosing && !isTagClosedSameLine)
+		) {
+			nextIndentCol = lineIndentCol + oneIndentCol;
+		} else if (
+			/[}\])]\s*;?,?$/.test(trimmedBefore) ||
+			/<\/[a-zA-Z0-9_-]+>$/.test(trimmedBefore) ||
+			/\bend\b$/.test(trimmedBefore)
+		) {
+			// 4. Closed block: keep line indent exactly, never add extra indent
+			nextIndentCol = lineIndentCol;
+		} else {
+			// 5. Default normal statement line: keep current line indent
+			nextIndentCol = lineIndentCol;
+		}
+
+		const nextIndentStr = indentString(viewState, nextIndentCol);
+		const textToInsert = viewState.lineBreak + nextIndentStr;
+		return {
+			changes: { from, to, insert: textToInsert },
+			range: EditorSelection.cursor(from + textToInsert.length),
+		};
+	});
+
+	view.dispatch(
+		viewState.update(changes, {
+			scrollIntoView: true,
+			userEvent: "input",
+		}),
+	);
+	return true;
+};
+
 /* ── Dotfile & Code Editor View ────────────────────────────── */
 
 export class DotfileView extends TextFileView {
@@ -2009,6 +2200,9 @@ export class DotfileView extends TextFileView {
 	}
 
 	private createEditorState(content: string): EditorState {
+		const useTab = (this.app.vault.getConfig("useTab") as boolean) ?? true;
+		const tabSize = (this.app.vault.getConfig("tabSize") as number) ?? 4;
+
 		const extensions: Extension[] = [
 			lineNumbers(),
 			highlightActiveLineGutter(),
@@ -2025,6 +2219,8 @@ export class DotfileView extends TextFileView {
 			drawSelection(),
 			dropCursor(),
 			EditorState.allowMultipleSelections.of(true),
+			EditorState.tabSize.of(tabSize),
+			indentUnit.of(useTab ? "\t" : " ".repeat(tabSize)),
 			indentOnInput(),
 			syntaxHighlighting(vaultCodeHighlightStyle),
 			syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
@@ -2069,6 +2265,10 @@ export class DotfileView extends TextFileView {
 						preventDefault: true,
 					},
 					...closeBracketsKeymap,
+					{
+						key: "Enter",
+						run: smartNewlineAndIndent,
+					},
 					...defaultKeymap,
 					...searchKeymap,
 					...historyKeymap,
