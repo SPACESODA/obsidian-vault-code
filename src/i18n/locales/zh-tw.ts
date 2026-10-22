@@ -62,6 +62,11 @@ export const zhTw: TranslationSchema = {
 	modalButtonSave: "儲存變更",
 	modalButtonDiscard: "捨棄變更",
 
+	// Modals - Confirm Replace All
+	modalReplaceAllTitle: "取代所有相符項目",
+	modalReplaceAllMessage: "確定要將全部 {0} 個「{1}」取代為「{2}」嗎？",
+	modalButtonReplaceAll: "全部取代",
+
 	// Callouts
 	calloutBinaryTitle: "不支援的二進位格式",
 	calloutBinaryDesc: "無法在程式碼編輯器中開啟此檔案（{0}），以防止二進位資料損壞。",
@@ -123,6 +128,7 @@ export const zhTw: TranslationSchema = {
 	noticeIgnoredPathsReset: "忽略路徑已重設為預設值。",
 	noticeAllSettingsReset: "所有設定已重設為預設值。",
 	noticeNoActiveToRename: "沒有可重新命名的使用中檔案或資料夾。",
+	noticeReplaceAllSuccess: "已取代 {0} 個相符項目。",
 
 	// Commands
 	commandCreateFile: "新增檔案（任何類型）",

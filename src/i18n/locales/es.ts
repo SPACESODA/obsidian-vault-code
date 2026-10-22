@@ -62,6 +62,11 @@ export const es: TranslationSchema = {
 	modalButtonSave: "Guardar cambios",
 	modalButtonDiscard: "Descartar",
 
+	// Modals - Confirm Replace All
+	modalReplaceAllTitle: "Reemplazar todas las coincidencias",
+	modalReplaceAllMessage: "¿Seguro que quieres reemplazar las {0} coincidencias de «{1}» por «{2}»?",
+	modalButtonReplaceAll: "Reemplazar todo",
+
 	// Callouts
 	calloutBinaryTitle: "Formato binario no compatible",
 	calloutBinaryDesc: "Este archivo ({0}) no se puede abrir en el editor de código para protegerlo de posibles corrupciones binarias.",
@@ -123,6 +128,7 @@ export const es: TranslationSchema = {
 	noticeIgnoredPathsReset: "Rutas ignoradas restablecidas por defecto.",
 	noticeAllSettingsReset: "Todos los ajustes han sido restablecidos por defecto.",
 	noticeNoActiveToRename: "No hay ningún archivo o carpeta activo para renombrar.",
+	noticeReplaceAllSuccess: "Se han reemplazado {0} coincidencias.",
 
 	// Commands
 	commandCreateFile: "Crear nuevo archivo (cualquier tipo)",

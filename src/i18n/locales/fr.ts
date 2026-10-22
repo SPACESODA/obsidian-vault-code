@@ -62,6 +62,11 @@ export const fr: TranslationSchema = {
 	modalButtonSave: "Enregistrer les modifications",
 	modalButtonDiscard: "Ignorer",
 
+	// Modals - Confirm Replace All
+	modalReplaceAllTitle: "Remplacer toutes les occurrences",
+	modalReplaceAllMessage: "Voulez-vous vraiment remplacer les {0} occurrences de « {1} » par « {2} » ?",
+	modalButtonReplaceAll: "Tout remplacer",
+
 	// Callouts
 	calloutBinaryTitle: "Format binaire non pris en charge",
 	calloutBinaryDesc: "Ce fichier ({0}) ne peut pas être ouvert dans l'éditeur de code afin d'éviter toute corruption binaire.",
@@ -123,6 +128,7 @@ export const fr: TranslationSchema = {
 	noticeIgnoredPathsReset: "Les chemins ignorés ont été réinitialisés par défaut.",
 	noticeAllSettingsReset: "Tous les paramètres ont été réinitialisés par défaut.",
 	noticeNoActiveToRename: "Aucun fichier ou dossier actif à renommer.",
+	noticeReplaceAllSuccess: "{0} occurrences ont été remplacées.",
 
 	// Commands
 	commandCreateFile: "Créer un nouveau fichier (tout type)",

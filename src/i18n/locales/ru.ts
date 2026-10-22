@@ -62,6 +62,11 @@ export const ru: TranslationSchema = {
 	modalButtonSave: "Сохранить изменения",
 	modalButtonDiscard: "Не сохранять",
 
+	// Modals - Confirm Replace All
+	modalReplaceAllTitle: "Заменить все совпадения",
+	modalReplaceAllMessage: "Вы уверены, что хотите заменить все {0} совпадений «{1}» на «{2}»?",
+	modalButtonReplaceAll: "Заменить все",
+
 	// Callouts
 	calloutBinaryTitle: "Неподдерживаемый двоичный формат",
 	calloutBinaryDesc: "Этот файл ({0}) нельзя открыть в редакторе кода во избежание повреждения двоичных данных.",
@@ -123,6 +128,7 @@ export const ru: TranslationSchema = {
 	noticeIgnoredPathsReset: "Игнорируемые пути сброшены по умолчанию.",
 	noticeAllSettingsReset: "Все настройки были сброшены по умолчанию.",
 	noticeNoActiveToRename: "Нет активного файла или папки для переименования.",
+	noticeReplaceAllSuccess: "Заменено совпадений: {0}.",
 
 	// Commands
 	commandCreateFile: "Создать новый файл (любой тип)",

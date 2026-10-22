@@ -60,6 +60,11 @@ export const en = {
 	modalButtonSave: "Save changes",
 	modalButtonDiscard: "Discard",
 
+	// Modals - Confirm Replace All
+	modalReplaceAllTitle: "Replace all occurrences",
+	modalReplaceAllMessage: "Are you sure you want to replace all {0} occurrences of \"{1}\" with \"{2}\"?",
+	modalButtonReplaceAll: "Replace all",
+
 	// Callouts
 	calloutBinaryTitle: "Unsupported binary format",
 	calloutBinaryDesc: "This file ({0}) cannot be opened in the code editor to protect it from binary corruption.",
@@ -121,6 +126,7 @@ export const en = {
 	noticeIgnoredPathsReset: "Ignored paths reset to default.",
 	noticeAllSettingsReset: "All settings have been reset to default.",
 	noticeNoActiveToRename: "No active file or folder to rename.",
+	noticeReplaceAllSuccess: "Replaced {0} occurrences.",
 
 	// Commands
 	commandCreateFile: "Create new file (any type)",

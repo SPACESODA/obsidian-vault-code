@@ -62,6 +62,11 @@ export const ja: TranslationSchema = {
 	modalButtonSave: "保存する",
 	modalButtonDiscard: "破棄する",
 
+	// Modals - Confirm Replace All
+	modalReplaceAllTitle: "すべて置換の確認",
+	modalReplaceAllMessage: "{0} 件の一致する「{1}」を「{2}」にすべて置換しますか？",
+	modalButtonReplaceAll: "すべて置換",
+
 	// Callouts
 	calloutBinaryTitle: "サポートされていないバイナリ形式",
 	calloutBinaryDesc: "バイナリ破損を防ぐため、このファイル（{0}）をコードエディタで開くことはできません。",
@@ -123,6 +128,7 @@ export const ja: TranslationSchema = {
 	noticeIgnoredPathsReset: "除外パスをデフォルトにリセットしました。",
 	noticeAllSettingsReset: "すべての設定をデフォルトにリセットしました。",
 	noticeNoActiveToRename: "名前を変更するアクティブなファイルまたはフォルダがありません。",
+	noticeReplaceAllSuccess: "{0} 件の一致項目を置換しました。",
 
 	// Commands
 	commandCreateFile: "新規ファイルを作成（任意の形式）",

@@ -62,6 +62,11 @@ export const zhCn: TranslationSchema = {
 	modalButtonSave: "保存更改",
 	modalButtonDiscard: "放弃更改",
 
+	// Modals - Confirm Replace All
+	modalReplaceAllTitle: "替换所有匹配项",
+	modalReplaceAllMessage: "确定要将全部 {0} 个“{1}”替换为“{2}”吗？",
+	modalButtonReplaceAll: "全部替换",
+
 	// Callouts
 	calloutBinaryTitle: "不支持的二进制格式",
 	calloutBinaryDesc: "无法在代码编辑器中打开此文件（{0}），以防止二进制数据损坏。",
@@ -123,6 +128,7 @@ export const zhCn: TranslationSchema = {
 	noticeIgnoredPathsReset: "忽略路径已重置为默认值。",
 	noticeAllSettingsReset: "所有设置已重置为默认值。",
 	noticeNoActiveToRename: "没有可重命名的活动文件或文件夹。",
+	noticeReplaceAllSuccess: "已替换 {0} 个匹配项。",
 
 	// Commands
 	commandCreateFile: "新建文件（任何类型）",

@@ -570,6 +570,76 @@ class ConfirmCloseModal extends Modal {
 	}
 }
 
+/* ── Confirm Replace All Modal ─────────────────────────────── */
+
+class ConfirmReplaceAllModal extends Modal {
+	private countDisplay: string;
+	private searchStr: string;
+	private replaceStr: string;
+	private onConfirm: () => void;
+
+	constructor(
+		app: App,
+		countDisplay: string,
+		searchStr: string,
+		replaceStr: string,
+		onConfirm: () => void,
+	) {
+		super(app);
+		this.countDisplay = countDisplay;
+		this.searchStr = searchStr;
+		this.replaceStr = replaceStr;
+		this.onConfirm = onConfirm;
+	}
+
+	onOpen(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+		contentEl.addClass("hidden-files-confirm-modal");
+
+		contentEl.createEl("h3", {
+			text: t("modalReplaceAllTitle"),
+		});
+
+		contentEl.createEl("p", {
+			text: t(
+				"modalReplaceAllMessage",
+				this.countDisplay,
+				this.searchStr,
+				this.replaceStr,
+			),
+		});
+
+		const buttonContainer = contentEl.createDiv({
+			cls: "hidden-files-modal-buttons",
+		});
+
+		const replaceAllBtn = buttonContainer.createEl("button", {
+			cls: "mod-warning",
+			text: t("modalButtonReplaceAll"),
+		});
+		replaceAllBtn.addEventListener("click", () => {
+			this.close();
+			this.onConfirm();
+		});
+
+		const cancelBtn = buttonContainer.createEl("button", {
+			text: t("modalButtonCancel"),
+		});
+		cancelBtn.addEventListener("click", () => {
+			this.close();
+		});
+
+		// Auto-focus confirm button
+		replaceAllBtn.focus();
+	}
+
+	onClose(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+	}
+}
+
 /* ── Create File Modal ─────────────────────────────────────── */
 
 class CreateFileModal extends Modal {
@@ -1082,9 +1152,11 @@ class ModernSearchPanel implements Panel {
 	private isCaseSensitive = false;
 	private isRegex = false;
 	private isWholeWord = false;
+	private app?: App;
 
-	constructor(view: EditorView) {
+	constructor(view: EditorView, app?: App) {
 		this.view = view;
+		this.app = app;
 		const currentQuery = getSearchQuery(view.state);
 		this.isCaseSensitive = currentQuery.caseSensitive;
 		this.isRegex = currentQuery.regexp;
@@ -1306,7 +1378,7 @@ class ModernSearchPanel implements Panel {
 			},
 		});
 		replaceAllBtn.addEventListener("click", () => {
-			replaceAll(this.view);
+			this.promptReplaceAll();
 		});
 
 		// Input event listeners
@@ -1357,7 +1429,7 @@ class ModernSearchPanel implements Panel {
 			if (e.key === "Enter" && e.target === this.replaceInput) {
 				e.preventDefault();
 				if (e.altKey || e.shiftKey) {
-					replaceAll(this.view);
+					this.promptReplaceAll();
 				} else {
 					replaceNext(this.view);
 				}
@@ -1369,6 +1441,48 @@ class ModernSearchPanel implements Panel {
 		this.dom.addEventListener("open-replace", () => {
 			this.setReplaceOpen(true);
 		});
+	}
+
+	private promptReplaceAll(): void {
+		const query = getSearchQuery(this.view.state);
+		if (!query.valid || !query.search) {
+			return;
+		}
+
+		let count = 0;
+		try {
+			const cursor = query.getCursor(this.view.state);
+			while (!cursor.next().done) {
+				count++;
+				if (count >= 1000) break;
+			}
+		} catch {
+			return;
+		}
+
+		if (count === 0) {
+			new Notice(t("searchNoResults"));
+			return;
+		}
+
+		const countDisplay = count >= 1000 ? "999+" : String(count);
+		const app = this.app || (window as unknown as { app?: App }).app;
+		if (!app) {
+			replaceAll(this.view);
+			return;
+		}
+
+		new ConfirmReplaceAllModal(
+			app,
+			countDisplay,
+			query.search,
+			this.replaceInput.value,
+			() => {
+				replaceAll(this.view);
+				new Notice(t("noticeReplaceAllSuccess", countDisplay));
+				this.view.focus();
+			},
+		).open();
 	}
 
 	setReplaceOpen(open: boolean): void {
@@ -1827,7 +1941,7 @@ export class DotfileView extends TextFileView {
 			highlightSelectionMatches(),
 			search({
 				top: true,
-				createPanel: (view) => new ModernSearchPanel(view),
+				createPanel: (view) => new ModernSearchPanel(view, this.app),
 			}),
 			this.languageCompartment.of([]),
 			keymap.of([

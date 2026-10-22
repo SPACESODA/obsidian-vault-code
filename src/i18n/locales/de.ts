@@ -62,6 +62,11 @@ export const de: TranslationSchema = {
 	modalButtonSave: "Änderungen speichern",
 	modalButtonDiscard: "Verwerfen",
 
+	// Modals - Confirm Replace All
+	modalReplaceAllTitle: "Alle Vorkommen ersetzen",
+	modalReplaceAllMessage: "Möchten Sie wirklich alle {0} Vorkommen von „{1}“ durch „{2}“ ersetzen?",
+	modalButtonReplaceAll: "Alle ersetzen",
+
 	// Callouts
 	calloutBinaryTitle: "Nicht unterstütztes Binärformat",
 	calloutBinaryDesc: "Diese Datei ({0}) kann nicht im Code-Editor geöffnet werden, um eine Beschädigung der Binärdaten zu verhindern.",
@@ -123,6 +128,7 @@ export const de: TranslationSchema = {
 	noticeIgnoredPathsReset: "Ignorierte Pfade auf Standard zurückgesetzt.",
 	noticeAllSettingsReset: "Alle Einstellungen wurden auf Standard zurückgesetzt.",
 	noticeNoActiveToRename: "Keine aktive Datei oder Ordner zum Umbenennen vorhanden.",
+	noticeReplaceAllSuccess: "{0} Vorkommen wurden ersetzt.",
 
 	// Commands
 	commandCreateFile: "Neue Datei erstellen (beliebiger Typ)",

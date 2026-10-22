@@ -62,6 +62,11 @@ export const ko: TranslationSchema = {
 	modalButtonSave: "변경 사항 저장",
 	modalButtonDiscard: "저장 안 함",
 
+	// Modals - Confirm Replace All
+	modalReplaceAllTitle: "모두 바꾸기 확인",
+	modalReplaceAllMessage: "{0}개의 \"{1}\" 일치 항목을 \"{2}\"(으)로 모두 바꾸시겠습니까?",
+	modalButtonReplaceAll: "모두 바꾸기",
+
 	// Callouts
 	calloutBinaryTitle: "지원되지 않는 바이너리 형식",
 	calloutBinaryDesc: "데이터 손상을 방지하기 위해 이 파일({0})은 코드 편집기에서 열 수 없습니다.",
@@ -123,6 +128,7 @@ export const ko: TranslationSchema = {
 	noticeIgnoredPathsReset: "제외 경로가 기본값으로 재설정되었습니다.",
 	noticeAllSettingsReset: "모든 설정이 기본값으로 재설정되었습니다.",
 	noticeNoActiveToRename: "이름을 바꿀 활성 파일 또는 폴더가 없습니다.",
+	noticeReplaceAllSuccess: "{0}개의 일치 항목을 바꿨습니다.",
 
 	// Commands
 	commandCreateFile: "새 파일 만들기 (모든 형식)",

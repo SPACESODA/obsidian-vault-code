@@ -62,6 +62,11 @@ export const it: TranslationSchema = {
 	modalButtonSave: "Salva modifiche",
 	modalButtonDiscard: "Ignora",
 
+	// Modals - Confirm Replace All
+	modalReplaceAllTitle: "Sostituisci tutte le occorrenze",
+	modalReplaceAllMessage: "Sei sicuro di voler sostituire tutte le {0} occorrenze di \"{1}\" con \"{2}\"?",
+	modalButtonReplaceAll: "Sostituisci tutto",
+
 	// Callouts
 	calloutBinaryTitle: "Formato binario non supportato",
 	calloutBinaryDesc: "Questo file ({0}) non può essere aperto nell'editor di codice per evitare corruzioni binarie.",
@@ -123,6 +128,7 @@ export const it: TranslationSchema = {
 	noticeIgnoredPathsReset: "I percorsi ignorati sono stati ripristinati ai valori predefiniti.",
 	noticeAllSettingsReset: "Tutte le impostazioni sono state ripristinate ai valori predefiniti.",
 	noticeNoActiveToRename: "Nessun file o cartella attivo da rinominare.",
+	noticeReplaceAllSuccess: "Sostituite {0} occorrenze.",
 
 	// Commands
 	commandCreateFile: "Crea nuovo file (qualsiasi tipo)",
