@@ -2067,7 +2067,7 @@ export class DotfileView extends TextFileView {
 	private languageCompartment = new Compartment();
 	private lineWrappingCompartment = new Compartment();
 	private isLineWrapping = false;
-	private plugin: VaultCodePlugin;
+	public plugin: VaultCodePlugin;
 	private isModified = false;
 	private discardOnClose = false;
 	private isPreviewMode = false;
@@ -2132,6 +2132,7 @@ export class DotfileView extends TextFileView {
 	override getState(): Record<string, unknown> {
 		const state = super.getState();
 		state.file = this.file ? this.file.path : this.filePath;
+		state.preview = this.isPreviewMode;
 		return state;
 	}
 
@@ -2143,6 +2144,14 @@ export class DotfileView extends TextFileView {
 			typeof (state as { file: unknown }).file === "string"
 		) {
 			this.filePath = (state as { file: string }).file;
+		}
+		if (
+			state &&
+			typeof state === "object" &&
+			"preview" in state &&
+			typeof (state as { preview: unknown }).preview === "boolean"
+		) {
+			this.isPreviewMode = (state as { preview: boolean }).preview;
 		}
 		await super.setState(state, result);
 	}
@@ -3293,22 +3302,14 @@ export default class VaultCodePlugin extends Plugin {
 				await this.rescanVault();
 			}
 
-			// Ensure any deferred or restored tabs for code files are properly initialized
-			this.app.workspace.iterateAllLeaves((leaf) => {
-				const viewState = leaf.getViewState();
-				if (viewState && viewState.type === VIEW_TYPE_DOTFILE) {
-					if (!(leaf.view instanceof DotfileView)) {
-						void leaf.setViewState({
-							type: VIEW_TYPE_DOTFILE,
-							state: viewState.state,
-							active: false,
-						});
-					}
-				}
-			});
-
+			// Seamlessly restore code editor leaves on launch or after plugin update/reload
+			await this.reloadCodeEditorLeaves();
 			this.updateAllLeafHeaderActions();
 		});
+
+		if (this.app.workspace.layoutReady) {
+			void this.reloadCodeEditorLeaves();
+		}
 
 		this.registerEvent(
 			this.app.workspace.on("layout-change", () => {
@@ -3666,7 +3667,62 @@ export default class VaultCodePlugin extends Plugin {
 		});
 	}
 
+	private async reloadCodeEditorLeaves(): Promise<void> {
+		const leavesToReload: WorkspaceLeaf[] = [];
+
+		this.app.workspace.iterateAllLeaves((leaf) => {
+			const viewState = leaf.getViewState();
+			if (viewState && viewState.type === VIEW_TYPE_DOTFILE) {
+				const view = leaf.view;
+				const isDeadOrStale =
+					!(view instanceof DotfileView) ||
+					!view.editor ||
+					view.plugin !== this ||
+					view.contentEl.children.length === 0;
+
+				if (isDeadOrStale) {
+					leavesToReload.push(leaf);
+				}
+			}
+		});
+
+		for (const leaf of leavesToReload) {
+			const viewState = leaf.getViewState();
+			const filePath =
+				(viewState?.state as { file?: string } | undefined)?.file ||
+				(leaf.view as unknown as { file?: { path: string }; filePath?: string })?.file?.path ||
+				(leaf.view as unknown as { filePath?: string })?.filePath;
+
+			const targetState = {
+				...(viewState?.state ?? {}),
+				...(filePath ? { file: filePath } : {}),
+			};
+			const activeFile = this.app.workspace.getActiveFile();
+			const isActive = Boolean(activeFile && filePath && activeFile.path === filePath);
+
+			// Clear view state first so Obsidian purges the stale instance and re-invokes
+			// the newly registered DotfileView constructor cleanly
+			await leaf.setViewState({ type: "empty" });
+			await leaf.setViewState({
+				type: VIEW_TYPE_DOTFILE,
+				state: targetState,
+				active: isActive,
+			});
+		}
+	}
+
 	onunload() {
+		// Save any dirty code editor views before unloading to prevent data loss
+		this.app.workspace.iterateAllLeaves((leaf) => {
+			if (leaf.view instanceof DotfileView && leaf.view.isDirty()) {
+				try {
+					void leaf.view.save();
+				} catch {
+					// ignore
+				}
+			}
+		});
+
 		this.restoreWorkspaceLeaf();
 		this.restoreViewRegistry();
 		this.restoreTFileGetNewPath();
