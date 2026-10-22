@@ -43,12 +43,6 @@ export const en = {
 	modalButtonCreate: "Create",
 	modalButtonCancel: "Cancel",
 
-	// Modals - Create Folder
-	modalCreateFolderTitle: "Create new folder",
-	modalCreateFolderPlaceholder: "e.g. .github, assets, src/components",
-	modalCreateFolderEmptyError: "Folder name cannot be empty.",
-	modalCreateFolderExistsError: "A file or folder named '{0}' already exists.",
-
 	// Modals - Rename
 	modalRenameFileTitle: "Rename file",
 	modalRenameFolderTitle: "Rename folder",

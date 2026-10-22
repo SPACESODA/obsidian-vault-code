@@ -45,12 +45,6 @@ export const it: TranslationSchema = {
 	modalButtonCreate: "Crea",
 	modalButtonCancel: "Annulla",
 
-	// Modals - Create Folder
-	modalCreateFolderTitle: "Crea nuova cartella",
-	modalCreateFolderPlaceholder: "es. .github, assets, src/components",
-	modalCreateFolderEmptyError: "Il nome della cartella non può essere vuoto.",
-	modalCreateFolderExistsError: "Un file o una cartella con il nome '{0}' esiste già.",
-
 	// Modals - Rename
 	modalRenameFileTitle: "Rinomina file",
 	modalRenameFolderTitle: "Rinomina cartella",

@@ -45,12 +45,6 @@ export const es: TranslationSchema = {
 	modalButtonCreate: "Crear",
 	modalButtonCancel: "Cancelar",
 
-	// Modals - Create Folder
-	modalCreateFolderTitle: "Crear nueva carpeta",
-	modalCreateFolderPlaceholder: "p. ej., .github, assets, src/components",
-	modalCreateFolderEmptyError: "El nombre de la carpeta no puede estar vacío.",
-	modalCreateFolderExistsError: "Ya existe un archivo o carpeta llamado '{0}'.",
-
 	// Modals - Rename
 	modalRenameFileTitle: "Renombrar archivo",
 	modalRenameFolderTitle: "Renombrar carpeta",

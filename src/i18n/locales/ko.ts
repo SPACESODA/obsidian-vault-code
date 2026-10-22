@@ -45,12 +45,6 @@ export const ko: TranslationSchema = {
 	modalButtonCreate: "만들기",
 	modalButtonCancel: "취소",
 
-	// Modals - Create Folder
-	modalCreateFolderTitle: "새 폴더 만들기",
-	modalCreateFolderPlaceholder: "예: .github, assets, src/components",
-	modalCreateFolderEmptyError: "폴더 이름을 입력하세요.",
-	modalCreateFolderExistsError: "'{0}' 파일 또는 폴더가 이미 존재합니다.",
-
 	// Modals - Rename
 	modalRenameFileTitle: "파일 이름 바꾸기",
 	modalRenameFolderTitle: "폴더 이름 바꾸기",

@@ -45,12 +45,6 @@ export const zhCn: TranslationSchema = {
 	modalButtonCreate: "创建",
 	modalButtonCancel: "取消",
 
-	// Modals - Create Folder
-	modalCreateFolderTitle: "新建文件夹",
-	modalCreateFolderPlaceholder: "例如 .github、assets 或 src/components",
-	modalCreateFolderEmptyError: "文件夹名称不能为空。",
-	modalCreateFolderExistsError: "已存在名为“{0}”的文件或文件夹。",
-
 	// Modals - Rename
 	modalRenameFileTitle: "重命名文件",
 	modalRenameFolderTitle: "重命名文件夹",

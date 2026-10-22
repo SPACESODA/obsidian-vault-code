@@ -45,12 +45,6 @@ export const ja: TranslationSchema = {
 	modalButtonCreate: "作成",
 	modalButtonCancel: "キャンセル",
 
-	// Modals - Create Folder
-	modalCreateFolderTitle: "新規フォルダを作成",
-	modalCreateFolderPlaceholder: "例: .github, assets, src/components",
-	modalCreateFolderEmptyError: "フォルダ名を入力してください。",
-	modalCreateFolderExistsError: "「{0}」という名前のファイルまたはフォルダが既に存在します。",
-
 	// Modals - Rename
 	modalRenameFileTitle: "ファイル名を変更",
 	modalRenameFolderTitle: "フォルダ名を変更",

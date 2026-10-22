@@ -45,12 +45,6 @@ export const ru: TranslationSchema = {
 	modalButtonCreate: "Создать",
 	modalButtonCancel: "Отмена",
 
-	// Modals - Create Folder
-	modalCreateFolderTitle: "Создать новую папку",
-	modalCreateFolderPlaceholder: "например, .github, assets, src/components",
-	modalCreateFolderEmptyError: "Имя папки не может быть пустым.",
-	modalCreateFolderExistsError: "Файл или папка с именем '{0}' уже существует.",
-
 	// Modals - Rename
 	modalRenameFileTitle: "Переименовать файл",
 	modalRenameFolderTitle: "Переименовать папку",
