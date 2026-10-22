@@ -93,7 +93,7 @@ export const ko: TranslationSchema = {
 
 	// Settings - Code Editor
 	settingsGroupCodeEditor: "코드 편집기",
-	settingsSecurityWarning: "숨김 파일을 표시하면 중요한 설정 파일(.env, API 토큰, 자격 증명 등)을 보고 편집할 수 있습니다. 파일 탐색기에서 파일을 수정하거나 삭제할 때 주의하세요.",
+	settingsSecurityWarning: "숨김 파일을 표시하면 중요한 설정 파일(.env, API 토큰, 자격 증명 등)을 보고 편집할 수 있습니다. 파일을 수정하거나 삭제할 때 주의하세요.",
 	settingsAllowEditDotfilesName: "숨김 파일 및 확장자 없는 파일 편집 허용",
 	settingsAllowEditDotfilesDesc: "점 파일(.gitignore, .env 등) 및 확장자가 없는 파일(license, makefile 등)을 내장 편집기에서 직접 열고 편집합니다.",
 	settingsAllowEditCodeFilesName: "코드 및 데이터 파일 편집 허용",

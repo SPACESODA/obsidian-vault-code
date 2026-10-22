@@ -91,7 +91,7 @@ export const en = {
 
 	// Settings - Code Editor
 	settingsGroupCodeEditor: "Code editor",
-	settingsSecurityWarning: "Revealing dotfiles allows viewing and editing sensitive configuration files (e.g. .env, tokens, credentials). Please exercise caution when modifying or deleting files in your file explorer.",
+	settingsSecurityWarning: "Revealing dotfiles allows viewing and editing sensitive configuration files (e.g. .env, tokens, credentials). Please exercise caution when modifying or deleting files.",
 	settingsAllowEditDotfilesName: "Allow editing dotfiles and extensionless files",
 	settingsAllowEditDotfilesDesc: "Open and edit dotfiles (such as .gitignore or .env) and files without extensions (such as license or makefile) directly in the built-in editor.",
 	settingsAllowEditCodeFilesName: "Allow editing code and data files",

@@ -93,7 +93,7 @@ export const es: TranslationSchema = {
 
 	// Settings - Code Editor
 	settingsGroupCodeEditor: "Editor de código",
-	settingsSecurityWarning: "Mostrar archivos ocultos permite ver y editar archivos de configuración confidenciales (p. ej., .env, credenciales, claves). Tenga cuidado al modificar o eliminar archivos en su explorador.",
+	settingsSecurityWarning: "Mostrar archivos ocultos permite ver y editar archivos de configuración confidenciales (p. ej., .env, credenciales, claves). Tenga cuidado al modificar o eliminar archivos.",
 	settingsAllowEditDotfilesName: "Permitir editar archivos ocultos y sin extensión",
 	settingsAllowEditDotfilesDesc: "Abrir y editar archivos con punto (como .gitignore o .env) y archivos sin extensión (como license o makefile) directamente en el editor integrado.",
 	settingsAllowEditCodeFilesName: "Permitir editar archivos de código y datos",

@@ -93,7 +93,7 @@ export const zhTw: TranslationSchema = {
 
 	// Settings - Code Editor
 	settingsGroupCodeEditor: "程式碼編輯器",
-	settingsSecurityWarning: "顯示隱藏檔案會允許檢視與編輯機密設定檔（例如 .env、token、憑證）。在檔案總管中修改或刪除檔案時請務必謹慎。",
+	settingsSecurityWarning: "顯示隱藏檔案會允許檢視與編輯機密設定檔（例如 .env、token、憑證）。修改或刪除檔案時請務必謹慎。",
 	settingsAllowEditDotfilesName: "允許編輯隱藏檔案與無副檔名檔案",
 	settingsAllowEditDotfilesDesc: "直接在內建編輯器中開啟並編輯點檔案（如 .gitignore 或 .env）以及無副檔名的檔案（如 license 或 makefile）。",
 	settingsAllowEditCodeFilesName: "允許編輯程式碼與資料檔案",
