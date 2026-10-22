@@ -58,13 +58,13 @@
 
 .hidden-files-editor-wrapper .cm-editor {
 	height: 100%;
-	font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
-	font-size: var(--font-text-size, 14px);
+	font-family: var(--font-monospace, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace);
+	font-size: var(--code-size, 13px);
 }
 
 .hidden-files-editor-wrapper .cm-scroller {
 	overflow: auto;
-	line-height: 1.6;
+	line-height: 1.55;
 	font-family: inherit;
 }
 
@@ -80,9 +80,48 @@
 	background-color: var(--background-secondary);
 	color: var(--text-muted);
 	border-right: 1px solid var(--background-modifier-border);
-	font-family: inherit;
-	font-size: 12px;
-	min-width: 40px;
+	font-family: var(--font-monospace, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace);
+	font-size: var(--code-size, 13px);
+}
+
+.hidden-files-editor-wrapper .cm-lineNumbers .cm-gutterElement {
+	padding: 0 8px 0 10px;
+	min-width: 32px;
+	text-align: right;
+	user-select: none;
+}
+
+.hidden-files-editor-wrapper .cm-foldGutter {
+	width: 18px;
+}
+
+.hidden-files-editor-wrapper .cm-foldGutter .cm-gutterElement {
+	padding: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+}
+
+.hidden-files-editor-wrapper .cm-fold-marker {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 14px;
+	height: 14px;
+	color: var(--collapse-icon-color, var(--text-faint));
+	transition: color 0.15s ease;
+	line-height: 1;
+}
+
+.hidden-files-editor-wrapper .cm-fold-marker svg {
+	width: 12px;
+	height: 12px;
+	stroke-width: 2.2px;
+}
+
+.hidden-files-editor-wrapper .cm-fold-marker:hover {
+	color: var(--collapse-icon-color-collapsed, var(--text-accent));
 }
 
 .hidden-files-editor-wrapper .cm-activeLineGutter {

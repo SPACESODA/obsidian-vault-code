@@ -1805,7 +1805,14 @@ export class DotfileView extends TextFileView {
 			highlightActiveLineGutter(),
 			highlightSpecialChars(),
 			history(),
-			foldGutter(),
+			foldGutter({
+				markerDOM: (open: boolean) => {
+					const el = document.createElement("div");
+					el.className = `cm-fold-marker ${open ? "is-open" : "is-closed"}`;
+					setIcon(el, open ? "chevron-down" : "chevron-right");
+					return el;
+				},
+			}),
 			drawSelection(),
 			dropCursor(),
 			EditorState.allowMultipleSelections.of(true),
