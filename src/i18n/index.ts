@@ -1,3 +1,4 @@
+import { getLanguage, requireApiVersion } from "obsidian";
 import { de } from "./locales/de";
 import { en, type TranslationSchema } from "./locales/en";
 import { es } from "./locales/es";
@@ -74,10 +75,12 @@ export function normalizeLanguageCode(code: string): string {
 
 export function detectObsidianLanguage(): string {
 	let lang = "";
-	try {
-		lang = window.localStorage.getItem("language") || "";
-	} catch {
-		// Ignore local storage access errors
+	if (requireApiVersion("1.8.7")) {
+		try {
+			lang = getLanguage();
+		} catch {
+			// Fall back if getLanguage throws
+		}
 	}
 
 	if (!lang) {

@@ -46,6 +46,8 @@
 	--vc-constant: #0070c1;
 }
 
+body .workspace-leaf-content[data-type="vault-code-editor"] .view-content,
+body .workspace-leaf-content .view-content.hidden-files-editor-container,
 .workspace-leaf-content[data-type="vault-code-editor"] .view-content,
 .workspace-leaf-content .view-content.hidden-files-editor-container,
 .hidden-files-editor-container {
@@ -53,9 +55,9 @@
 	flex-direction: column;
 	height: 100%;
 	width: 100%;
-	padding: 0 !important;
-	margin: 0 !important;
-	overflow: hidden !important;
+	padding: 0;
+	margin: 0;
+	overflow: hidden;
 	background-color: var(--background-primary);
 }
 
@@ -91,7 +93,7 @@
 }
 
 .hidden-files-editor-title {
-	font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+	font-family: var(--font-monospace, monospace);
 	font-weight: var(--font-semibold, 600);
 	color: var(--text-normal);
 	letter-spacing: -0.2px;
@@ -109,7 +111,7 @@
 
 .hidden-files-editor-wrapper .cm-editor {
 	height: 100%;
-	font-family: var(--font-monospace, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace);
+	font-family: var(--font-monospace, monospace);
 	font-size: var(--code-size, 13px);
 }
 
@@ -133,7 +135,7 @@
 	background-color: var(--background-secondary);
 	color: var(--text-muted);
 	border-right: 1px solid var(--background-modifier-border);
-	font-family: var(--font-monospace, ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace);
+	font-family: var(--font-monospace, monospace);
 	font-size: var(--code-size, 13px);
 }
 
@@ -191,9 +193,11 @@
 	border-left: 2px solid var(--text-accent, #705dcf);
 }
 
+.hidden-files-editor-wrapper .cm-editor .cm-selectionBackground,
+.hidden-files-editor-wrapper .cm-editor.cm-focused .cm-selectionBackground,
 .hidden-files-editor-wrapper .cm-selectionBackground,
 .hidden-files-editor-wrapper.cm-focused .cm-selectionBackground {
-	background-color: var(--text-selection, rgba(0, 122, 255, 0.25)) !important;
+	background-color: var(--text-selection, rgba(0, 122, 255, 0.25));
 }
 
 .hidden-files-editor-wrapper .cm-selectionMatch {
@@ -267,13 +271,16 @@
 	box-shadow: 0 0 0 1px var(--interactive-accent);
 }
 
+.hidden-files-goto-input-wrapper input.hidden-files-goto-input,
+.hidden-files-goto-corner-widget input.hidden-files-goto-input,
+input.hidden-files-goto-input,
 .hidden-files-goto-input {
-	border: none !important;
-	outline: none !important;
-	box-shadow: none !important;
-	background: transparent !important;
+	border: none;
+	outline: none;
+	box-shadow: none;
+	background: transparent;
 	color: var(--text-normal);
-	font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+	font-family: var(--font-monospace, monospace);
 	font-size: var(--font-ui-smaller, 12px);
 	width: 55px;
 	padding: 0;
@@ -283,7 +290,7 @@
 }
 
 .hidden-files-goto-total {
-	font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+	font-family: var(--font-monospace, monospace);
 	font-size: var(--font-ui-smaller, 11px);
 	color: var(--text-muted);
 	margin-left: 4px;
@@ -309,10 +316,12 @@
 	opacity: 0.9;
 }
 
+.hidden-files-goto-corner-widget button.hidden-files-goto-close,
+button.hidden-files-goto-close,
 .hidden-files-goto-close {
-	background: none !important;
-	border: none !important;
-	box-shadow: none !important;
+	background: none;
+	border: none;
+	box-shadow: none;
 	color: var(--text-muted);
 	cursor: pointer;
 	padding: 0;
@@ -400,13 +409,16 @@
 	box-shadow: 0 0 0 1px var(--interactive-accent);
 }
 
+.hidden-files-search-input-wrapper input.hidden-files-search-input,
+.hidden-files-replace-input-wrapper input.hidden-files-search-input,
+input.hidden-files-search-input,
 .hidden-files-search-input {
-	border: none !important;
-	outline: none !important;
-	box-shadow: none !important;
-	background: transparent !important;
+	border: none;
+	outline: none;
+	box-shadow: none;
+	background: transparent;
 	color: var(--text-normal);
-	font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+	font-family: var(--font-monospace, monospace);
 	font-size: var(--font-ui-smaller, 12px);
 	flex: 1 1 auto;
 	min-width: 60px;
@@ -449,7 +461,7 @@
 	border: 1px solid transparent;
 	color: var(--text-muted);
 	border-radius: var(--radius-s, 3px);
-	font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+	font-family: var(--font-monospace, monospace);
 	font-size: 11px;
 	font-weight: var(--font-semibold, 600);
 	padding: 1px 4px;
@@ -581,14 +593,16 @@
 }
 
 /* Search match highlights */
+.hidden-files-editor-wrapper .cm-editor .cm-searchMatch,
 .hidden-files-editor-wrapper .cm-searchMatch {
-	background-color: var(--text-highlight-bg, rgba(255, 230, 0, 0.35)) !important;
+	background-color: var(--text-highlight-bg, rgba(255, 230, 0, 0.35));
 	border-radius: 2px;
 }
 
+.hidden-files-editor-wrapper .cm-editor .cm-searchMatch.cm-searchMatch-selected,
 .hidden-files-editor-wrapper .cm-searchMatch-selected {
-	background-color: var(--interactive-accent) !important;
-	color: var(--text-on-accent, #ffffff) !important;
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent, #ffffff);
 	border-radius: 2px;
 }
 
@@ -603,7 +617,7 @@
 	width: 100%;
 	min-width: 280px;
 	min-height: 95px;
-	font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+	font-family: var(--font-monospace, monospace);
 	font-size: 13px;
 	line-height: 1.5;
 	resize: vertical;
@@ -762,6 +776,8 @@
 }
 
 /* Find & replace and line wrap icon buttons in header (box-less clickable-icon matching Obsidian header actions) */
+.hidden-files-editor-header-right button.clickable-icon.hidden-files-editor-search-btn,
+.hidden-files-editor-header-right button.clickable-icon.hidden-files-editor-wrap-btn,
 .hidden-files-editor-search-btn.clickable-icon,
 .hidden-files-editor-wrap-btn.clickable-icon {
 	width: var(--icon-size, 26px);
@@ -771,9 +787,9 @@
 	padding: 0;
 	border-radius: var(--radius-s, 4px);
 	cursor: pointer;
-	border: none !important;
-	background-color: transparent !important;
-	box-shadow: none !important;
+	border: none;
+	background-color: transparent;
+	box-shadow: none;
 	color: var(--text-muted);
 	transition: background-color 0.15s ease, color 0.15s ease;
 	display: inline-flex;
@@ -789,16 +805,20 @@
 	display: block;
 }
 
+.hidden-files-editor-header-right button.clickable-icon.hidden-files-editor-search-btn:hover,
+.hidden-files-editor-header-right button.clickable-icon.hidden-files-editor-wrap-btn:hover,
 .hidden-files-editor-search-btn.clickable-icon:hover,
 .hidden-files-editor-wrap-btn.clickable-icon:hover {
-	background-color: var(--background-modifier-hover) !important;
+	background-color: var(--background-modifier-hover);
 	color: var(--text-normal);
 }
 
+.hidden-files-editor-header-right button.clickable-icon.hidden-files-editor-search-btn.is-active,
+.hidden-files-editor-header-right button.clickable-icon.hidden-files-editor-wrap-btn.is-active,
 .hidden-files-editor-search-btn.clickable-icon.is-active,
 .hidden-files-editor-wrap-btn.clickable-icon.is-active {
-	background-color: var(--background-modifier-active-hover, var(--background-secondary-alt)) !important;
-	color: var(--interactive-accent) !important;
+	background-color: var(--background-modifier-active-hover, var(--background-secondary-alt));
+	color: var(--interactive-accent);
 }
 
 /* View / Code toggle button in header */
@@ -1062,14 +1082,18 @@
 }
 
 /* Hide empty file tag badges (e.g. for extensionless files or dotfiles) */
+.nav-files-container .nav-file-title .nav-file-tag:empty,
+.nav-file-title .nav-file-tag:empty,
 .nav-file-tag:empty {
-	display: none !important;
+	display: none;
 }
 
 /* Ignored files and folders hidden by user ignore patterns */
+.nav-files-container .nav-file.is-ignored-hidden,
+.nav-files-container .nav-folder.is-ignored-hidden,
 .nav-file.is-ignored-hidden,
 .nav-folder.is-ignored-hidden {
-	display: none !important;
+	display: none;
 }
 
 /* Header view action toggle button for code editor */

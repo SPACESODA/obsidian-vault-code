@@ -1095,7 +1095,7 @@ class ModernSearchPanel implements Panel {
 		this.isWholeWord = currentQuery.wholeWord;
 		this.query = currentQuery;
 
-		this.dom = createEl("div", { cls: "hidden-files-search-panel" });
+		this.dom = createDiv({ cls: "hidden-files-search-panel" });
 
 		// Row 1: Search row
 		const searchRow = this.dom.createDiv({
@@ -2640,7 +2640,7 @@ export class DotfileView extends TextFileView {
 			history(),
 			foldGutter({
 				markerDOM: (open: boolean) => {
-					const el = createEl("div", {
+					const el = createDiv({
 						cls: `cm-fold-marker ${open ? "is-open" : "is-closed"}`,
 					});
 					setIcon(el, open ? "chevron-down" : "chevron-right");
@@ -5406,6 +5406,10 @@ class VaultCodeSettingTab extends PluginSettingTab {
 	constructor(app: App, plugin: VaultCodePlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
+	}
+
+	getSettingDefinitions(): unknown[] {
+		return [];
 	}
 
 	display(): void {
