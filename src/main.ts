@@ -102,6 +102,36 @@ export function setCodeIcon(el: HTMLElement): void {
 	}
 }
 
+/**
+ * Opens an external URL directly in the user's system default browser (Safari, Chrome, etc.)
+ * rather than Obsidian's internal web viewer.
+ */
+export function openInDefaultBrowser(url: string): void {
+	if (Platform.isDesktopApp) {
+		try {
+			const electron = (
+				window as unknown as {
+					require?: (module: string) => {
+						shell?: { openExternal: (targetUrl: string) => Promise<void> };
+					};
+				}
+			).require?.("electron");
+			if (electron?.shell?.openExternal) {
+				void electron.shell.openExternal(url);
+				return;
+			}
+		} catch {
+			// Fallback if electron require fails
+		}
+	}
+
+	try {
+		window.open(url, "_system");
+	} catch {
+		window.open(url, "_blank");
+	}
+}
+
 export const VIEW_TYPE_DOTFILE = "vault-code-editor";
 
 /** Formats that support visual live-preview toggling inside the editor. */
@@ -5658,14 +5688,37 @@ class VaultCodeSettingTab extends PluginSettingTab {
 			cls: "vault-code-settings-footer",
 		});
 		footerEl.createSpan({ text: "Brought to you by " });
-		footerEl.createEl("a", {
+		const authorLink = footerEl.createEl("a", {
 			text: "SPACESODA",
 			href: "https://github.com/SPACESODA",
+			attr: {
+				target: "_blank",
+				rel: "noopener noreferrer",
+			},
 		});
+		const handleAuthorClick = (e: MouseEvent): void => {
+			e.preventDefault();
+			e.stopPropagation();
+			openInDefaultBrowser("https://github.com/SPACESODA");
+		};
+		authorLink.addEventListener("click", handleAuthorClick);
+		authorLink.addEventListener("auxclick", handleAuthorClick);
+
 		footerEl.createSpan({ text: " | Star on " });
-		footerEl.createEl("a", {
+		const starLink = footerEl.createEl("a", {
 			text: "GitHub",
 			href: "https://github.com/SPACESODA/obsidian-vault-code",
+			attr: {
+				target: "_blank",
+				rel: "noopener noreferrer",
+			},
 		});
+		const handleStarClick = (e: MouseEvent): void => {
+			e.preventDefault();
+			e.stopPropagation();
+			openInDefaultBrowser("https://github.com/SPACESODA/obsidian-vault-code");
+		};
+		starLink.addEventListener("click", handleStarClick);
+		starLink.addEventListener("auxclick", handleStarClick);
 	}
 }
