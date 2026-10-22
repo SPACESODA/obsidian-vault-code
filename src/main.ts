@@ -704,150 +704,6 @@ class ConfirmReplaceAllModal extends Modal {
 	}
 }
 
-/* ── Go To Line Modal ──────────────────────────────────────── */
-
-class GotoLineModal extends Modal {
-	private view: DotfileView;
-	private inputEl!: HTMLInputElement;
-	private errorEl!: HTMLElement;
-
-	constructor(app: App, view: DotfileView) {
-		super(app);
-		this.view = view;
-	}
-
-	onOpen(): void {
-		const { contentEl } = this;
-		contentEl.empty();
-		contentEl.addClass("hidden-files-modal", "hidden-files-goto-modal");
-
-		contentEl.createEl("h3", {
-			text: t("commandGotoLine"),
-			cls: "hidden-files-modal-title",
-		});
-
-		const editor = this.view.editor;
-		if (!editor) {
-			this.close();
-			return;
-		}
-
-		const state = editor.state;
-		const totalLines = state.doc.lines;
-		const currentLine = state.doc.lineAt(state.selection.main.head).number;
-
-		const descEl = contentEl.createDiv({
-			cls: "hidden-files-goto-desc",
-		});
-		descEl.setText(t("modalGotoLineDesc", currentLine, totalLines));
-
-		const formEl = contentEl.createEl("form");
-		formEl.addEventListener("submit", (e) => {
-			e.preventDefault();
-			this.submit();
-		});
-
-		this.inputEl = formEl.createEl("input", {
-			type: "text",
-			cls: "hidden-files-modal-input",
-			value: String(currentLine),
-		});
-		this.inputEl.setAttribute(
-			"placeholder",
-			`1 - ${totalLines} (e.g. 42, 42:10, +10)`,
-		);
-
-		this.errorEl = formEl.createDiv({
-			cls: "hidden-files-modal-error",
-		});
-		this.errorEl.hide();
-
-		const buttonContainer = formEl.createDiv({
-			cls: "hidden-files-modal-buttons",
-		});
-
-		const cancelBtn = buttonContainer.createEl("button", {
-			text: t("modalButtonCancel"),
-			type: "button",
-		});
-		cancelBtn.addEventListener("click", () => {
-			this.close();
-		});
-
-		buttonContainer.createEl("button", {
-			text: t("modalButtonGo"),
-			cls: "mod-cta",
-			type: "submit",
-		});
-
-		this.inputEl.addEventListener("input", () => {
-			this.errorEl.hide();
-		});
-
-		setTimeout(() => {
-			this.inputEl.focus();
-			this.inputEl.select();
-		}, 50);
-	}
-
-	private submit(): void {
-		const raw = this.inputEl.value.trim();
-		if (!raw) {
-			this.close();
-			return;
-		}
-
-		const editor = this.view.editor;
-		if (!editor) {
-			this.close();
-			return;
-		}
-
-		const state = editor.state;
-		const totalLines = state.doc.lines;
-		const currentHead = state.selection.main.head;
-		const currentLine = state.doc.lineAt(currentHead).number;
-
-		// Match formats: "42", "42:10", "+10", "-5", "50%"
-		const match = /^([+-])?(\d+)?(?::(\d+))?(%)?$/.exec(raw);
-		if (!match) {
-			this.errorEl.setText(`Invalid line format: "${raw}"`);
-			this.errorEl.show();
-			return;
-		}
-
-		const [, sign, lnStr, clStr, percent] = match;
-		const col = clStr ? Math.max(0, parseInt(clStr, 10) - 1) : 0;
-		let line = lnStr ? parseInt(lnStr, 10) : currentLine;
-
-		if (lnStr && percent) {
-			let pc = line / 100;
-			if (sign) {
-				pc = pc * (sign === "-" ? -1 : 1) + (currentLine / totalLines);
-			}
-			line = Math.round(totalLines * pc);
-		} else if (lnStr && sign) {
-			line = currentLine + (sign === "-" ? -line : line);
-		}
-
-		const clampedLine = Math.max(1, Math.min(totalLines, line));
-		const docLine = state.doc.line(clampedLine);
-		const targetPos = docLine.from + Math.min(col, docLine.length);
-
-		editor.dispatch({
-			selection: EditorSelection.cursor(targetPos),
-			effects: EditorView.scrollIntoView(targetPos, { y: "center" }),
-		});
-		editor.focus();
-		this.close();
-	}
-
-	onClose(): void {
-		const { contentEl } = this;
-		contentEl.empty();
-	}
-}
-
 /* ── Create File Modal ─────────────────────────────────────── */
 
 class CreateFileModal extends Modal {
@@ -2187,6 +2043,8 @@ export class DotfileView extends TextFileView {
 	private isPreviewMode = false;
 	private headerFileNameEl: HTMLElement | null = null;
 	private filePath: string | null = null;
+	private gotoLineEl: HTMLElement | null = null;
+	private gotoLineInputEl: HTMLInputElement | null = null;
 
 	constructor(leaf: WorkspaceLeaf, plugin: VaultCodePlugin) {
 		super(leaf);
@@ -2210,6 +2068,16 @@ export class DotfileView extends TextFileView {
 		this.scope.register(["Alt"], "z", (evt: KeyboardEvent) => {
 			evt.preventDefault();
 			this.toggleLineWrapping();
+			return false;
+		});
+		this.scope.register(["Ctrl"], "g", (evt: KeyboardEvent) => {
+			evt.preventDefault();
+			this.openGotoLine();
+			return false;
+		});
+		this.scope.register(["Mod", "Alt"], "g", (evt: KeyboardEvent) => {
+			evt.preventDefault();
+			this.openGotoLine();
 			return false;
 		});
 	}
@@ -2348,7 +2216,139 @@ export class DotfileView extends TextFileView {
 		if (this.isPreviewMode) {
 			this.toggleViewMode();
 		}
-		new GotoLineModal(this.app, this).open();
+		if (!this.editor || !this.editorEl) return;
+
+		if (this.gotoLineEl && this.gotoLineInputEl) {
+			this.gotoLineInputEl.focus();
+			this.gotoLineInputEl.select();
+			return;
+		}
+
+		const state = this.editor.state;
+		const totalLines = state.doc.lines;
+		const currentLine = state.doc.lineAt(state.selection.main.head).number;
+
+		const widget = this.editorEl.createDiv({
+			cls: "hidden-files-goto-corner-widget",
+		});
+		this.gotoLineEl = widget;
+
+		const form = widget.createEl("form");
+		form.addEventListener("submit", (e) => {
+			e.preventDefault();
+			this.submitGotoLine();
+		});
+
+		const inputWrapper = form.createDiv({
+			cls: "hidden-files-goto-input-wrapper",
+		});
+
+		const input = inputWrapper.createEl("input", {
+			type: "text",
+			cls: "hidden-files-goto-input",
+			value: String(currentLine),
+		});
+		input.setAttribute("placeholder", String(currentLine));
+		input.setAttribute("aria-label", t("commandGotoLine"));
+		this.gotoLineInputEl = input;
+
+		inputWrapper.createSpan({
+			cls: "hidden-files-goto-total",
+			text: `/ ${totalLines}`,
+		});
+
+		form.createEl("button", {
+			type: "submit",
+			cls: "hidden-files-goto-btn",
+			text: t("modalButtonGo"),
+		});
+
+		const closeBtn = form.createEl("button", {
+			type: "button",
+			cls: "hidden-files-goto-close",
+			attr: { "aria-label": t("modalButtonCancel") },
+		});
+		setIcon(closeBtn, "x");
+		closeBtn.addEventListener("click", () => {
+			this.closeGotoLine();
+			this.editor?.focus();
+		});
+
+		input.addEventListener("keydown", (e) => {
+			if (e.key === "Escape") {
+				e.preventDefault();
+				e.stopPropagation();
+				this.closeGotoLine();
+				this.editor?.focus();
+			}
+		});
+
+		setTimeout(() => {
+			if (this.gotoLineInputEl) {
+				this.gotoLineInputEl.focus();
+				this.gotoLineInputEl.select();
+			}
+		}, 20);
+	}
+
+	closeGotoLine(): void {
+		if (this.gotoLineEl) {
+			this.gotoLineEl.remove();
+			this.gotoLineEl = null;
+			this.gotoLineInputEl = null;
+		}
+	}
+
+	private submitGotoLine(): void {
+		if (!this.gotoLineInputEl || !this.editor) {
+			this.closeGotoLine();
+			return;
+		}
+
+		const raw = this.gotoLineInputEl.value.trim();
+		if (!raw) {
+			this.closeGotoLine();
+			this.editor.focus();
+			return;
+		}
+
+		const state = this.editor.state;
+		const totalLines = state.doc.lines;
+		const currentHead = state.selection.main.head;
+		const currentLine = state.doc.lineAt(currentHead).number;
+
+		// Match formats: "42", "42:10", "+10", "-5", "50%"
+		const match = /^([+-])?(\d+)?(?::(\d+))?(%)?$/.exec(raw);
+		if (!match) {
+			this.closeGotoLine();
+			this.editor.focus();
+			return;
+		}
+
+		const [, sign, lnStr, clStr, percent] = match;
+		const col = clStr ? Math.max(0, parseInt(clStr, 10) - 1) : 0;
+		let line = lnStr ? parseInt(lnStr, 10) : currentLine;
+
+		if (lnStr && percent) {
+			let pc = line / 100;
+			if (sign) {
+				pc = pc * (sign === "-" ? -1 : 1) + (currentLine / totalLines);
+			}
+			line = Math.round(totalLines * pc);
+		} else if (lnStr && sign) {
+			line = currentLine + (sign === "-" ? -line : line);
+		}
+
+		const clampedLine = Math.max(1, Math.min(totalLines, line));
+		const docLine = state.doc.line(clampedLine);
+		const targetPos = docLine.from + Math.min(col, docLine.length);
+
+		this.editor.dispatch({
+			selection: EditorSelection.cursor(targetPos),
+			effects: EditorView.scrollIntoView(targetPos, { y: "center" }),
+		});
+		this.editor.focus();
+		this.closeGotoLine();
 	}
 
 	async saveExplicitly(): Promise<void> {
@@ -2953,6 +2953,7 @@ export class DotfileView extends TextFileView {
 	}
 
 	async onClose(): Promise<void> {
+		this.closeGotoLine();
 		if (this.editor) {
 			this.editor.destroy();
 			this.editor = null;

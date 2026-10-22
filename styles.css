@@ -215,16 +215,125 @@
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
-/* Go to line modal */
-.hidden-files-goto-modal {
-	max-width: 380px;
+/* Floating corner Go to Line widget */
+.hidden-files-goto-corner-widget {
+	position: absolute;
+	top: 8px;
+	right: 14px;
+	z-index: 50;
+	background-color: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+	border-radius: var(--radius-m, 6px);
+	padding: 4px 6px;
+	display: flex;
+	align-items: center;
+	animation: vaultCodeFadeIn 0.12s ease-out;
 }
 
-.hidden-files-goto-desc {
+@keyframes vaultCodeFadeIn {
+	from {
+		opacity: 0;
+		transform: translateY(-4px) scale(0.97);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+.hidden-files-goto-corner-widget form {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin: 0;
+	padding: 0;
+}
+
+.hidden-files-goto-input-wrapper {
+	display: inline-flex;
+	align-items: center;
+	background-color: var(--background-modifier-form-field, var(--background-primary));
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s, 4px);
+	padding: 2px 6px;
+	height: 26px;
+	box-sizing: border-box;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.hidden-files-goto-input-wrapper:focus-within {
+	border-color: var(--interactive-accent);
+	box-shadow: 0 0 0 1px var(--interactive-accent);
+}
+
+.hidden-files-goto-input {
+	border: none !important;
+	outline: none !important;
+	box-shadow: none !important;
+	background: transparent !important;
+	color: var(--text-normal);
+	font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 	font-size: var(--font-ui-smaller, 12px);
+	width: 55px;
+	padding: 0;
+	height: 100%;
+	line-height: 22px;
+	text-align: right;
+}
+
+.hidden-files-goto-total {
+	font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+	font-size: var(--font-ui-smaller, 11px);
 	color: var(--text-muted);
-	margin-top: -8px;
-	margin-bottom: 16px;
+	margin-left: 4px;
+	user-select: none;
+	white-space: nowrap;
+}
+
+.hidden-files-goto-btn {
+	height: 26px;
+	padding: 2px 10px;
+	font-size: var(--font-ui-smaller, 12px);
+	font-weight: 500;
+	border-radius: var(--radius-s, 4px);
+	cursor: pointer;
+	line-height: 1;
+	border: none;
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent, #ffffff);
+	transition: opacity 0.15s ease;
+}
+
+.hidden-files-goto-btn:hover {
+	opacity: 0.9;
+}
+
+.hidden-files-goto-close {
+	background: none !important;
+	border: none !important;
+	box-shadow: none !important;
+	color: var(--text-muted);
+	cursor: pointer;
+	padding: 0;
+	width: 20px;
+	height: 20px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: var(--radius-s, 4px);
+	line-height: 1;
+	transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.hidden-files-goto-close svg {
+	width: 13px;
+	height: 13px;
+}
+
+.hidden-files-goto-close:hover {
+	color: var(--text-normal);
+	background-color: var(--background-modifier-hover);
 }
 
 .hidden-files-search-panel {
