@@ -22,6 +22,9 @@
 	--vc-regex: #d16969;
 	--vc-meta: #c586c0;
 	--vc-constant: #4fc1ff;
+	--vc-selection: var(--text-selection, rgba(80, 140, 255, 0.3));
+	--vc-search-match: var(--text-highlight-bg, rgba(255, 230, 0, 0.3));
+	--vc-search-match-selected: var(--text-highlight-bg-active, rgba(255, 150, 0, 0.45));
 }
 
 .theme-light {
@@ -44,6 +47,9 @@
 	--vc-regex: #811f3f;
 	--vc-meta: #af00db;
 	--vc-constant: #0070c1;
+	--vc-selection: var(--text-selection, rgba(0, 122, 255, 0.22));
+	--vc-search-match: var(--text-highlight-bg, rgba(255, 230, 0, 0.35));
+	--vc-search-match-selected: var(--text-highlight-bg-active, rgba(255, 150, 0, 0.45));
 }
 
 body .workspace-leaf-content[data-type="vault-code-editor"] .view-content,
@@ -193,15 +199,33 @@ body .workspace-leaf-content .view-content.hidden-files-editor-container,
 	border-left: 2px solid var(--text-accent, #705dcf);
 }
 
-.hidden-files-editor-wrapper .cm-editor .cm-selectionBackground,
-.hidden-files-editor-wrapper .cm-editor.cm-focused .cm-selectionBackground,
-.hidden-files-editor-wrapper .cm-selectionBackground,
-.hidden-files-editor-wrapper.cm-focused .cm-selectionBackground {
-	background-color: var(--text-selection, rgba(0, 122, 255, 0.25));
+body .hidden-files-editor-wrapper .cm-editor.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground,
+body .hidden-files-editor-wrapper .cm-editor > .cm-scroller > .cm-selectionLayer .cm-selectionBackground,
+body .hidden-files-editor-wrapper .cm-editor .cm-selectionLayer .cm-selectionBackground,
+body .hidden-files-editor-wrapper .cm-editor.cm-focused .cm-selectionBackground,
+body .hidden-files-editor-wrapper .cm-editor .cm-selectionBackground,
+body .hidden-files-editor-wrapper .cm-selectionBackground,
+body .hidden-files-editor-wrapper.cm-focused .cm-selectionBackground {
+	background: var(--vc-selection, var(--text-selection, rgba(80, 140, 255, 0.3)));
+	background-color: var(--vc-selection, var(--text-selection, rgba(80, 140, 255, 0.3)));
 }
 
-.hidden-files-editor-wrapper .cm-selectionMatch {
-	background-color: var(--text-highlight-bg, rgba(255, 230, 0, 0.35));
+body .hidden-files-editor-wrapper .cm-editor:not(.cm-focused) > .cm-scroller > .cm-selectionLayer .cm-selectionBackground,
+body .hidden-files-editor-wrapper .cm-editor:not(.cm-focused) .cm-selectionBackground {
+	background: var(--vc-selection, var(--text-selection, rgba(80, 140, 255, 0.2)));
+	background-color: var(--vc-selection, var(--text-selection, rgba(80, 140, 255, 0.2)));
+	opacity: 0.75;
+}
+
+body .hidden-files-editor-wrapper .cm-editor .cm-content ::selection {
+	background: var(--vc-selection, var(--text-selection, rgba(80, 140, 255, 0.3)));
+	background-color: var(--vc-selection, var(--text-selection, rgba(80, 140, 255, 0.3)));
+}
+
+body .hidden-files-editor-wrapper .cm-editor .cm-selectionMatch,
+body .hidden-files-editor-wrapper .cm-selectionMatch {
+	background: var(--vc-search-match, var(--text-highlight-bg, rgba(255, 230, 0, 0.3)));
+	background-color: var(--vc-search-match, var(--text-highlight-bg, rgba(255, 230, 0, 0.3)));
 	border-radius: 2px;
 }
 
@@ -615,16 +639,19 @@ input.hidden-files-search-input,
 }
 
 /* Search match highlights */
-.hidden-files-editor-wrapper .cm-editor .cm-searchMatch,
-.hidden-files-editor-wrapper .cm-searchMatch {
-	background-color: var(--text-highlight-bg, rgba(255, 230, 0, 0.35));
+body .hidden-files-editor-wrapper .cm-editor .cm-searchMatch,
+body .hidden-files-editor-wrapper .cm-searchMatch {
+	background: var(--vc-search-match, var(--text-highlight-bg, rgba(255, 230, 0, 0.35)));
+	background-color: var(--vc-search-match, var(--text-highlight-bg, rgba(255, 230, 0, 0.35)));
 	border-radius: 2px;
 }
 
-.hidden-files-editor-wrapper .cm-editor .cm-searchMatch.cm-searchMatch-selected,
-.hidden-files-editor-wrapper .cm-searchMatch-selected {
-	background-color: var(--interactive-accent);
-	color: var(--text-on-accent, #ffffff);
+body .hidden-files-editor-wrapper .cm-editor .cm-searchMatch.cm-searchMatch-selected,
+body .hidden-files-editor-wrapper .cm-searchMatch-selected {
+	background: var(--vc-search-match-selected, var(--text-highlight-bg-active, rgba(255, 150, 0, 0.45)));
+	background-color: var(--vc-search-match-selected, var(--text-highlight-bg-active, rgba(255, 150, 0, 0.45)));
+	outline: 1px solid var(--interactive-accent);
+	outline-offset: -1px;
 	border-radius: 2px;
 }
 

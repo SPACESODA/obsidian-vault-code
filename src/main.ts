@@ -429,6 +429,34 @@ export const vaultCodeHighlightStyle = HighlightStyle.define([
 	},
 ]);
 
+/* ── CodeMirror Theme for Selections & Highlights ───────────── */
+
+export const vaultCodeTheme = EditorView.theme({
+	"&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground": {
+		backgroundColor: "var(--vc-selection, var(--text-selection, rgba(80, 140, 255, 0.3)))",
+	},
+	"& > .cm-scroller > .cm-selectionLayer .cm-selectionBackground": {
+		backgroundColor: "var(--vc-selection, var(--text-selection, rgba(80, 140, 255, 0.3)))",
+	},
+	".cm-selectionBackground": {
+		backgroundColor: "var(--vc-selection, var(--text-selection, rgba(80, 140, 255, 0.3)))",
+	},
+	".cm-selectionMatch": {
+		backgroundColor: "var(--vc-search-match, var(--text-highlight-bg, rgba(255, 230, 0, 0.35)))",
+		borderRadius: "2px",
+	},
+	".cm-searchMatch": {
+		backgroundColor: "var(--vc-search-match, var(--text-highlight-bg, rgba(255, 230, 0, 0.35)))",
+		borderRadius: "2px",
+	},
+	".cm-searchMatch.cm-searchMatch-selected": {
+		backgroundColor: "var(--vc-search-match-selected, var(--text-highlight-bg-active, rgba(255, 150, 0, 0.45)))",
+		outline: "1px solid var(--interactive-accent)",
+		outlineOffset: "-1px",
+		borderRadius: "2px",
+	},
+});
+
 /* ── Type augmentations for internal Obsidian APIs ─────────── */
 
 declare module "obsidian" {
@@ -2689,6 +2717,7 @@ export class DotfileView extends TextFileView {
 			}),
 			drawSelection(),
 			dropCursor(),
+			vaultCodeTheme,
 			EditorState.allowMultipleSelections.of(true),
 			EditorState.tabSize.of(tabSize),
 			indentUnit.of(useTab ? "\t" : " ".repeat(tabSize)),
