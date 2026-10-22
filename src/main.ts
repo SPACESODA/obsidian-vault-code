@@ -2008,7 +2008,7 @@ export class DotfileView extends TextFileView {
 		await super.save();
 		this.updateDirtyUI();
 		this.updateStatus();
-		new Notice(t("noticeSaved", this.file.name));
+		new Notice(t("noticeSaved"));
 	}
 
 	private isBinaryOrNonEditable(): boolean {

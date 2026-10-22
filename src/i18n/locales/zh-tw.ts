@@ -118,7 +118,7 @@ export const zhTw: TranslationSchema = {
 
 	// Notices
 	noticeCreated: "已建立 {0}",
-	noticeSaved: "已儲存 {0}",
+	noticeSaved: "已儲存",
 	noticeHiddenFilesVisible: "隱藏檔案與資料夾現已顯示。",
 	noticeHiddenFilesHidden: "隱藏檔案與資料夾現已隱藏。",
 	noticeAllFilesVisible: "所有檔案類型現已顯示。",

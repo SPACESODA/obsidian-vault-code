@@ -118,7 +118,7 @@ export const ko: TranslationSchema = {
 
 	// Notices
 	noticeCreated: "{0} 파일이 생성되었습니다",
-	noticeSaved: "{0} 파일이 저장되었습니다",
+	noticeSaved: "저장되었습니다",
 	noticeHiddenFilesVisible: "이제 숨김 파일 및 폴더가 표시됩니다.",
 	noticeHiddenFilesHidden: "이제 숨김 파일 및 폴더가 숨겨집니다.",
 	noticeAllFilesVisible: "이제 모든 파일 형식이 표시됩니다.",

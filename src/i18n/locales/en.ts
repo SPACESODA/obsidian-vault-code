@@ -116,7 +116,7 @@ export const en = {
 
 	// Notices
 	noticeCreated: "Created {0}",
-	noticeSaved: "Saved {0}",
+	noticeSaved: "Saved",
 	noticeHiddenFilesVisible: "Hidden dotfiles and folders are now visible.",
 	noticeHiddenFilesHidden: "Hidden dotfiles and folders are now hidden.",
 	noticeAllFilesVisible: "All file types are now visible.",

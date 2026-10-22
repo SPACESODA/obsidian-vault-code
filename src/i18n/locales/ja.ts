@@ -118,7 +118,7 @@ export const ja: TranslationSchema = {
 
 	// Notices
 	noticeCreated: "{0} を作成しました",
-	noticeSaved: "{0} を保存しました",
+	noticeSaved: "保存しました",
 	noticeHiddenFilesVisible: "隠しファイルとフォルダが表示されるようになりました。",
 	noticeHiddenFilesHidden: "隠しファイルとフォルダが非表示になりました。",
 	noticeAllFilesVisible: "すべてのファイル形式が表示されるようになりました。",

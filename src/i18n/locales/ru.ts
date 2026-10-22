@@ -118,7 +118,7 @@ export const ru: TranslationSchema = {
 
 	// Notices
 	noticeCreated: "Создан {0}",
-	noticeSaved: "Сохранен {0}",
+	noticeSaved: "Сохранено",
 	noticeHiddenFilesVisible: "Скрытые файлы и папки теперь видны.",
 	noticeHiddenFilesHidden: "Скрытые файлы и папки теперь скрыты.",
 	noticeAllFilesVisible: "Все типы файлов теперь видны.",

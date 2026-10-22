@@ -118,7 +118,7 @@ export const zhCn: TranslationSchema = {
 
 	// Notices
 	noticeCreated: "已创建 {0}",
-	noticeSaved: "已保存 {0}",
+	noticeSaved: "已保存",
 	noticeHiddenFilesVisible: "隐藏文件与文件夹现已显示。",
 	noticeHiddenFilesHidden: "隐藏文件与文件夹现已隐藏。",
 	noticeAllFilesVisible: "所有文件类型现已显示。",

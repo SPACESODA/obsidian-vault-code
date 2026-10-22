@@ -118,7 +118,7 @@ export const fr: TranslationSchema = {
 
 	// Notices
 	noticeCreated: "Créé {0}",
-	noticeSaved: "Enregistré {0}",
+	noticeSaved: "Enregistré",
 	noticeHiddenFilesVisible: "Les fichiers et dossiers masqués sont maintenant visibles.",
 	noticeHiddenFilesHidden: "Les fichiers et dossiers masqués sont maintenant masqués.",
 	noticeAllFilesVisible: "Tous les types de fichiers sont maintenant visibles.",
