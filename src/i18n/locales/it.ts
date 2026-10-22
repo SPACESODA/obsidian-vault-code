@@ -6,6 +6,7 @@ export const it: TranslationSchema = {
 	viewToggleCode: "Codice",
 	viewToggleRendered: "Anteprima",
 	viewToggleTooltip: "Passa dalla visualizzazione codice a quella anteprima",
+	editorLineWrapToggle: "Attiva/disattiva a capo automatico (Alt+Z)",
 	saveChanges: "Salva",
 	saveChangesTooltip: "Salva modifiche",
 	saved: "Salvato",
@@ -110,6 +111,8 @@ export const it: TranslationSchema = {
 	settingsIndentWithAuto: "Eredita da Obsidian",
 	settingsIndentWithTabs: "Tabulazioni",
 	settingsIndentWithSpaces: "Spazi",
+	settingsLineWrappingName: "A capo automatico",
+	settingsLineWrappingDesc: "Manda a capo le righe lunghe per adattarle alla finestra anziché scorrere orizzontalmente.",
 	settingsDisableAutoSaveName: "Disattiva salvataggio automatico",
 	settingsDisableAutoSaveDesc: "Richiede di premere la scorciatoia di salvataggio o il pulsante di salvataggio prima di scrivere le modifiche su disco. Nota: all'uscita da Obsidian le modifiche non salvate verranno salvate automaticamente.",
 	settingsAutoSaveWarning: "Attenzione: il salvataggio automatico scrive immediatamente le modifiche su disco, aumentando il rischio di danneggiare accidentalmente file di codice importanti.",
@@ -145,4 +148,5 @@ export const it: TranslationSchema = {
 	commandToggleAllTypes: "Attiva/disattiva visibilità di tutti i tipi di file",
 	commandToggleAllowEditDotfiles: "Attiva/disattiva modifica file nascosti e senza estensione",
 	commandToggleAllowEditCodeFiles: "Attiva/disattiva modifica file di codice e dati",
+	commandToggleLineWrapping: "Attiva/disattiva a capo automatico nell'editor di codice",
 };

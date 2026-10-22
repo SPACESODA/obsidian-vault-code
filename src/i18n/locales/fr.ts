@@ -6,6 +6,7 @@ export const fr: TranslationSchema = {
 	viewToggleCode: "Code",
 	viewToggleRendered: "Aperçu",
 	viewToggleTooltip: "Basculer entre la vue code et la vue aperçu",
+	editorLineWrapToggle: "Activer/désactiver le retour à la ligne (Alt+Z)",
 	saveChanges: "Enregistrer",
 	saveChangesTooltip: "Enregistrer les modifications",
 	saved: "Enregistré",
@@ -110,6 +111,8 @@ export const fr: TranslationSchema = {
 	settingsIndentWithAuto: "Hériter d'Obsidian",
 	settingsIndentWithTabs: "Tabulations",
 	settingsIndentWithSpaces: "Espaces",
+	settingsLineWrappingName: "Retour à la ligne",
+	settingsLineWrappingDesc: "Ajuster les longues lignes à la largeur de l'éditeur au lieu de faire défiler horizontalement.",
 	settingsDisableAutoSaveName: "Désactiver l'enregistrement automatique",
 	settingsDisableAutoSaveDesc: "Nécessite d'appuyer sur le raccourci d'enregistrement ou de cliquer sur le bouton avant d'écrire les modifications sur le disque. Remarque : à la fermeture d'Obsidian, les modifications non enregistrées sont automatiquement sauvegardées.",
 	settingsAutoSaveWarning: "Avertissement : l'enregistrement automatique écrit immédiatement les modifications sur le disque, ce qui peut augmenter le risque d'endommager accidentellement des fichiers de code sensibles.",
@@ -145,4 +148,5 @@ export const fr: TranslationSchema = {
 	commandToggleAllTypes: "Basculer l'affichage de tous les types de fichiers",
 	commandToggleAllowEditDotfiles: "Basculer la modification des fichiers masqués et sans extension",
 	commandToggleAllowEditCodeFiles: "Basculer la modification des fichiers de code et de données",
+	commandToggleLineWrapping: "Activer/désactiver le retour à la ligne dans l'éditeur de code",
 };

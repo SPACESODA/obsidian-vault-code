@@ -6,6 +6,7 @@ export const es: TranslationSchema = {
 	viewToggleCode: "Código",
 	viewToggleRendered: "Vista previa",
 	viewToggleTooltip: "Alternar entre vista de código y vista previa",
+	editorLineWrapToggle: "Alternar ajuste de línea (Alt+Z)",
 	saveChanges: "Guardar",
 	saveChangesTooltip: "Guardar cambios",
 	saved: "Guardado",
@@ -110,6 +111,8 @@ export const es: TranslationSchema = {
 	settingsIndentWithAuto: "Heredar de Obsidian",
 	settingsIndentWithTabs: "Tabulaciones",
 	settingsIndentWithSpaces: "Espacios",
+	settingsLineWrappingName: "Ajuste de línea",
+	settingsLineWrappingDesc: "Ajustar líneas largas a la ventana del editor en lugar de desplazarse horizontalmente.",
 	settingsDisableAutoSaveName: "Desactivar guardado automático",
 	settingsDisableAutoSaveDesc: "Requiere pulsar el atajo de guardado o el botón de guardar antes de escribir cambios en el disco. Limitación: si cierra Obsidian, los cambios no guardados se guardarán automáticamente.",
 	settingsAutoSaveWarning: "Advertencia: El guardado automático escribe inmediatamente los cambios en el disco, lo que puede aumentar el riesgo de dañar accidentalmente archivos de código sensibles.",
@@ -145,4 +148,5 @@ export const es: TranslationSchema = {
 	commandToggleAllTypes: "Alternar visibilidad de todos los tipos de archivo",
 	commandToggleAllowEditDotfiles: "Alternar edición de archivos ocultos y sin extensión",
 	commandToggleAllowEditCodeFiles: "Alternar edición de archivos de código y datos",
+	commandToggleLineWrapping: "Alternar ajuste de línea en el editor de código",
 };

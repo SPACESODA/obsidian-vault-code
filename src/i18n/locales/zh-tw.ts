@@ -6,6 +6,7 @@ export const zhTw: TranslationSchema = {
 	viewToggleCode: "原始碼",
 	viewToggleRendered: "預覽",
 	viewToggleTooltip: "切換原始碼與預覽檢視",
+	editorLineWrapToggle: "切換自動換行 (Alt+Z)",
 	saveChanges: "儲存",
 	saveChangesTooltip: "儲存變更",
 	saved: "已儲存",
@@ -110,6 +111,8 @@ export const zhTw: TranslationSchema = {
 	settingsIndentWithAuto: "繼承 Obsidian 設定",
 	settingsIndentWithTabs: "Tab (製表符)",
 	settingsIndentWithSpaces: "空格 (Spaces)",
+	settingsLineWrappingName: "自動換行",
+	settingsLineWrappingDesc: "將長行自動換行以符合編輯器視窗，而非水平捲動。",
 	settingsDisableAutoSaveName: "停用自動儲存",
 	settingsDisableAutoSaveDesc: "在將變更儲存到磁碟之前，必須先按下儲存快捷鍵或點選儲存按鈕。限制：若退出 Obsidian 應用程式，未儲存的編輯將會自動儲存。",
 	settingsAutoSaveWarning: "警告：允許自動儲存會立即將變更寫入磁碟，這可能會增加意外損壞機密程式碼檔案的風險。",
@@ -145,4 +148,5 @@ export const zhTw: TranslationSchema = {
 	commandToggleAllTypes: "切換所有檔案類型顯示狀態",
 	commandToggleAllowEditDotfiles: "切換隱藏檔案與無副檔名檔案編輯狀態",
 	commandToggleAllowEditCodeFiles: "切換程式碼與資料檔案編輯狀態",
+	commandToggleLineWrapping: "在程式碼編輯器中切換自動換行",
 };

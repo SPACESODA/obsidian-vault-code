@@ -420,6 +420,7 @@ interface VaultCodeSettings {
 	language: string;
 	tabSize: string;
 	indentWithTabs: string;
+	lineWrapping: boolean;
 }
 
 const DEFAULT_EXTENSIONS =
@@ -451,6 +452,7 @@ const DEFAULT_SETTINGS: VaultCodeSettings = {
 	language: "auto",
 	tabSize: "auto",
 	indentWithTabs: "auto",
+	lineWrapping: false,
 };
 
 interface IgnoreRule {
@@ -1985,6 +1987,7 @@ export class DotfileView extends TextFileView {
 	private editorEl: HTMLElement | null = null;
 	private previewEl: HTMLElement | null = null;
 	private langEl: HTMLElement | null = null;
+	private lineWrapBtnEl: HTMLButtonElement | null = null;
 	private searchBtnEl: HTMLButtonElement | null = null;
 	private saveBtnEl: HTMLButtonElement | null = null;
 	private saveIconEl: HTMLElement | null = null;
@@ -1994,6 +1997,8 @@ export class DotfileView extends TextFileView {
 	private viewToggleTextEl: HTMLElement | null = null;
 	private dirtyDotEl: HTMLElement | null = null;
 	private languageCompartment = new Compartment();
+	private lineWrappingCompartment = new Compartment();
+	private isLineWrapping = false;
 	private plugin: VaultCodePlugin;
 	private isModified = false;
 	private discardOnClose = false;
@@ -2018,6 +2023,11 @@ export class DotfileView extends TextFileView {
 		this.scope.register(["Mod", "Alt"], "f", (evt: KeyboardEvent) => {
 			evt.preventDefault();
 			this.openReplace();
+			return false;
+		});
+		this.scope.register(["Alt"], "z", (evt: KeyboardEvent) => {
+			evt.preventDefault();
+			this.toggleLineWrapping();
 			return false;
 		});
 	}
@@ -2275,6 +2285,7 @@ export class DotfileView extends TextFileView {
 		const { contentEl } = this;
 		contentEl.empty();
 		contentEl.addClass("hidden-files-editor-container");
+		this.isLineWrapping = this.plugin.settings.lineWrapping ?? false;
 
 		// Header bar with filename, language badge, and live position
 		const headerEl = contentEl.createDiv({
@@ -2302,6 +2313,16 @@ export class DotfileView extends TextFileView {
 		const rightEl = headerEl.createDiv({
 			cls: "hidden-files-editor-header-right",
 		});
+
+		// Toggle line wrapping button (icon-only, on the left of search button)
+		this.lineWrapBtnEl = rightEl.createEl("button", {
+			cls: "clickable-icon hidden-files-editor-wrap-btn",
+		});
+		setIcon(this.lineWrapBtnEl, "wrap-text");
+		this.lineWrapBtnEl.addEventListener("click", () => {
+			this.toggleLineWrapping();
+		});
+		this.updateLineWrappingUI();
 
 		// Find and replace button (icon-only, on the left of View button)
 		this.searchBtnEl = rightEl.createEl("button", {
@@ -2420,6 +2441,9 @@ export class DotfileView extends TextFileView {
 				createPanel: (view) => new ModernSearchPanel(view, this.app),
 			}),
 			this.languageCompartment.of([]),
+			this.lineWrappingCompartment.of(
+				this.isLineWrapping ? EditorView.lineWrapping : [],
+			),
 			Prec.highest(
 				keymap.of([
 					{
@@ -2474,6 +2498,13 @@ export class DotfileView extends TextFileView {
 								return true;
 							}
 							return false;
+						},
+					},
+					{
+						key: "Alt-z",
+						run: () => {
+							this.toggleLineWrapping();
+							return true;
 						},
 					},
 				]),
@@ -2702,6 +2733,31 @@ export class DotfileView extends TextFileView {
 		await super.onClose();
 	}
 
+	toggleLineWrapping(wrap?: boolean): void {
+		this.isLineWrapping = wrap !== undefined ? wrap : !this.isLineWrapping;
+		if (this.editor) {
+			this.editor.dispatch({
+				effects: this.lineWrappingCompartment.reconfigure(
+					this.isLineWrapping ? EditorView.lineWrapping : [],
+				),
+			});
+		}
+		this.plugin.settings.lineWrapping = this.isLineWrapping;
+		void this.plugin.saveSettings();
+		this.updateLineWrappingUI();
+	}
+
+	getLineWrapping(): boolean {
+		return this.isLineWrapping;
+	}
+
+	private updateLineWrappingUI(): void {
+		if (!this.lineWrapBtnEl) return;
+		this.lineWrapBtnEl.toggleClass("is-active", this.isLineWrapping);
+		this.lineWrapBtnEl.title = t("editorLineWrapToggle");
+		this.lineWrapBtnEl.setAttribute("aria-label", t("editorLineWrapToggle"));
+	}
+
 	private isPreviewable(): boolean {
 		if (!this.file) return false;
 		const ext = this.file.extension?.toLowerCase() ?? "";
@@ -2723,6 +2779,7 @@ export class DotfileView extends TextFileView {
 			if (this.previewEl) this.previewEl.hide();
 			if (this.editorEl) this.editorEl.show();
 			if (this.searchBtnEl) this.searchBtnEl.show();
+			if (this.lineWrapBtnEl) this.lineWrapBtnEl.show();
 			return;
 		}
 
@@ -2745,6 +2802,7 @@ export class DotfileView extends TextFileView {
 		if (this.isPreviewMode) {
 			if (this.editorEl) this.editorEl.hide();
 			if (this.searchBtnEl) this.searchBtnEl.hide();
+			if (this.lineWrapBtnEl) this.lineWrapBtnEl.hide();
 			if (this.previewEl) {
 				this.previewEl.show();
 				this.renderPreview();
@@ -2752,6 +2810,7 @@ export class DotfileView extends TextFileView {
 		} else {
 			if (this.previewEl) this.previewEl.hide();
 			if (this.searchBtnEl) this.searchBtnEl.show();
+			if (this.lineWrapBtnEl) this.lineWrapBtnEl.show();
 			if (this.editorEl) {
 				this.editorEl.show();
 				if (this.editor) {
@@ -3244,6 +3303,22 @@ export default class VaultCodePlugin extends Plugin {
 				if (activeView) {
 					if (!checking) {
 						activeView.openReplace();
+					}
+					return true;
+				}
+				return false;
+			},
+		});
+
+		this.addCommand({
+			id: "toggle-line-wrapping-code-editor",
+			name: t("commandToggleLineWrapping"),
+			checkCallback: (checking: boolean) => {
+				const activeView =
+					this.app.workspace.getActiveViewOfType(DotfileView);
+				if (activeView) {
+					if (!checking) {
+						activeView.toggleLineWrapping();
 					}
 					return true;
 				}
@@ -5017,6 +5092,27 @@ class VaultCodeSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					});
 			});
+
+		new Setting(containerEl)
+			.setName(t("settingsLineWrappingName"))
+			.setDesc(t("settingsLineWrappingDesc"))
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.lineWrapping ?? false)
+					.onChange(async (value) => {
+						this.plugin.settings.lineWrapping = value;
+						await this.plugin.saveSettings();
+						this.app.workspace
+							.getLeavesOfType(VIEW_TYPE_DOTFILE)
+							.forEach((leaf) => {
+								if (leaf.view instanceof DotfileView) {
+									if (leaf.view.getLineWrapping() !== value) {
+										leaf.view.toggleLineWrapping(value);
+									}
+								}
+							});
+					}),
+			);
 
 		const autoSaveSetting = new Setting(containerEl)
 			.setName(t("settingsDisableAutoSaveName"))

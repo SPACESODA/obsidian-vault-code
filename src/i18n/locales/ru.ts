@@ -6,6 +6,7 @@ export const ru: TranslationSchema = {
 	viewToggleCode: "Код",
 	viewToggleRendered: "Просмотр",
 	viewToggleTooltip: "Переключение между режимами кода и просмотра",
+	editorLineWrapToggle: "Переключить перенос строк (Alt+Z)",
 	saveChanges: "Сохранить",
 	saveChangesTooltip: "Сохранить изменения",
 	saved: "Сохранено",
@@ -110,6 +111,8 @@ export const ru: TranslationSchema = {
 	settingsIndentWithAuto: "Наследовать из Obsidian",
 	settingsIndentWithTabs: "Табуляция",
 	settingsIndentWithSpaces: "Пробелы",
+	settingsLineWrappingName: "Перенос строк",
+	settingsLineWrappingDesc: "Переносить длинные строки по ширине окна редактора вместо горизонтальной прокрутки.",
 	settingsDisableAutoSaveName: "Отключить автосохранение",
 	settingsDisableAutoSaveDesc: "Требуется нажать сочетание клавиш или кнопку сохранения перед записью изменений на диск. Примечание: при закрытии Obsidian несохраненные изменения сохранятся автоматически.",
 	settingsAutoSaveWarning: "Предупреждение: автосохранение мгновенно записывает изменения на диск, что может увеличить риск случайного повреждения важных файлов кода.",
@@ -145,4 +148,5 @@ export const ru: TranslationSchema = {
 	commandToggleAllTypes: "Переключить видимость всех типов файлов",
 	commandToggleAllowEditDotfiles: "Переключить редактирование скрытых файлов и файлов без расширения",
 	commandToggleAllowEditCodeFiles: "Переключить редактирование файлов кода и данных",
+	commandToggleLineWrapping: "Переключить перенос строк в редакторе кода",
 };

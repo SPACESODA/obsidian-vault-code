@@ -6,6 +6,7 @@ export const ja: TranslationSchema = {
 	viewToggleCode: "コード",
 	viewToggleRendered: "プレビュー",
 	viewToggleTooltip: "コードとプレビューの切り替え",
+	editorLineWrapToggle: "行の折り返しを切り替え (Alt+Z)",
 	saveChanges: "保存",
 	saveChangesTooltip: "変更を保存",
 	saved: "保存済み",
@@ -110,6 +111,8 @@ export const ja: TranslationSchema = {
 	settingsIndentWithAuto: "Obsidianの設定に従う",
 	settingsIndentWithTabs: "タブ (Tabs)",
 	settingsIndentWithSpaces: "スペース (Spaces)",
+	settingsLineWrappingName: "行の折り返し",
+	settingsLineWrappingDesc: "エディタの幅に合わせて長い行を折り返します（無効時は水平スクロール）。",
 	settingsDisableAutoSaveName: "自動保存を無効化",
 	settingsDisableAutoSaveDesc: "変更をディスクに保存する前に、保存ショートカットキーを押すか保存ボタンをタップすることを必須にします。注意: Obsidian アプリを終了すると、未保存の編集は自動的に保存されます。",
 	settingsAutoSaveWarning: "警告: 自動保存を有効にすると変更が即座に書き込まれるため、機密コードファイルを誤って破損するリスクが高まる可能性があります。",
@@ -145,4 +148,5 @@ export const ja: TranslationSchema = {
 	commandToggleAllTypes: "すべてのファイル形式の表示・非表示を切り替え",
 	commandToggleAllowEditDotfiles: "ドットファイルおよび拡張子なしファイル編集の切り替え",
 	commandToggleAllowEditCodeFiles: "コードおよびデータファイル編集の切り替え",
+	commandToggleLineWrapping: "コードエディタで行の折り返しを切り替え",
 };

@@ -6,6 +6,7 @@ export const ko: TranslationSchema = {
 	viewToggleCode: "코드",
 	viewToggleRendered: "미리보기",
 	viewToggleTooltip: "코드 및 미리보기 보기 전환",
+	editorLineWrapToggle: "자동 줄 바꿈 전환 (Alt+Z)",
 	saveChanges: "저장",
 	saveChangesTooltip: "변경 사항 저장",
 	saved: "저장됨",
@@ -110,6 +111,8 @@ export const ko: TranslationSchema = {
 	settingsIndentWithAuto: "Obsidian 설정 따르기",
 	settingsIndentWithTabs: "탭 (Tabs)",
 	settingsIndentWithSpaces: "공백 (Spaces)",
+	settingsLineWrappingName: "자동 줄 바꿈",
+	settingsLineWrappingDesc: "긴 줄을 가로로 스크롤하는 대신 편집기 창 너비에 맞춰 줄 바꿈합니다.",
 	settingsDisableAutoSaveName: "자동 저장 비활성화",
 	settingsDisableAutoSaveDesc: "변경 사항을 디스크에 기록하기 전에 저장 단축키를 누르거나 저장 버튼을 클릭해야 합니다. 참고: Obsidian 앱을 종료할 때 저장되지 않은 편집 내용은 자동으로 저장됩니다.",
 	settingsAutoSaveWarning: "경고: 자동 저장을 허용하면 변경 사항이 즉시 디스크에 기록되므로 중요한 코드 파일이 실수로 손상될 위험이 높아질 수 있습니다.",
@@ -145,4 +148,5 @@ export const ko: TranslationSchema = {
 	commandToggleAllTypes: "모든 파일 형식 표시 전환",
 	commandToggleAllowEditDotfiles: "숨김 파일 및 확장자 없는 파일 편집 전환",
 	commandToggleAllowEditCodeFiles: "코드 및 데이터 파일 편집 전환",
+	commandToggleLineWrapping: "코드 편집기에서 자동 줄 바꿈 전환",
 };

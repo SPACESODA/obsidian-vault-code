@@ -621,8 +621,9 @@
 	opacity: 0.75;
 }
 
-/* Find & replace icon button in header (box-less clickable-icon matching Obsidian header actions) */
-.hidden-files-editor-search-btn.clickable-icon {
+/* Find & replace and line wrap icon buttons in header (box-less clickable-icon matching Obsidian header actions) */
+.hidden-files-editor-search-btn.clickable-icon,
+.hidden-files-editor-wrap-btn.clickable-icon {
 	width: var(--icon-size, 26px);
 	height: var(--icon-size, 26px);
 	min-width: 26px;
@@ -641,18 +642,21 @@
 	flex-shrink: 0;
 }
 
-.hidden-files-editor-search-btn svg {
+.hidden-files-editor-search-btn svg,
+.hidden-files-editor-wrap-btn svg {
 	width: 17px;
 	height: 17px;
 	display: block;
 }
 
-.hidden-files-editor-search-btn.clickable-icon:hover {
+.hidden-files-editor-search-btn.clickable-icon:hover,
+.hidden-files-editor-wrap-btn.clickable-icon:hover {
 	background-color: var(--background-modifier-hover) !important;
 	color: var(--text-normal);
 }
 
-.hidden-files-editor-search-btn.clickable-icon.is-active {
+.hidden-files-editor-search-btn.clickable-icon.is-active,
+.hidden-files-editor-wrap-btn.clickable-icon.is-active {
 	background-color: var(--background-modifier-active-hover, var(--background-secondary-alt)) !important;
 	color: var(--interactive-accent) !important;
 }
@@ -888,7 +892,8 @@
 	.hidden-files-editor-header-right .hidden-files-btn-text {
 		display: none;
 	}
-	.hidden-files-editor-search-btn.clickable-icon {
+	.hidden-files-editor-search-btn.clickable-icon,
+	.hidden-files-editor-wrap-btn.clickable-icon {
 		min-height: 28px;
 		min-width: 28px;
 		width: 28px;

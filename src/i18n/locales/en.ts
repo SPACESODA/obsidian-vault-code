@@ -4,6 +4,7 @@ export const en = {
 	viewToggleCode: "Code",
 	viewToggleRendered: "Preview",
 	viewToggleTooltip: "Switch between code and preview",
+	editorLineWrapToggle: "Toggle line wrapping (Alt+Z)",
 	saveChanges: "Save",
 	saveChangesTooltip: "Save changes",
 	saved: "Saved",
@@ -108,6 +109,8 @@ export const en = {
 	settingsIndentWithAuto: "Inherit from Obsidian",
 	settingsIndentWithTabs: "Tabs",
 	settingsIndentWithSpaces: "Spaces",
+	settingsLineWrappingName: "Line wrapping",
+	settingsLineWrappingDesc: "Wrap long lines to fit the editor window instead of scrolling horizontally.",
 	settingsDisableAutoSaveName: "Disable auto-save",
 	settingsDisableAutoSaveDesc: "Require pressing the save shortcut or tapping the save button before changes are saved to disk. Limitation: if you quit the Obsidian app, unsaved edits will be saved automatically.",
 	settingsAutoSaveWarning: "Warning: Allowing auto-save immediately writes changes to disk, which may increase the risk of unintentionally damaging sensitive code files.",
@@ -143,6 +146,7 @@ export const en = {
 	commandToggleAllTypes: "Toggle all file types visibility",
 	commandToggleAllowEditDotfiles: "Toggle dotfile and extensionless file editing",
 	commandToggleAllowEditCodeFiles: "Toggle code and data file editing",
+	commandToggleLineWrapping: "Toggle line wrapping in code editor",
 };
 
 export type TranslationSchema = typeof en;

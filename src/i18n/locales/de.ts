@@ -6,6 +6,7 @@ export const de: TranslationSchema = {
 	viewToggleCode: "Code",
 	viewToggleRendered: "Vorschau",
 	viewToggleTooltip: "Zwischen Code- und Vorschauansicht wechseln",
+	editorLineWrapToggle: "Zeilenumbruch umschalten (Alt+Z)",
 	saveChanges: "Speichern",
 	saveChangesTooltip: "Änderungen speichern",
 	saved: "Gespeichert",
@@ -110,6 +111,8 @@ export const de: TranslationSchema = {
 	settingsIndentWithAuto: "Von Obsidian übernehmen",
 	settingsIndentWithTabs: "Tabs",
 	settingsIndentWithSpaces: "Leerzeichen",
+	settingsLineWrappingName: "Zeilenumbruch",
+	settingsLineWrappingDesc: "Lange Zeilen an das Editorfenster anpassen, anstatt horizontal zu scrollen.",
 	settingsDisableAutoSaveName: "Automatisches Speichern deaktivieren",
 	settingsDisableAutoSaveDesc: "Erfordert das Drücken des Tastaturkürzels oder das Klicken auf die Schaltfläche vor dem Speichern auf Festplatte. Hinweis: Beim Schließen von Obsidian werden ungespeicherte Änderungen automatisch gespeichert.",
 	settingsAutoSaveWarning: "Warnung: Durch das automatische Speichern werden Änderungen sofort geschrieben, was das Risiko einer versehentlichen Beschädigung sensibler Codedateien erhöhen kann.",
@@ -145,4 +148,5 @@ export const de: TranslationSchema = {
 	commandToggleAllTypes: "Sichtbarkeit aller Dateitypen umschalten",
 	commandToggleAllowEditDotfiles: "Bearbeitung von Dotfiles und dateiendungslosen Dateien umschalten",
 	commandToggleAllowEditCodeFiles: "Bearbeitung von Code- und Datendateien umschalten",
+	commandToggleLineWrapping: "Zeilenumbruch im Code-Editor umschalten",
 };
