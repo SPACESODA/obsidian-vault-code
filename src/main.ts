@@ -61,9 +61,11 @@ import {
 	indentOnInput,
 	syntaxHighlighting,
 	defaultHighlightStyle,
+	HighlightStyle,
 	LanguageDescription,
 	LanguageSupport,
 } from "@codemirror/language";
+import { tags } from "@lezer/highlight";
 import {
 	closeBrackets,
 	closeBracketsKeymap,
@@ -160,6 +162,183 @@ export const BINARY_EXTENSIONS = new Set([
 	// Executables, binaries & database
 	"exe", "dll", "so", "dylib", "bin", "dat", "db", "sqlite", "sqlite3", "class",
 	"pyc", "pyo", "wasm", "node", "apk", "aab", "ipa",
+]);
+
+/* ── Native syntax highlighting style ─────────────────────── */
+
+export const vaultCodeHighlightStyle = HighlightStyle.define([
+	// Keywords & Language constructs
+	{
+		tag: [
+			tags.keyword,
+			tags.controlKeyword,
+			tags.definitionKeyword,
+			tags.moduleKeyword,
+			tags.operatorKeyword,
+			tags.modifier,
+		],
+		color: "var(--code-keyword, var(--color-pink, #ff7b72))",
+		fontWeight: "500",
+	},
+	{
+		tag: [tags.self],
+		color: "var(--code-keyword, var(--color-pink, #ff7b72))",
+		fontStyle: "italic",
+	},
+
+	// HTML / XML / SVG Elements & Tags
+	{
+		tag: tags.tagName,
+		color: "var(--code-tag, var(--color-red, #ff7b72))",
+		fontWeight: "500",
+	},
+	{
+		tag: [tags.angleBracket, tags.bracket],
+		color: "var(--code-punctuation, var(--text-muted, #8b949e))",
+	},
+
+	// HTML / XML Attributes & Object Properties
+	{
+		tag: [tags.attributeName, tags.propertyName],
+		color: "var(--code-property, var(--color-cyan, #79c0ff))",
+	},
+
+	// Functions, Methods & Function Definitions
+	{
+		tag: [
+			tags.function(tags.variableName),
+			tags.function(tags.propertyName),
+			tags.macroName,
+		],
+		color: "var(--code-function, var(--color-yellow, #e3b341))",
+	},
+
+	// Types, Classes, Namespaces & Interfaces
+	{
+		tag: [
+			tags.typeName,
+			tags.className,
+			tags.namespace,
+			tags.changed,
+		],
+		color: "var(--code-function, var(--color-yellow, #ffa657))",
+	},
+
+	// Strings & Attribute Values
+	{
+		tag: [tags.string, tags.attributeValue, tags.character],
+		color: "var(--code-string, var(--color-green, #7ee787))",
+	},
+	{
+		tag: [tags.special(tags.string), tags.escape],
+		color: "var(--code-important, var(--color-orange, #ffa657))",
+	},
+	{
+		tag: tags.regexp,
+		color: "var(--code-important, var(--color-orange, #ffa657))",
+	},
+
+	// Numbers, Booleans, Null, Constants & Literals
+	{
+		tag: [tags.number, tags.integer, tags.float],
+		color: "var(--code-value, var(--color-purple, #d2a8ff))",
+	},
+	{
+		tag: [tags.bool, tags.null, tags.atom],
+		color: "var(--code-value, var(--color-purple, #d2a8ff))",
+		fontWeight: "500",
+	},
+
+	// Operators & Punctuation
+	{
+		tag: [tags.operator, tags.compareOperator, tags.logicOperator, tags.arithmeticOperator],
+		color: "var(--code-operator, var(--color-red, #ff7b72))",
+	},
+	{
+		tag: [tags.punctuation, tags.separator],
+		color: "var(--code-punctuation, var(--text-muted, #8b949e))",
+	},
+
+	// Comments
+	{
+		tag: [
+			tags.comment,
+			tags.lineComment,
+			tags.blockComment,
+			tags.docComment,
+		],
+		color: "var(--code-comment, var(--text-faint, #8b949e))",
+		fontStyle: "italic",
+	},
+
+	// Meta, DOCTYPE, Processing Instructions (e.g. <?php ?> or <!DOCTYPE>)
+	{
+		tag: [
+			tags.meta,
+			tags.documentMeta,
+			tags.processingInstruction,
+			tags.annotation,
+		],
+		color: "var(--code-important, var(--color-orange, #ffa657))",
+	},
+
+	// CSS Units & Colors
+	{
+		tag: tags.unit,
+		color: "var(--code-value, var(--color-purple, #d2a8ff))",
+	},
+	{
+		tag: tags.color,
+		color: "var(--code-string, var(--color-green, #7ee787))",
+	},
+
+	// Variables & Definitions
+	{
+		tag: tags.definition(tags.variableName),
+		color: "var(--text-accent, var(--color-blue, #58a6ff))",
+	},
+	{
+		tag: tags.variableName,
+		color: "var(--code-normal, var(--text-normal))",
+	},
+
+	// Markdown / Documentation formatting
+	{
+		tag: tags.heading,
+		color: "var(--text-title-h1, var(--text-normal))",
+		fontWeight: "bold",
+	},
+	{
+		tag: tags.link,
+		color: "var(--text-accent, #58a6ff)",
+		textDecoration: "underline",
+	},
+	{
+		tag: tags.emphasis,
+		fontStyle: "italic",
+	},
+	{
+		tag: tags.strong,
+		fontWeight: "bold",
+	},
+
+	// Diff / Git
+	{
+		tag: tags.inserted,
+		color: "var(--color-green, #7ee787)",
+		backgroundColor: "rgba(46, 160, 67, 0.15)",
+	},
+	{
+		tag: tags.deleted,
+		color: "var(--color-red, #ff7b72)",
+		backgroundColor: "rgba(248, 81, 73, 0.15)",
+	},
+
+	// Errors
+	{
+		tag: tags.invalid,
+		color: "var(--text-error, #f85149)",
+	},
 ]);
 
 /* ── Type augmentations for internal Obsidian APIs ─────────── */
@@ -1631,6 +1810,7 @@ export class DotfileView extends TextFileView {
 			dropCursor(),
 			EditorState.allowMultipleSelections.of(true),
 			indentOnInput(),
+			syntaxHighlighting(vaultCodeHighlightStyle),
 			syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
 			bracketMatching(),
 			closeBrackets(),
