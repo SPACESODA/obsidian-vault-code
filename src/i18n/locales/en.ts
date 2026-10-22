@@ -82,7 +82,7 @@ export const en = {
 	settingsPreventAutoOpenDesc: "Single-clicking unsupported binary or document files (such as .zip, .exe, .docx, .dmg) in the file explorer only selects them, preventing accidental unzipping or application launching.",
 	settingsOpenOnDoubleClickName: "Open unsupported files on double-click",
 	settingsOpenOnDoubleClickDesc: "Allow opening unsupported files with your system's default application on double-click. If disabled, files can only be opened externally via the right-click context menu.",
-	settingsObsidianIgnoreName: "Ignore files and folders: {0}",
+	settingsObsidianIgnoreName: "Ignore files and folders with {0}",
 	settingsObsidianIgnoreDesc: "Respect rules defined in .obsidianignore at the vault root, using standard .gitignore syntax (supports wildcards, folder slashes, and negations).",
 	settingsButtonCreateDefault: "Create default file",
 	settingsButtonCopyDefault: "Copy default values",
@@ -90,7 +90,7 @@ export const en = {
 	settingsTooltipCopyDefault: "Copy default ignore rules to clipboard",
 	settingsNoticeCreatedObsidianIgnore: "Created .obsidianignore at vault root.",
 	settingsNoticeCopiedDefaultIgnore: "Default ignore rules copied to clipboard.",
-	settingsGitIgnoreName: "Ignore files and folders: {0}",
+	settingsGitIgnoreName: "Ignore files and folders with {0}",
 	settingsGitIgnoreDesc: "Also respect rules defined in .gitignore file placed at the vault root.",
 	settingsButtonResetDefault: "Reset to default",
 

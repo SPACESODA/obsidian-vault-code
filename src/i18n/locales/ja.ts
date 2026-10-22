@@ -84,7 +84,7 @@ export const ja: TranslationSchema = {
 	settingsPreventAutoOpenDesc: "ファイルエクスプローラーで未サポートのバイナリやドキュメントファイル（.zip、.exe、.docx、.dmg など）をシングルクリックした際に選択のみ行い、誤った解凍や外部アプリの起動を防ぎます。",
 	settingsOpenOnDoubleClickName: "ダブルクリックで未サポートファイルを開く",
 	settingsOpenOnDoubleClickDesc: "ダブルクリック時にシステムの標準アプリケーションでファイルを開くことを許可します。無効の場合、右クリックメニューからのみ外部起動できます。",
-	settingsObsidianIgnoreName: "ファイルとフォルダーを除外：{0}",
+	settingsObsidianIgnoreName: "{0} でファイルとフォルダーを除外",
 	settingsObsidianIgnoreDesc: "保管庫ルートの .obsidianignore に定義されたルールを適用します。標準の .gitignore 構文に対応（ワイルドカード、スラッシュ、否定 ! をサポート）。",
 	settingsButtonCreateDefault: "デフォルトファイルを作成",
 	settingsButtonCopyDefault: "デフォルト値をコピー",
@@ -92,7 +92,7 @@ export const ja: TranslationSchema = {
 	settingsTooltipCopyDefault: "デフォルトの除外ルールをクリップボードにコピー",
 	settingsNoticeCreatedObsidianIgnore: "保管庫のルートに .obsidianignore を作成しました。",
 	settingsNoticeCopiedDefaultIgnore: "デフォルトの除外ルールをクリップボードにコピーしました。",
-	settingsGitIgnoreName: "ファイルとフォルダーを除外：{0}",
+	settingsGitIgnoreName: "{0} でファイルとフォルダーを除外",
 	settingsGitIgnoreDesc: "保管庫のルートにある .gitignore ファイルに定義されたルールも適用します。",
 	settingsButtonResetDefault: "デフォルトに戻す",
 

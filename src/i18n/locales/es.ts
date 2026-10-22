@@ -84,7 +84,7 @@ export const es: TranslationSchema = {
 	settingsPreventAutoOpenDesc: "Al hacer un solo clic en archivos binarios o documentos no compatibles (.zip, .exe, .docx, .dmg), solo se seleccionarán, evitando descompresiones accidentales o aperturas de programas externos.",
 	settingsOpenOnDoubleClickName: "Abrir archivos no compatibles con doble clic",
 	settingsOpenOnDoubleClickDesc: "Permitir abrir archivos no compatibles con la aplicación predeterminada del sistema mediante doble clic. Si está desactivado, solo podrán abrirse desde el menú contextual.",
-	settingsObsidianIgnoreName: "Ignorar archivos y carpetas: {0}",
+	settingsObsidianIgnoreName: "Ignorar archivos y carpetas con {0}",
 	settingsObsidianIgnoreDesc: "Respetar las reglas de .obsidianignore en la raíz de la bóveda, usando la sintaxis estándar de .gitignore (admite comodines, barras de carpeta y negaciones !).",
 	settingsButtonCreateDefault: "Crear archivo por defecto",
 	settingsButtonCopyDefault: "Copiar valores por defecto",
@@ -92,7 +92,7 @@ export const es: TranslationSchema = {
 	settingsTooltipCopyDefault: "Copiar reglas de exclusión por defecto al portapapeles",
 	settingsNoticeCreatedObsidianIgnore: ".obsidianignore creado en la raíz de la bóveda.",
 	settingsNoticeCopiedDefaultIgnore: "Reglas de exclusión por defecto copiadas al portapapeles.",
-	settingsGitIgnoreName: "Ignorar archivos y carpetas: {0}",
+	settingsGitIgnoreName: "Ignorar archivos y carpetas con {0}",
 	settingsGitIgnoreDesc: "Respetar también las reglas definidas en el archivo .gitignore en la raíz de la bóveda.",
 	settingsButtonResetDefault: "Restablecer por defecto",
 

@@ -84,7 +84,7 @@ export const de: TranslationSchema = {
 	settingsPreventAutoOpenDesc: "Ein einfacher Klick auf nicht unterstützte Binär- oder Dokumentdateien (.zip, .exe, .docx, .dmg) wählt diese nur aus, um ein versehentliches Entpacken oder Starten externer Programme zu verhindern.",
 	settingsOpenOnDoubleClickName: "Nicht unterstützte Dateien per Doppelklick öffnen",
 	settingsOpenOnDoubleClickDesc: "Erlaubt das Öffnen nicht unterstützter Dateien mit der Standardanwendung des Systems per Doppelklick. Wenn deaktiviert, können sie nur über das Kontextmenü geöffnet werden.",
-	settingsObsidianIgnoreName: "Dateien und Ordner ignorieren: {0}",
+	settingsObsidianIgnoreName: "Dateien und Ordner mit {0} ignorieren",
 	settingsObsidianIgnoreDesc: "Regeln aus .obsidianignore im Vault-Stammverzeichnis anwenden (verwendet Standard-.gitignore-Syntax mit Platzhaltern, Ordner-Schrägstrichen und Negationen !).",
 	settingsButtonCreateDefault: "Standarddatei erstellen",
 	settingsButtonCopyDefault: "Standardwerte kopieren",
@@ -92,7 +92,7 @@ export const de: TranslationSchema = {
 	settingsTooltipCopyDefault: "Standard-Ignorierregeln in die Zwischenablage kopieren",
 	settingsNoticeCreatedObsidianIgnore: ".obsidianignore im Vault-Stammverzeichnis erstellt.",
 	settingsNoticeCopiedDefaultIgnore: "Standard-Ignorierregeln in die Zwischenablage kopiert.",
-	settingsGitIgnoreName: "Dateien und Ordner ignorieren: {0}",
+	settingsGitIgnoreName: "Dateien und Ordner mit {0} ignorieren",
 	settingsGitIgnoreDesc: "Auch Regeln aus der Datei .gitignore im Vault-Stammverzeichnis anwenden.",
 	settingsButtonResetDefault: "Auf Standard zurücksetzen",
 

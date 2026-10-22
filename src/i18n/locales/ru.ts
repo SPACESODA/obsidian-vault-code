@@ -84,7 +84,7 @@ export const ru: TranslationSchema = {
 	settingsPreventAutoOpenDesc: "Одиночный щелчок по неподдерживаемым двоичным файлам или документам (.zip, .exe, .docx, .dmg) только выбирает их, предотвращая случайную распаковку или запуск внешних приложений.",
 	settingsOpenOnDoubleClickName: "Открывать неподдерживаемые файлы двойным щелчком",
 	settingsOpenOnDoubleClickDesc: "Разрешить открытие неподдерживаемых файлов системным приложением по умолчанию двойным щелчком. Если отключено, файлы можно открыть только через контекстное меню.",
-	settingsObsidianIgnoreName: "Игнорировать файлы и папки: {0}",
+	settingsObsidianIgnoreName: "Игнорировать файлы и папки с помощью {0}",
 	settingsObsidianIgnoreDesc: "Применять правила из .obsidianignore в корне хранилища, используя стандартный синтаксис .gitignore (поддерживает маски, косые черты папок и исключения !).",
 	settingsButtonCreateDefault: "Создать файл по умолчанию",
 	settingsButtonCopyDefault: "Скопировать значения по умолчанию",
@@ -92,7 +92,7 @@ export const ru: TranslationSchema = {
 	settingsTooltipCopyDefault: "Скопировать стандартные правила в буфер обмена",
 	settingsNoticeCreatedObsidianIgnore: "Файл .obsidianignore создан в корне хранилища.",
 	settingsNoticeCopiedDefaultIgnore: "Стандартные правила игнорирования скопированы в буфер обмена.",
-	settingsGitIgnoreName: "Игнорировать файлы и папки: {0}",
+	settingsGitIgnoreName: "Игнорировать файлы и папки с помощью {0}",
 	settingsGitIgnoreDesc: "Также применять правила из файла .gitignore в корне хранилища.",
 	settingsButtonResetDefault: "Сбросить по умолчанию",
 

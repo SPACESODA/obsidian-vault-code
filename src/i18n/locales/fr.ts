@@ -84,7 +84,7 @@ export const fr: TranslationSchema = {
 	settingsPreventAutoOpenDesc: "Un simple clic sur des fichiers binaires ou documents non pris en charge (.zip, .exe, .docx, .dmg) les sélectionne uniquement, évitant ainsi toute décompression accidentelle ou lancement d'application externe.",
 	settingsOpenOnDoubleClickName: "Ouvrir les fichiers non pris en charge par double-clic",
 	settingsOpenOnDoubleClickDesc: "Autoriser l'ouverture des fichiers non pris en charge avec l'application par défaut du système lors d'un double-clic. Si désactivé, l'ouverture externe ne se fait que via le menu contextuel.",
-	settingsObsidianIgnoreName: "Ignorer les fichiers et dossiers : {0}",
+	settingsObsidianIgnoreName: "Ignorer les fichiers et dossiers avec {0}",
 	settingsObsidianIgnoreDesc: "Respecter les règles de .obsidianignore à la racine du coffre, selon la syntaxe standard .gitignore (jokers, barres obliques de dossier et négations !).",
 	settingsButtonCreateDefault: "Créer le fichier par défaut",
 	settingsButtonCopyDefault: "Copier les valeurs par défaut",
@@ -92,7 +92,7 @@ export const fr: TranslationSchema = {
 	settingsTooltipCopyDefault: "Copier les règles d'exclusion par défaut dans le presse-papiers",
 	settingsNoticeCreatedObsidianIgnore: ".obsidianignore créé à la racine du coffre.",
 	settingsNoticeCopiedDefaultIgnore: "Règles d'exclusion par défaut copiées dans le presse-papiers.",
-	settingsGitIgnoreName: "Ignorer les fichiers et dossiers : {0}",
+	settingsGitIgnoreName: "Ignorer les fichiers et dossiers avec {0}",
 	settingsGitIgnoreDesc: "Respecter également les règles définies dans le fichier .gitignore à la racine du coffre.",
 	settingsButtonResetDefault: "Rétablir par défaut",
 

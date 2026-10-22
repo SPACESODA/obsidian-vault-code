@@ -84,7 +84,7 @@ export const it: TranslationSchema = {
 	settingsPreventAutoOpenDesc: "Facendo un singolo clic su file binari o documenti non supportati (.zip, .exe, .docx, .dmg), questi vengono solo selezionati, evitando estrazioni o avvii accidentali di app esterne.",
 	settingsOpenOnDoubleClickName: "Apri file non supportati con doppio clic",
 	settingsOpenOnDoubleClickDesc: "Consenti l'apertura dei file non supportati con l'applicazione di sistema predefinita tramite doppio clic. Se disattivato, possono essere aperti solo dal menu contestuale.",
-	settingsObsidianIgnoreName: "Ignora file e cartelle: {0}",
+	settingsObsidianIgnoreName: "Ignora file e cartelle con {0}",
 	settingsObsidianIgnoreDesc: "Applica le regole di .obsidianignore nella radice del vault, usando la sintassi standard di .gitignore (supporta caratteri jolly, barre per cartelle e negazioni !).",
 	settingsButtonCreateDefault: "Crea file predefinito",
 	settingsButtonCopyDefault: "Copia valori predefiniti",
@@ -92,7 +92,7 @@ export const it: TranslationSchema = {
 	settingsTooltipCopyDefault: "Copia le regole di esclusione predefinite negli appunti",
 	settingsNoticeCreatedObsidianIgnore: ".obsidianignore creato nella radice del vault.",
 	settingsNoticeCopiedDefaultIgnore: "Regole di esclusione predefinite copiate negli appunti.",
-	settingsGitIgnoreName: "Ignora file e cartelle: {0}",
+	settingsGitIgnoreName: "Ignora file e cartelle con {0}",
 	settingsGitIgnoreDesc: "Applica anche le regole definite nel file .gitignore nella radice del vault.",
 	settingsButtonResetDefault: "Ripristina predefiniti",
 
