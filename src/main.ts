@@ -675,6 +675,7 @@ class ConfirmCloseModal extends Modal {
 	}
 
 	onOpen(): void {
+		this.modalEl.addClass("hidden-files-modal-window");
 		const { contentEl } = this;
 		contentEl.empty();
 		contentEl.addClass("hidden-files-confirm-modal");
@@ -746,6 +747,7 @@ class ConfirmReplaceAllModal extends Modal {
 	}
 
 	onOpen(): void {
+		this.modalEl.addClass("hidden-files-modal-window");
 		const { contentEl } = this;
 		contentEl.empty();
 		contentEl.addClass("hidden-files-confirm-modal");
@@ -812,6 +814,7 @@ class CreateFileModal extends Modal {
 	}
 
 	onOpen(): void {
+		this.modalEl.addClass("hidden-files-modal-window");
 		const { contentEl } = this;
 		contentEl.empty();
 		contentEl.addClass("hidden-files-form-modal");
@@ -989,6 +992,7 @@ class RenameModal extends Modal {
 	}
 
 	onOpen(): void {
+		this.modalEl.addClass("hidden-files-modal-window");
 		const { contentEl } = this;
 		contentEl.empty();
 		contentEl.addClass("hidden-files-form-modal");
@@ -1333,27 +1337,27 @@ class ModernSearchPanel implements Panel {
 		});
 
 		const replaceBtn = replaceBtnsWrapper.createEl("button", {
-			cls: "hidden-files-search-action-btn",
-			text: t("searchReplace"),
+			cls: "clickable-icon hidden-files-search-action-icon",
 			attr: {
 				title: t("searchReplace"),
 				"aria-label": t("searchReplace"),
 				type: "button",
 			},
 		});
+		setIcon(replaceBtn, getIcon("replace") ? "replace" : "arrow-left-right");
 		replaceBtn.addEventListener("click", () => {
 			replaceNext(this.view);
 		});
 
 		const replaceAllBtn = replaceBtnsWrapper.createEl("button", {
-			cls: "hidden-files-search-action-btn",
-			text: t("searchReplaceAll"),
+			cls: "clickable-icon hidden-files-search-action-icon",
 			attr: {
 				title: t("searchReplaceAll"),
 				"aria-label": t("searchReplaceAll"),
 				type: "button",
 			},
 		});
+		setIcon(replaceAllBtn, getIcon("replace-all") ? "replace-all" : "check-check");
 		replaceAllBtn.addEventListener("click", () => {
 			this.promptReplaceAll();
 		});
