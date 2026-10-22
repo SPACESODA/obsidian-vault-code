@@ -1925,6 +1925,9 @@ export class DotfileView extends TextFileView {
 		if (this.isDirty()) {
 			return false;
 		}
+		if (ext === "md" || ext === "markdown") {
+			return true;
+		}
 		return this.plugin.isExtensionEditable(ext);
 	}
 
@@ -2011,7 +2014,10 @@ export class DotfileView extends TextFileView {
 	private isBinaryOrNonEditable(): boolean {
 		if (!this.file) return true;
 		const ext = this.file.extension?.toLowerCase() ?? "";
-		return BINARY_EXTENSIONS.has(ext) || !this.plugin.isFileEditable(this.file);
+		return (
+			BINARY_EXTENSIONS.has(ext) ||
+			!this.plugin.isViewableInCodeEditor(this.file)
+		);
 	}
 
 	override async save(clear?: boolean): Promise<void> {
@@ -2099,7 +2105,10 @@ export class DotfileView extends TextFileView {
 
 		if (this.file) {
 			const ext = this.file.extension?.toLowerCase() ?? "";
-			if (BINARY_EXTENSIONS.has(ext) || !this.plugin.isFileEditable(this.file)) {
+			if (
+				BINARY_EXTENSIONS.has(ext) ||
+				!this.plugin.isViewableInCodeEditor(this.file)
+			) {
 				const { contentEl } = this;
 				contentEl.empty();
 				contentEl.addClass("hidden-files-editor-container");
@@ -2500,6 +2509,8 @@ export class DotfileView extends TextFileView {
 			liquid: "Liquid",
 			log: "Log",
 			lua: "Lua",
+			markdown: "Markdown",
+			md: "Markdown",
 			mdx: "MDX",
 			mjml: "MJML",
 			mjs: "JavaScript",
@@ -2909,72 +2920,133 @@ export default class VaultCodePlugin extends Plugin {
 		);
 
 		this.registerEvent(
-			this.app.workspace.on("file-menu", (menu, file) => {
-				if (file instanceof TFolder) {
-					menu.addItem((item) => {
-						item
-							.setTitle(t("contextNewFile"))
-							.setIcon("file-plus")
-							.setSection("action")
-							.onClick(() => {
-								new CreateFileModal(this.app, this, file).open();
-							});
-					});
-				} else if (file instanceof TFile) {
-					const targetFolder = file.parent ?? this.app.vault.getRoot();
-
-					menu.addItem((item) => {
-						item
-							.setTitle(t("contextNewNoteHere"))
-							.setIcon("file-text")
-							.setSection("action")
-							.onClick(() => {
-								void this.createNewNoteInFolder(targetFolder);
-							});
-					});
-
-					menu.addItem((item) => {
-						item
-							.setTitle(t("contextNewFileHere"))
-							.setIcon("file-plus")
-							.setSection("action")
-							.onClick(() => {
-								new CreateFileModal(
-									this.app,
-									this,
-									targetFolder,
-								).open();
-							});
-					});
-
-					menu.addItem((item) => {
-						item
-							.setTitle(t("contextNewFolderHere"))
-							.setIcon("folder-plus")
-							.setSection("action")
-							.onClick(() => {
-								void this.createNewFolderInFolder(targetFolder);
-							});
-					});
-
-					if (this.isFileEditable(file)) {
+			this.app.workspace.on(
+				"file-menu",
+				(menu, file, source, leaf) => {
+					if (file instanceof TFolder) {
 						menu.addItem((item) => {
 							item
-								.setTitle(t("contextEditInCodeEditor"))
-								.setIcon("document-code")
-								.onClick(async () => {
-									const leaf =
-										this.app.workspace.getLeaf(false);
-									await leaf.setViewState({
+								.setTitle(t("contextNewFile"))
+								.setIcon("file-plus")
+								.setSection("action")
+								.onClick(() => {
+									new CreateFileModal(this.app, this, file).open();
+								});
+						});
+					} else if (file instanceof TFile) {
+						const targetFolder =
+							file.parent ?? this.app.vault.getRoot();
+
+						menu.addItem((item) => {
+							item
+								.setTitle(t("contextNewNoteHere"))
+								.setIcon("file-text")
+								.setSection("action")
+								.onClick(() => {
+									void this.createNewNoteInFolder(targetFolder);
+								});
+						});
+
+						menu.addItem((item) => {
+							item
+								.setTitle(t("contextNewFileHere"))
+								.setIcon("file-plus")
+								.setSection("action")
+								.onClick(() => {
+									new CreateFileModal(
+										this.app,
+										this,
+										targetFolder,
+									).open();
+								});
+						});
+
+						menu.addItem((item) => {
+							item
+								.setTitle(t("contextNewFolderHere"))
+								.setIcon("folder-plus")
+								.setSection("action")
+								.onClick(() => {
+									void this.createNewFolderInFolder(targetFolder);
+								});
+						});
+
+						if (this.isViewableInCodeEditor(file)) {
+							const isCurrentCodeEditor =
+								leaf?.view instanceof DotfileView;
+
+							// If in more-options and already in code editor for a non-markdown file, skip
+							if (
+								source === "more-options" &&
+								isCurrentCodeEditor &&
+								!this.isMarkdownFile(file)
+							) {
+								return;
+							}
+
+							menu.addItem((item) => {
+								item
+									.setTitle(t("contextEditInCodeEditor"))
+									.setIcon("document-code");
+
+								if (source === "more-options") {
+									item.setSection("pane");
+									item.setChecked(isCurrentCodeEditor);
+								}
+
+								item.onClick(async () => {
+									if (isCurrentCodeEditor) {
+										if (leaf?.view instanceof DotfileView) {
+											await leaf.view.saveExplicitly();
+										}
+										const target =
+											leaf ?? this.app.workspace.getLeaf(false);
+										await target.setViewState({
+											type: "markdown",
+											state: { file: file.path },
+											active: true,
+										});
+										return;
+									}
+
+									let targetLeaf = leaf;
+									if (!targetLeaf) {
+										this.app.workspace.iterateAllLeaves((l) => {
+											if (
+												!targetLeaf &&
+												(l.view as { file?: TFile })?.file?.path ===
+													file.path
+											) {
+												targetLeaf = l;
+											}
+										});
+									}
+									if (!targetLeaf) {
+										targetLeaf = this.app.workspace.getLeaf(false);
+									}
+
+									const currentView = targetLeaf.view as unknown as {
+										save?: () => Promise<void>;
+									};
+									if (typeof currentView?.save === "function") {
+										try {
+											await currentView.save();
+										} catch {
+											// Ignore save error
+										}
+									}
+
+									await targetLeaf.setViewState({
 										type: VIEW_TYPE_DOTFILE,
 										state: { file: file.path },
 										active: true,
 									});
 								});
-						});
+							});
+						}
 					}
-				}
-			}),
+				},
+			),
 		);
 
 		this.registerEvent(
@@ -3196,6 +3268,28 @@ export default class VaultCodePlugin extends Plugin {
 			}
 		}
 		return set;
+	}
+
+	isMarkdownFile(file: TFile): boolean {
+		if (!file || !(file instanceof TFile)) {
+			return false;
+		}
+		const ext = file.extension ? file.extension.toLowerCase() : "";
+		return ext === "md" || ext === "markdown";
+	}
+
+	isViewableInCodeEditor(file: TFile): boolean {
+		if (!file || !(file instanceof TFile)) {
+			return false;
+		}
+		const ext = file.extension ? file.extension.toLowerCase() : "";
+		if (ext && BINARY_EXTENSIONS.has(ext)) {
+			return false;
+		}
+		if (this.isMarkdownFile(file)) {
+			return true;
+		}
+		return this.isFileEditable(file);
 	}
 
 	isFileEditable(file: TFile): boolean {
