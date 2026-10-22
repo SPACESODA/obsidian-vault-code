@@ -144,4 +144,5 @@ export const de: TranslationSchema = {
 	commandToggleAllowEditDotfiles: "Bearbeitung von Dotfiles und dateiendungslosen Dateien umschalten",
 	commandToggleAllowEditCodeFiles: "Bearbeitung von Code- und Datendateien umschalten",
 	commandToggleLineWrapping: "Zeilenumbruch im Code-Editor umschalten",
+	commandGotoLine: "Gehe zu Zeile im Code-Editor",
 };

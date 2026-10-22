@@ -215,6 +215,83 @@
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
+/* Go to line panel */
+.hidden-files-editor-wrapper .cm-dialog.cm-goto-line {
+	padding: 8px 14px;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	background-color: var(--background-secondary);
+	font-family: var(--font-interface);
+	font-size: var(--font-ui-smaller, 12px);
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.hidden-files-editor-wrapper .cm-dialog.cm-goto-line label {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	font-weight: 500;
+	color: var(--text-normal);
+	margin: 0;
+}
+
+.hidden-files-editor-wrapper .cm-dialog.cm-goto-line .cm-textfield {
+	background-color: var(--background-modifier-form-field, var(--background-primary));
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s, 4px);
+	padding: 4px 8px;
+	height: 28px;
+	color: var(--text-normal);
+	font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+	font-size: var(--font-ui-smaller, 12px);
+	outline: none;
+	width: 120px;
+	box-sizing: border-box;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.hidden-files-editor-wrapper .cm-dialog.cm-goto-line .cm-textfield:focus {
+	border-color: var(--interactive-accent);
+	box-shadow: 0 0 0 1px var(--interactive-accent);
+}
+
+.hidden-files-editor-wrapper .cm-dialog.cm-goto-line .cm-button {
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent, #ffffff);
+	border: none;
+	border-radius: var(--radius-s, 4px);
+	padding: 4px 14px;
+	height: 28px;
+	cursor: pointer;
+	font-weight: var(--font-semibold, 600);
+	font-size: var(--font-ui-smaller, 12px);
+	text-transform: capitalize;
+	transition: opacity 0.15s ease;
+}
+
+.hidden-files-editor-wrapper .cm-dialog.cm-goto-line .cm-button:hover {
+	opacity: 0.9;
+}
+
+.hidden-files-editor-wrapper .cm-dialog.cm-goto-line .cm-dialog-close {
+	background: none;
+	border: none;
+	color: var(--text-muted);
+	font-size: 18px;
+	cursor: pointer;
+	padding: 0 6px;
+	line-height: 1;
+	border-radius: var(--radius-s, 4px);
+	margin-left: auto;
+	transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.hidden-files-editor-wrapper .cm-dialog.cm-goto-line .cm-dialog-close:hover {
+	color: var(--text-normal);
+	background-color: var(--background-modifier-hover);
+}
+
 .hidden-files-search-panel {
 	padding: 6px 12px;
 	display: flex;

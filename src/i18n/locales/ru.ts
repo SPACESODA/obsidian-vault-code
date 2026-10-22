@@ -144,4 +144,5 @@ export const ru: TranslationSchema = {
 	commandToggleAllowEditDotfiles: "Переключить редактирование скрытых файлов и файлов без расширения",
 	commandToggleAllowEditCodeFiles: "Переключить редактирование файлов кода и данных",
 	commandToggleLineWrapping: "Переключить перенос строк в редакторе кода",
+	commandGotoLine: "Перейти к строке в редакторе кода",
 };

@@ -144,4 +144,5 @@ export const zhCn: TranslationSchema = {
 	commandToggleAllowEditDotfiles: "切换隐藏文件与无扩展名文件编辑状态",
 	commandToggleAllowEditCodeFiles: "切换代码与数据文件编辑状态",
 	commandToggleLineWrapping: "在代码编辑器中切换自动换行",
+	commandGotoLine: "在代码编辑器中跳转到指定行",
 };

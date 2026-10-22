@@ -144,4 +144,5 @@ export const ko: TranslationSchema = {
 	commandToggleAllowEditDotfiles: "숨김 파일 및 확장자 없는 파일 편집 전환",
 	commandToggleAllowEditCodeFiles: "코드 및 데이터 파일 편집 전환",
 	commandToggleLineWrapping: "코드 편집기에서 자동 줄 바꿈 전환",
+	commandGotoLine: "코드 편집기에서 지정된 행으로 이동",
 };

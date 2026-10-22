@@ -144,4 +144,5 @@ export const ja: TranslationSchema = {
 	commandToggleAllowEditDotfiles: "ドットファイルおよび拡張子なしファイル編集の切り替え",
 	commandToggleAllowEditCodeFiles: "コードおよびデータファイル編集の切り替え",
 	commandToggleLineWrapping: "コードエディタで行の折り返しを切り替え",
+	commandGotoLine: "コードエディタで指定行へジャンプ",
 };

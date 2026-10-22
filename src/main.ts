@@ -47,6 +47,7 @@ import {
 	history,
 	historyKeymap,
 	indentWithTab,
+	toggleBlockComment,
 } from "@codemirror/commands";
 import {
 	search,
@@ -63,6 +64,7 @@ import {
 	selectMatches,
 	replaceNext,
 	replaceAll,
+	gotoLine,
 } from "@codemirror/search";
 import {
 	foldGutter,
@@ -2000,6 +2002,15 @@ export class DotfileView extends TextFileView {
 		}
 	}
 
+	openGotoLine(): void {
+		if (this.isPreviewMode) {
+			this.toggleViewMode();
+		}
+		if (this.editor) {
+			gotoLine(this.editor);
+		}
+	}
+
 	async saveExplicitly(): Promise<void> {
 		if (this.isBinaryOrNonEditable() || !this.file) return;
 		this.data = this.getViewData();
@@ -2317,6 +2328,17 @@ export class DotfileView extends TextFileView {
 						scope: "editor search-panel",
 						preventDefault: true,
 					},
+					// VS Code muscle memory parity
+					{
+						key: "Ctrl-g",
+						run: gotoLine,
+						preventDefault: true,
+					},
+					{
+						key: "Shift-Alt-a",
+						run: toggleBlockComment,
+						preventDefault: true,
+					},
 					...closeBracketsKeymap,
 					{
 						key: "Enter",
@@ -2386,9 +2408,21 @@ export class DotfileView extends TextFileView {
 
 		const filename = this.file.name;
 		const ext = this.file.extension?.toLowerCase() ?? "";
+		const name = filename.toLowerCase();
 
 		const desc =
 			LanguageDescription.matchFilename(languages, filename) ||
+			(name === ".gitignore" ||
+			name === ".gitattributes" ||
+			name === ".dockerignore"
+				? LanguageDescription.matchFilename(languages, "file.sh")
+				: null) ||
+			(name.startsWith(".env")
+				? LanguageDescription.matchFilename(languages, "file.properties")
+				: null) ||
+			(name === ".editorconfig" || name === ".npmrc"
+				? LanguageDescription.matchFilename(languages, "file.ini")
+				: null) ||
 			(ext === "mdx"
 				? LanguageDescription.matchFilename(languages, "file.md")
 				: null) ||
@@ -3222,6 +3256,22 @@ export default class VaultCodePlugin extends Plugin {
 				if (activeView) {
 					if (!checking) {
 						activeView.toggleLineWrapping();
+					}
+					return true;
+				}
+				return false;
+			},
+		});
+
+		this.addCommand({
+			id: "goto-line-code-editor",
+			name: t("commandGotoLine"),
+			checkCallback: (checking: boolean) => {
+				const activeView =
+					this.app.workspace.getActiveViewOfType(DotfileView);
+				if (activeView) {
+					if (!checking) {
+						activeView.openGotoLine();
 					}
 					return true;
 				}
