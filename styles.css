@@ -434,6 +434,9 @@ input.hidden-files-search-input,
 	resize: none;
 	overflow-y: hidden;
 	box-sizing: border-box;
+	white-space: pre-wrap;
+	word-break: break-word;
+	tab-size: 2;
 }
 
 .hidden-files-search-input.is-scrollable {

@@ -1340,8 +1340,8 @@ class ModernSearchPanel implements Panel {
 				return;
 			}
 			if (e.key === "Enter" && e.target === this.searchInput) {
-				if (e.ctrlKey || e.metaKey) {
-					// VS Code style: Ctrl+Enter or Cmd+Enter inserts a newline into the find query
+				if (e.shiftKey || e.ctrlKey || e.metaKey) {
+					// Shift+Enter, Ctrl+Enter, Cmd+Enter: break line (insert newline)
 					e.preventDefault();
 					const start = this.searchInput.selectionStart ?? this.searchInput.value.length;
 					const end = this.searchInput.selectionEnd ?? this.searchInput.value.length;
@@ -1353,16 +1353,14 @@ class ModernSearchPanel implements Panel {
 				e.preventDefault();
 				if (e.altKey) {
 					selectMatches(this.view);
-				} else if (e.shiftKey) {
-					findPrevious(this.view);
 				} else {
 					findNext(this.view);
 				}
 				return;
 			}
 			if (e.key === "Enter" && e.target === this.replaceInput) {
-				if (e.ctrlKey || e.metaKey) {
-					// VS Code style: Ctrl+Enter or Cmd+Enter inserts a newline into the replace query
+				if (e.shiftKey || e.ctrlKey || e.metaKey) {
+					// Shift+Enter, Ctrl+Enter, Cmd+Enter: break line (insert newline)
 					e.preventDefault();
 					const start = this.replaceInput.selectionStart ?? this.replaceInput.value.length;
 					const end = this.replaceInput.selectionEnd ?? this.replaceInput.value.length;
@@ -1372,11 +1370,7 @@ class ModernSearchPanel implements Panel {
 					return;
 				}
 				e.preventDefault();
-				if (e.altKey || e.shiftKey) {
-					this.promptReplaceAll();
-				} else {
-					replaceNext(this.view);
-				}
+				replaceNext(this.view);
 				return;
 			}
 		});
