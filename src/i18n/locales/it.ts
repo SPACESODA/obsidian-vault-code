@@ -86,7 +86,7 @@ export const it: TranslationSchema = {
 	settingsOpenOnDoubleClickDesc: "Consenti l'apertura dei file non supportati con l'applicazione di sistema predefinita tramite doppio clic. Se disattivato, possono essere aperti solo dal menu contestuale.",
 	settingsObsidianIgnoreName: "Ignora file e cartelle con {0}",
 	settingsObsidianIgnoreDesc: "Applica le regole di .obsidianignore nella radice del vault, usando la sintassi standard di .gitignore (supporta caratteri jolly, barre per cartelle e negazioni !).",
-	settingsButtonCreateDefault: "Crea file predefinito",
+	settingsButtonCreateDefault: "Aggiungi predefinito",
 	settingsButtonCopyDefault: "Copia valori predefiniti",
 	settingsTooltipCreateDefault: "Crea un file .obsidianignore con le regole predefinite nella radice del vault",
 	settingsTooltipCopyDefault: "Copia le regole di esclusione predefinite negli appunti",

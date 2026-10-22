@@ -1094,7 +1094,14 @@ body .hidden-files-editor-wrapper .cm-searchMatch-selected {
 	flex-wrap: wrap;
 }
 
+.hidden-files-confirm-buttons .hidden-files-btn-discard {
+	margin-right: auto;
+}
+
 @media (max-width: 540px) {
+	.hidden-files-confirm-buttons .hidden-files-btn-discard {
+		margin-right: 0;
+	}
 	.hidden-files-editor-lang {
 		display: none;
 	}

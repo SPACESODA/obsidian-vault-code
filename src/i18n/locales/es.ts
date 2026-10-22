@@ -86,7 +86,7 @@ export const es: TranslationSchema = {
 	settingsOpenOnDoubleClickDesc: "Permitir abrir archivos no compatibles con la aplicación predeterminada del sistema mediante doble clic. Si está desactivado, solo podrán abrirse desde el menú contextual.",
 	settingsObsidianIgnoreName: "Ignorar archivos y carpetas con {0}",
 	settingsObsidianIgnoreDesc: "Respetar las reglas de .obsidianignore en la raíz de la bóveda, usando la sintaxis estándar de .gitignore (admite comodines, barras de carpeta y negaciones !).",
-	settingsButtonCreateDefault: "Crear archivo por defecto",
+	settingsButtonCreateDefault: "Añadir por defecto",
 	settingsButtonCopyDefault: "Copiar valores por defecto",
 	settingsTooltipCreateDefault: "Crear un archivo .obsidianignore con las reglas por defecto en la raíz de la bóveda",
 	settingsTooltipCopyDefault: "Copiar reglas de exclusión por defecto al portapapeles",

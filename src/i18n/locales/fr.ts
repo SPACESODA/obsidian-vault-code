@@ -86,7 +86,7 @@ export const fr: TranslationSchema = {
 	settingsOpenOnDoubleClickDesc: "Autoriser l'ouverture des fichiers non pris en charge avec l'application par défaut du système lors d'un double-clic. Si désactivé, l'ouverture externe ne se fait que via le menu contextuel.",
 	settingsObsidianIgnoreName: "Ignorer les fichiers et dossiers avec {0}",
 	settingsObsidianIgnoreDesc: "Respecter les règles de .obsidianignore à la racine du coffre, selon la syntaxe standard .gitignore (jokers, barres obliques de dossier et négations !).",
-	settingsButtonCreateDefault: "Créer le fichier par défaut",
+	settingsButtonCreateDefault: "Ajouter par défaut",
 	settingsButtonCopyDefault: "Copier les valeurs par défaut",
 	settingsTooltipCreateDefault: "Créer un fichier .obsidianignore avec les règles par défaut à la racine du coffre",
 	settingsTooltipCopyDefault: "Copier les règles d'exclusion par défaut dans le presse-papiers",

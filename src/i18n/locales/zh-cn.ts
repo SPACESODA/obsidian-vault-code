@@ -86,7 +86,7 @@ export const zhCn: TranslationSchema = {
 	settingsOpenOnDoubleClickDesc: "允许双击使用系统默认应用程序打开不支持的文件。若禁用，则只能通过右键菜单手动打开。",
 	settingsObsidianIgnoreName: "使用 {0} 忽略文件和文件夹",
 	settingsObsidianIgnoreDesc: "遵循仓库根目录 .obsidianignore 中的规则，采用标准 .gitignore 语法（支持通配符、文件夹斜杠与反向排除 !）。",
-	settingsButtonCreateDefault: "创建默认文件",
+	settingsButtonCreateDefault: "添加默认",
 	settingsButtonCopyDefault: "复制默认值",
 	settingsTooltipCreateDefault: "在仓库根目录创建包含默认规则的 .obsidianignore 文件",
 	settingsTooltipCopyDefault: "将默认忽略规则复制到剪贴板",

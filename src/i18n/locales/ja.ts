@@ -86,7 +86,7 @@ export const ja: TranslationSchema = {
 	settingsOpenOnDoubleClickDesc: "ダブルクリック時にシステムの標準アプリケーションでファイルを開くことを許可します。無効の場合、右クリックメニューからのみ外部起動できます。",
 	settingsObsidianIgnoreName: "{0} でファイルとフォルダーを除外",
 	settingsObsidianIgnoreDesc: "保管庫ルートの .obsidianignore に定義されたルールを適用します。標準の .gitignore 構文に対応（ワイルドカード、スラッシュ、否定 ! をサポート）。",
-	settingsButtonCreateDefault: "デフォルトファイルを作成",
+	settingsButtonCreateDefault: "デフォルトを追加",
 	settingsButtonCopyDefault: "デフォルト値をコピー",
 	settingsTooltipCreateDefault: "保管庫のルートにデフォルトの除外ルールを含む .obsidianignore を作成します",
 	settingsTooltipCopyDefault: "デフォルトの除外ルールをクリップボードにコピー",

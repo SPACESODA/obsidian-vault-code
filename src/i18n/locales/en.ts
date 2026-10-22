@@ -84,7 +84,7 @@ export const en = {
 	settingsOpenOnDoubleClickDesc: "Allow opening unsupported files with your system's default application on double-click. If disabled, files can only be opened externally via the right-click context menu.",
 	settingsObsidianIgnoreName: "Ignore files and folders with {0}",
 	settingsObsidianIgnoreDesc: "Respect rules defined in .obsidianignore at the vault root, using standard .gitignore syntax (supports wildcards, folder slashes, and negations).",
-	settingsButtonCreateDefault: "Create default file",
+	settingsButtonCreateDefault: "Add default",
 	settingsButtonCopyDefault: "Copy default values",
 	settingsTooltipCreateDefault: "Create a .obsidianignore file with default rules at the vault root",
 	settingsTooltipCopyDefault: "Copy default ignore rules to clipboard",

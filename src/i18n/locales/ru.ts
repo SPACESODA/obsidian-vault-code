@@ -86,7 +86,7 @@ export const ru: TranslationSchema = {
 	settingsOpenOnDoubleClickDesc: "Разрешить открытие неподдерживаемых файлов системным приложением по умолчанию двойным щелчком. Если отключено, файлы можно открыть только через контекстное меню.",
 	settingsObsidianIgnoreName: "Игнорировать файлы и папки с помощью {0}",
 	settingsObsidianIgnoreDesc: "Применять правила из .obsidianignore в корне хранилища, используя стандартный синтаксис .gitignore (поддерживает маски, косые черты папок и исключения !).",
-	settingsButtonCreateDefault: "Создать файл по умолчанию",
+	settingsButtonCreateDefault: "Добавить по умолчанию",
 	settingsButtonCopyDefault: "Скопировать значения по умолчанию",
 	settingsTooltipCreateDefault: "Создать файл .obsidianignore со стандартными правилами в корне хранилища",
 	settingsTooltipCopyDefault: "Скопировать стандартные правила в буфер обмена",

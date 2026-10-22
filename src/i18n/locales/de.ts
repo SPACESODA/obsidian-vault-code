@@ -86,7 +86,7 @@ export const de: TranslationSchema = {
 	settingsOpenOnDoubleClickDesc: "Erlaubt das Öffnen nicht unterstützter Dateien mit der Standardanwendung des Systems per Doppelklick. Wenn deaktiviert, können sie nur über das Kontextmenü geöffnet werden.",
 	settingsObsidianIgnoreName: "Dateien und Ordner mit {0} ignorieren",
 	settingsObsidianIgnoreDesc: "Regeln aus .obsidianignore im Vault-Stammverzeichnis anwenden (verwendet Standard-.gitignore-Syntax mit Platzhaltern, Ordner-Schrägstrichen und Negationen !).",
-	settingsButtonCreateDefault: "Standarddatei erstellen",
+	settingsButtonCreateDefault: "Standard hinzufügen",
 	settingsButtonCopyDefault: "Standardwerte kopieren",
 	settingsTooltipCreateDefault: "Erstellt eine .obsidianignore-Datei mit Standardregeln im Vault-Stammverzeichnis",
 	settingsTooltipCopyDefault: "Standard-Ignorierregeln in die Zwischenablage kopieren",

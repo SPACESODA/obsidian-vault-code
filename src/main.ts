@@ -687,20 +687,11 @@ class ConfirmCloseModal extends Modal {
 		});
 
 		const buttonContainer = contentEl.createDiv({
-			cls: "hidden-files-modal-buttons",
-		});
-
-		const saveBtn = buttonContainer.createEl("button", {
-			cls: "mod-cta",
-			text: t("modalButtonSave"),
-		});
-		saveBtn.addEventListener("click", () => {
-			this.close();
-			void this.onSave();
+			cls: "hidden-files-modal-buttons hidden-files-confirm-buttons",
 		});
 
 		const discardBtn = buttonContainer.createEl("button", {
-			cls: "mod-warning",
+			cls: "hidden-files-btn-discard",
 			text: t("modalButtonDiscard"),
 		});
 		discardBtn.addEventListener("click", () => {
@@ -713,6 +704,15 @@ class ConfirmCloseModal extends Modal {
 		});
 		cancelBtn.addEventListener("click", () => {
 			this.close();
+		});
+
+		const saveBtn = buttonContainer.createEl("button", {
+			cls: "mod-cta",
+			text: t("modalButtonSave"),
+		});
+		saveBtn.addEventListener("click", () => {
+			this.close();
+			void this.onSave();
 		});
 	}
 
@@ -5773,11 +5773,13 @@ class VaultCodeSettingTab extends PluginSettingTab {
 			try {
 				const exists = await this.app.vault.adapter.exists(".obsidianignore");
 				if (exists) {
+					obsidianIgnoreButtonIconEl.show();
 					setIcon(obsidianIgnoreButtonIconEl, "copy");
 					obsidianIgnoreButtonTextEl.setText(t("settingsButtonCopyDefault"));
 					obsidianIgnoreButton.setTooltip(t("settingsTooltipCopyDefault"));
 				} else {
-					setIcon(obsidianIgnoreButtonIconEl, "file-plus");
+					obsidianIgnoreButtonIconEl.empty();
+					obsidianIgnoreButtonIconEl.hide();
 					obsidianIgnoreButtonTextEl.setText(t("settingsButtonCreateDefault"));
 					obsidianIgnoreButton.setTooltip(t("settingsTooltipCreateDefault"));
 				}

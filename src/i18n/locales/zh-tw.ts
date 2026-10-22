@@ -86,7 +86,7 @@ export const zhTw: TranslationSchema = {
 	settingsOpenOnDoubleClickDesc: "允許按兩下使用系統預設應用程式開啟不支援的檔案。若停用，則只能透過右鍵選單手動開啟。",
 	settingsObsidianIgnoreName: "使用 {0} 忽略檔案與資料夾",
 	settingsObsidianIgnoreDesc: "遵循儲存庫根目錄 .obsidianignore 中的規則，採用標準 .gitignore 語法（支援萬用字元、資料夾斜線與反向排除 !）。",
-	settingsButtonCreateDefault: "建立預設檔案",
+	settingsButtonCreateDefault: "新增預設",
 	settingsButtonCopyDefault: "複製預設值",
 	settingsTooltipCreateDefault: "在儲存庫根目錄建立包含預設規則的 .obsidianignore 檔案",
 	settingsTooltipCopyDefault: "將預設忽略規則複製到剪貼簿",

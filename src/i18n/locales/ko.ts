@@ -86,7 +86,7 @@ export const ko: TranslationSchema = {
 	settingsOpenOnDoubleClickDesc: "더블 클릭 시 시스템 기본 응용 프로그램으로 파일을 열 수 있도록 허용합니다. 비활성화 시 마우스 오른쪽 버튼 메뉴에서만 외부 실행할 수 있습니다.",
 	settingsObsidianIgnoreName: "{0} 파일로 파일 및 폴더 제외",
 	settingsObsidianIgnoreDesc: "볼트 루트의 .obsidianignore 파일에 정의된 규칙을 적용합니다. 표준 .gitignore 구문 사용(와일드카드, 폴더 슬래시, 부정 ! 지원).",
-	settingsButtonCreateDefault: "기본 파일 생성",
+	settingsButtonCreateDefault: "기본값 추가",
 	settingsButtonCopyDefault: "기본값 복사",
 	settingsTooltipCreateDefault: "볼트 루트에 기본 제외 규칙이 포함된 .obsidianignore 파일을 생성합니다",
 	settingsTooltipCopyDefault: "기본 제외 규칙을 클립보드에 복사",
