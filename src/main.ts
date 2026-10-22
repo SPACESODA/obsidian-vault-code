@@ -3115,11 +3115,7 @@ export default class VaultCodePlugin extends Plugin {
 							.setIcon("folder-plus")
 							.setSection("action")
 							.onClick(() => {
-								new CreateFolderModal(
-									this.app,
-									this,
-									targetFolder,
-								).open();
+								void this.createNewFolderInFolder(targetFolder);
 							});
 					});
 
@@ -4073,6 +4069,41 @@ export default class VaultCodePlugin extends Plugin {
 		const newFile = await this.app.vault.create(fullPath, "");
 		const leaf = this.app.workspace.getLeaf(false);
 		await leaf.openFile(newFile);
+	}
+
+	async createNewFolderInFolder(folder: TFolder): Promise<void> {
+		const leaves = this.app.workspace.getLeavesOfType("file-explorer");
+		try {
+			for (const leaf of leaves) {
+				const fileExplorerView = leaf.view as unknown as {
+					createAbstractFile?: (
+						type: "file" | "folder",
+						location: TFolder,
+						newLeaf?: boolean,
+					) => Promise<void>;
+				};
+				if (typeof fileExplorerView?.createAbstractFile === "function") {
+					await fileExplorerView.createAbstractFile(
+						"folder",
+						folder,
+					);
+					return;
+				}
+			}
+		} catch {
+			// Fallback to vault create below
+		}
+
+		const parentPath = folder.isRoot() ? "" : folder.path;
+		let folderName = "Untitled";
+		let index = 1;
+		let fullPath = parentPath ? `${parentPath}/${folderName}` : folderName;
+		while (await this.app.vault.adapter.exists(fullPath)) {
+			folderName = `Untitled ${index}`;
+			fullPath = parentPath ? `${parentPath}/${folderName}` : folderName;
+			index++;
+		}
+		await this.app.vault.createFolder(fullPath);
 	}
 
 	async registerHiddenPath(path: string): Promise<void> {
