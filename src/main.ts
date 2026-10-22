@@ -2264,9 +2264,6 @@ export class DotfileView extends TextFileView {
 		if (this.isDirty()) {
 			return false;
 		}
-		if (ext === "md" || ext === "markdown") {
-			return true;
-		}
 		return this.plugin.isExtensionEditable(ext);
 	}
 
@@ -4294,6 +4291,35 @@ export default class VaultCodePlugin extends Plugin {
 
 					await this.setViewState({
 						type: VIEW_TYPE_DOTFILE,
+						state: innerState,
+						active: active,
+						group: stateObj.group as WorkspaceLeaf | undefined,
+					});
+					return;
+				}
+
+				if (
+					this.view instanceof DotfileView &&
+					file instanceof TFile &&
+					plugin.isMarkdownFile(file) &&
+					!plugin.isFileEditable(file)
+				) {
+					const stateObj =
+						openState && typeof openState === "object"
+							? (openState as Record<string, unknown>)
+							: {};
+					const innerState =
+						stateObj.state && typeof stateObj.state === "object"
+							? { ...(stateObj.state as Record<string, unknown>) }
+							: {};
+					innerState.file = file.path;
+					const active =
+						stateObj.active !== undefined
+							? Boolean(stateObj.active)
+							: true;
+
+					await this.setViewState({
+						type: "markdown",
 						state: innerState,
 						active: active,
 						group: stateObj.group as WorkspaceLeaf | undefined,
