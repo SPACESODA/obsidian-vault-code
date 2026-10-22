@@ -1170,7 +1170,6 @@ class ModernSearchPanel implements Panel {
 			cls: "clickable-icon hidden-files-search-chevron-btn",
 			attr: {
 				"aria-label": t("searchToggleReplaceTooltip"),
-				title: t("searchToggleReplaceTooltip"),
 				type: "button",
 			},
 		});
@@ -1220,7 +1219,6 @@ class ModernSearchPanel implements Panel {
 			cls: "hidden-files-search-toggle-btn",
 			text: "Aa",
 			attr: {
-				title: t("searchMatchCase"),
 				"aria-label": t("searchMatchCase"),
 				type: "button",
 			},
@@ -1236,7 +1234,6 @@ class ModernSearchPanel implements Panel {
 			cls: "hidden-files-search-toggle-btn",
 			text: "\\b",
 			attr: {
-				title: t("searchWholeWord"),
 				"aria-label": t("searchWholeWord"),
 				type: "button",
 			},
@@ -1252,7 +1249,6 @@ class ModernSearchPanel implements Panel {
 			cls: "hidden-files-search-toggle-btn",
 			text: ".*",
 			attr: {
-				title: t("searchRegex"),
 				"aria-label": t("searchRegex"),
 				type: "button",
 			},
@@ -1272,7 +1268,6 @@ class ModernSearchPanel implements Panel {
 		const prevBtn = navBtnsWrapper.createEl("button", {
 			cls: "clickable-icon",
 			attr: {
-				title: t("searchPreviousMatch"),
 				"aria-label": t("searchPreviousMatch"),
 				type: "button",
 			},
@@ -1285,7 +1280,6 @@ class ModernSearchPanel implements Panel {
 		const nextBtn = navBtnsWrapper.createEl("button", {
 			cls: "clickable-icon",
 			attr: {
-				title: t("searchNextMatch"),
 				"aria-label": t("searchNextMatch"),
 				type: "button",
 			},
@@ -1298,7 +1292,6 @@ class ModernSearchPanel implements Panel {
 		const selectAllBtn = navBtnsWrapper.createEl("button", {
 			cls: "clickable-icon",
 			attr: {
-				title: t("searchSelectAll"),
 				"aria-label": t("searchSelectAll"),
 				type: "button",
 			},
@@ -1339,7 +1332,6 @@ class ModernSearchPanel implements Panel {
 		const replaceBtn = replaceBtnsWrapper.createEl("button", {
 			cls: "clickable-icon hidden-files-search-action-icon",
 			attr: {
-				title: t("searchReplace"),
 				"aria-label": t("searchReplace"),
 				type: "button",
 			},
@@ -1352,7 +1344,6 @@ class ModernSearchPanel implements Panel {
 		const replaceAllBtn = replaceBtnsWrapper.createEl("button", {
 			cls: "clickable-icon hidden-files-search-action-icon",
 			attr: {
-				title: t("searchReplaceAll"),
 				"aria-label": t("searchReplaceAll"),
 				type: "button",
 			},
