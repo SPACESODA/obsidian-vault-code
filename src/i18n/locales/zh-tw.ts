@@ -63,7 +63,6 @@ export const zhTw: TranslationSchema = {
 	modalButtonReplaceAll: "全部取代",
 
 	// Modals - Go to Line
-	modalGotoLineDesc: "第 {0} 行，共 {1} 行",
 	modalButtonGo: "跳轉",
 
 	// Callouts

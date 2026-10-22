@@ -63,7 +63,6 @@ export const it: TranslationSchema = {
 	modalButtonReplaceAll: "Sostituisci tutto",
 
 	// Modals - Go to Line
-	modalGotoLineDesc: "Riga {0} di {1}",
 	modalButtonGo: "Vai",
 
 	// Callouts

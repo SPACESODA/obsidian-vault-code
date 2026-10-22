@@ -63,7 +63,6 @@ export const ja: TranslationSchema = {
 	modalButtonReplaceAll: "すべて置換",
 
 	// Modals - Go to Line
-	modalGotoLineDesc: "行 {0} / 全 {1} 行",
 	modalButtonGo: "移動",
 
 	// Callouts

@@ -63,7 +63,6 @@ export const ru: TranslationSchema = {
 	modalButtonReplaceAll: "Заменить все",
 
 	// Modals - Go to Line
-	modalGotoLineDesc: "Строка {0} из {1}",
 	modalButtonGo: "Перейти",
 
 	// Callouts

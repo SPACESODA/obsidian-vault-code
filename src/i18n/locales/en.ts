@@ -61,7 +61,6 @@ export const en = {
 	modalButtonReplaceAll: "Replace all",
 
 	// Modals - Go to Line
-	modalGotoLineDesc: "Line {0} of {1}",
 	modalButtonGo: "Go",
 
 	// Callouts

@@ -63,7 +63,6 @@ export const ko: TranslationSchema = {
 	modalButtonReplaceAll: "모두 바꾸기",
 
 	// Modals - Go to Line
-	modalGotoLineDesc: "{1}행 중 {0}행",
 	modalButtonGo: "이동",
 
 	// Callouts
