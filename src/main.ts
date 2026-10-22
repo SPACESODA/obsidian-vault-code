@@ -3283,26 +3283,182 @@ export class DotfileView extends TextFileView {
 			"allow-scripts allow-forms allow-modals allow-same-origin allow-popups",
 		);
 
+		let baseUrl: string | undefined;
 		if (this.file) {
 			const fileUrl = this.app.vault.getResourcePath(this.file);
 			const cleanUrl = fileUrl.split("?")[0] ?? fileUrl;
-			const baseUrl = cleanUrl.substring(0, cleanUrl.lastIndexOf("/") + 1);
-
-			// Remove any existing <base> tags so the local vault directory takes precedence
-			let htmlContent = content.replace(/<base\b[^>]*>/gi, "");
-
-			// Inject <base href="..."> so relative paths (images, styles, scripts) resolve to the local vault folder
-			const baseTag = `<base href="${baseUrl}">`;
-			if (/<head\b[^>]*>/i.test(htmlContent)) {
-				htmlContent = htmlContent.replace(/<head\b[^>]*>/i, `$&${baseTag}`);
-			} else {
-				htmlContent = `${baseTag}${htmlContent}`;
-			}
-
-			iframe.srcdoc = htmlContent;
-		} else {
-			iframe.srcdoc = content;
+			baseUrl = cleanUrl.substring(0, cleanUrl.lastIndexOf("/") + 1);
 		}
+
+		iframe.srcdoc = this.prepareHtmlContentForPreview(content, baseUrl);
+	}
+
+	private prepareHtmlContentForPreview(
+		content: string,
+		baseUrl?: string,
+	): string {
+		let htmlContent = content;
+
+		// 1. Detect remote web origin if available (canonical link, og:url, saved from url, or base href)
+		let webOrigin = "";
+		const baseMatch = htmlContent.match(
+			/<base\b[^>]+href=["'](https?:\/\/[^"'/]+)/i,
+		);
+		const canonicalMatch =
+			htmlContent.match(
+				/<link\b[^>]+rel=["']canonical["'][^>]+href=["'](https?:\/\/[^"'/]+)/i,
+			) ||
+			htmlContent.match(
+				/<link\b[^>]+href=["'](https?:\/\/[^"'/]+)[^>]+rel=["']canonical["']/i,
+			);
+		const ogMatch =
+			htmlContent.match(
+				/<meta\b[^>]+property=["']og:url["'][^>]+content=["'](https?:\/\/[^"'/]+)/i,
+			) ||
+			htmlContent.match(
+				/<meta\b[^>]+content=["'](https?:\/\/[^"'/]+)[^>]+property=["']og:url["']/i,
+			);
+		const savedMatch = htmlContent.match(
+			/saved from url=\(\d+\)(https?:\/\/[^"'\s/]+)/i,
+		);
+
+		if (baseMatch?.[1]) {
+			webOrigin = baseMatch[1];
+		} else if (canonicalMatch?.[1]) {
+			webOrigin = canonicalMatch[1];
+		} else if (ogMatch?.[1]) {
+			webOrigin = ogMatch[1];
+		} else if (savedMatch?.[1]) {
+			webOrigin = savedMatch[1];
+		} else {
+			// Check for prominent origin in absolute scripts or stylesheets (excluding generic CDNs)
+			const assetOrigins = [
+				...htmlContent.matchAll(
+					/(?:src|href)=["'](https?:\/\/[a-zA-Z0-9.-]+)/gi,
+				),
+			]
+				.map((m) => m[1])
+				.filter(
+					(url): url is string =>
+						typeof url === "string" &&
+						!url.includes("google") &&
+						!url.includes("cdnjs") &&
+						!url.includes("jsdelivr") &&
+						!url.includes("unpkg"),
+				);
+			if (assetOrigins.length > 0) {
+				const counts = new Map<string, number>();
+				for (const o of assetOrigins) {
+					counts.set(o, (counts.get(o) ?? 0) + 1);
+				}
+				let best = "";
+				let maxCount = 0;
+				for (const [o, count] of counts.entries()) {
+					if (count > maxCount) {
+						best = o;
+						maxCount = count;
+					}
+				}
+				if (best) webOrigin = best;
+			}
+		}
+
+		// 2. Upgrade protocol-relative URLs (//...) to https:// in HTML attributes, url(), and @import
+		htmlContent = htmlContent.replace(
+			/(src|href|action|poster)\s*=\s*(["'])\/\/([^"'\s>]+)\2/gi,
+			"$1=$2https://$3$2",
+		);
+		htmlContent = htmlContent.replace(
+			/url\(\s*(["']?)\/\/([^)"'\s]+)\1\s*\)/gi,
+			"url($1https://$2$1)",
+		);
+		htmlContent = htmlContent.replace(
+			/@import\s+(["'])\/\/([^"'\s;]+)\1/gi,
+			"@import $1https://$2$1",
+		);
+
+		// 3. Rewrite root-relative URLs (/path) if web origin is known so remote assets load from website
+		if (webOrigin) {
+			htmlContent = htmlContent.replace(
+				/(src|href|action|poster)\s*=\s*(["'])\/([^/'"\s>][^'"\s>]*)\2/gi,
+				`$1=$2${webOrigin}/$3$2`,
+			);
+			htmlContent = htmlContent.replace(
+				/url\(\s*(["']?)\/([^/)'"\s][^)'"\s]*)\1\s*\)/gi,
+				`url($1${webOrigin}/$2$1)`,
+			);
+			htmlContent = htmlContent.replace(
+				/@import\s+(["'])\/([^/'"\s;][^'"\s;]*)\1/gi,
+				`@import $1${webOrigin}/$2$1`,
+			);
+		}
+
+		// 4. Inject runtime network shim inside the iframe
+		// This intercepts fetch, XHR, and dynamic element setters to prevent app://domain.com requests
+		const shimScript = `<script>
+(function() {
+  function fixUrl(url) {
+    if (typeof url === "string") {
+      var m = url.match(/^(?:app|file|capacitor):\\/\\/([a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})(\\/.*)?$/);
+      if (m && m[1] !== "local" && m[1] !== "localhost" && m[1] !== "obsidian.md") {
+        return "https://" + m[1] + (m[2] || "/");
+      }
+      if (url.startsWith("//")) {
+        return "https:" + url;
+      }
+    }
+    return url;
+  }
+  var origFetch = window.fetch;
+  if (origFetch) {
+    window.fetch = function(resource, init) {
+      if (typeof resource === "string") {
+        resource = fixUrl(resource);
+      } else if (resource && resource.url) {
+        try {
+          resource = new Request(fixUrl(resource.url), resource);
+        } catch(e) {}
+      }
+      return origFetch.call(this, resource, init);
+    };
+  }
+  var origOpen = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function(method, url) {
+    arguments[1] = fixUrl(url);
+    return origOpen.apply(this, arguments);
+  };
+  function patchProperty(proto, prop) {
+    var desc = Object.getOwnPropertyDescriptor(proto, prop);
+    if (desc && desc.set) {
+      Object.defineProperty(proto, prop, {
+        set: function(val) {
+          return desc.set.call(this, fixUrl(val));
+        },
+        get: desc.get
+      });
+    }
+  }
+  if (window.HTMLScriptElement) patchProperty(window.HTMLScriptElement.prototype, "src");
+  if (window.HTMLLinkElement) patchProperty(window.HTMLLinkElement.prototype, "href");
+  if (window.HTMLImageElement) patchProperty(window.HTMLImageElement.prototype, "src");
+})();
+</script>`;
+
+		// 5. Inject local <base href="..."> for relative local resources
+		let baseTag = "";
+		if (baseUrl) {
+			htmlContent = htmlContent.replace(/<base\b[^>]*>/gi, "");
+			baseTag = `<base href="${baseUrl}">`;
+		}
+
+		const injection = `${shimScript}${baseTag}`;
+		if (/<head\b[^>]*>/i.test(htmlContent)) {
+			htmlContent = htmlContent.replace(/<head\b[^>]*>/i, `$&${injection}`);
+		} else {
+			htmlContent = `${injection}${htmlContent}`;
+		}
+
+		return htmlContent;
 	}
 
 	private async renderMjmlPreview(content: string): Promise<void> {
