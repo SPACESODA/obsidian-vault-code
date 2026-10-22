@@ -96,11 +96,15 @@ export const SUPPORTED_EXTENSIONS = new Set([
 	"csv",
 	"dart",
 	"diff",
+	"email",
+	"eml",
 	"fish",
 	"go",
 	"gql",
 	"graphql",
 	"h",
+	"handlebars",
+	"hbs",
 	"hpp",
 	"htm",
 	"html",
@@ -114,9 +118,11 @@ export const SUPPORTED_EXTENSIONS = new Set([
 	"jsx",
 	"kt",
 	"less",
+	"liquid",
 	"log",
 	"lua",
 	"mdx",
+	"mjml",
 	"mjs",
 	"patch",
 	"php",
@@ -404,7 +410,7 @@ interface VaultCodeSettings {
 }
 
 const DEFAULT_EXTENSIONS =
-	"astro, bash, bat, bib, c, cjs, cmd, cpp, cs, css, csv, dart, diff, fish, go, gql, graphql, h, hpp, htm, html, ini, java, jl, js, json, json5, jsonc, jsx, kt, less, log, lua, mdx, mjs, patch, php, pine, prisma, ps1, py, r, rb, rs, sass, scss, sh, sql, svelte, svg, swift, tex, toml, ts, tsx, tsv, txt, vue, xml, yaml, yml, zig, zsh";
+	"astro, bash, bat, bib, c, cjs, cmd, cpp, cs, css, csv, dart, diff, email, eml, fish, go, gql, graphql, h, handlebars, hbs, hpp, htm, html, ini, java, jl, js, json, json5, jsonc, jsx, kt, less, liquid, log, lua, mdx, mjml, mjs, patch, php, pine, prisma, ps1, py, r, rb, rs, sass, scss, sh, sql, svelte, svg, swift, tex, toml, ts, tsx, tsv, txt, vue, xml, yaml, yml, zig, zsh";
 
 const DEFAULT_IGNORED_PATHS = `# Obsidian & Git
 .obsidian
@@ -2126,6 +2132,12 @@ export class DotfileView extends TextFileView {
 			(ext === "mdx"
 				? LanguageDescription.matchFilename(languages, "file.md")
 				: null) ||
+			(ext === "mjml"
+				? LanguageDescription.matchFilename(languages, "file.html")
+				: null) ||
+			(ext === "email" || ext === "eml"
+				? LanguageDescription.matchFilename(languages, "file.html")
+				: null) ||
 			(ext === "astro" || ext === "svelte"
 				? LanguageDescription.matchFilename(languages, "file.html")
 				: null) ||
@@ -2209,11 +2221,15 @@ export class DotfileView extends TextFileView {
 			csv: "CSV",
 			dart: "Dart",
 			diff: "Diff",
+			email: "Email",
+			eml: "Email (EML)",
 			fish: "Fish",
 			go: "Go",
 			gql: "GraphQL",
 			graphql: "GraphQL",
 			h: "C Header",
+			handlebars: "Handlebars",
+			hbs: "Handlebars",
 			hpp: "C++ Header",
 			htm: "HTML",
 			html: "HTML",
@@ -2224,12 +2240,14 @@ export class DotfileView extends TextFileView {
 			json: "JSON",
 			json5: "JSON5",
 			jsonc: "JSONC",
-			jsx: "JSX",
+			jsx: "JSX (React)",
 			kt: "Kotlin",
 			less: "Less",
+			liquid: "Liquid",
 			log: "Log",
 			lua: "Lua",
 			mdx: "MDX",
+			mjml: "MJML",
 			mjs: "JavaScript",
 			patch: "Patch",
 			php: "PHP",
@@ -2250,7 +2268,7 @@ export class DotfileView extends TextFileView {
 			tex: "LaTeX",
 			toml: "TOML",
 			ts: "TypeScript",
-			tsx: "TSX",
+			tsx: "TSX (React)",
 			tsv: "TSV",
 			txt: "Plain Text",
 			vue: "Vue",
@@ -3203,6 +3221,32 @@ export default class VaultCodePlugin extends Plugin {
 	async loadSettings() {
 		const loaded = (await this.loadData()) as Partial<VaultCodeSettings> | null;
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, loaded ?? {});
+
+		// Ensure newly supported default extensions are available even with an existing saved configuration
+		if (loaded && typeof loaded.customFileExtensions === "string") {
+			const existingSet = new Set(
+				loaded.customFileExtensions
+					.split(/[\s,;]+/)
+					.map((s) => s.trim().toLowerCase().replace(/^\./, ""))
+					.filter(Boolean),
+			);
+			const defaultList = DEFAULT_EXTENSIONS
+				.split(/[\s,;]+/)
+				.map((s) => s.trim().toLowerCase().replace(/^\./, ""))
+				.filter(Boolean);
+			let updated = false;
+			for (const ext of defaultList) {
+				if (!existingSet.has(ext)) {
+					existingSet.add(ext);
+					updated = true;
+				}
+			}
+			if (updated) {
+				this.settings.customFileExtensions = Array.from(existingSet).sort().join(", ");
+				void this.saveSettings();
+			}
+		}
+
 		setLanguage(this.settings.language);
 	}
 
