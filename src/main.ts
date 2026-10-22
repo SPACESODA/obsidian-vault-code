@@ -591,7 +591,20 @@ function parseGitignore(text: string): IgnoreRule[] {
 				regexStr += "[^/]";
 				i++;
 				continue;
-			} else if (/[.+^$(){}[\]|\\]/.test(c)) {
+			} else if (c === "[") {
+				// Character class range notation e.g. [a-zA-Z] or [tT]
+				const closeIdx = line.indexOf("]", i + 1);
+				if (closeIdx > i + 1 && !line.slice(i, closeIdx).includes("/")) {
+					const classContent = line.slice(i + 1, closeIdx);
+					regexStr += "[" + classContent + "]";
+					i = closeIdx + 1;
+					continue;
+				} else {
+					regexStr += "\\[";
+					i++;
+					continue;
+				}
+			} else if (/[.+^$(){}|\\]/.test(c)) {
 				regexStr += "\\" + c;
 				i++;
 				continue;
@@ -606,14 +619,15 @@ function parseGitignore(text: string): IgnoreRule[] {
 		let childRegex: RegExp;
 		let fullRegex: RegExp;
 
+		// Strictly case-sensitive matching matching official .gitignore specification
 		if (hasSlash) {
-			exactRegex = new RegExp("^" + regexStr + "$", "i");
-			childRegex = new RegExp("^" + regexStr + "/.*$", "i");
-			fullRegex = new RegExp("^" + regexStr + "(?:/.*)?$", "i");
+			exactRegex = new RegExp("^" + regexStr + "$");
+			childRegex = new RegExp("^" + regexStr + "/.*$");
+			fullRegex = new RegExp("^" + regexStr + "(?:/.*)?$");
 		} else {
-			exactRegex = new RegExp("(?:^|/)" + regexStr + "$", "i");
-			childRegex = new RegExp("(?:^|/)" + regexStr + "/.*$", "i");
-			fullRegex = new RegExp("(?:^|/)" + regexStr + "(?:/.*)?$", "i");
+			exactRegex = new RegExp("(?:^|/)" + regexStr + "$");
+			childRegex = new RegExp("(?:^|/)" + regexStr + "/.*$");
+			fullRegex = new RegExp("(?:^|/)" + regexStr + "(?:/.*)?$");
 		}
 
 		try {
