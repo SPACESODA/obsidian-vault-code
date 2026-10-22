@@ -5615,6 +5615,31 @@ export default class VaultCodePlugin extends Plugin {
 
 /* ── Settings tab ──────────────────────────────────────────── */
 
+function createSettingNameWithFilename(
+	template: string,
+	filename: string,
+): DocumentFragment {
+	return createFragment((frag) => {
+		const parts = template.split("{0}");
+		if (parts.length > 1) {
+			for (let i = 0; i < parts.length; i++) {
+				const part = parts[i];
+				if (part) {
+					frag.append(part);
+				}
+				if (i < parts.length - 1) {
+					frag.createSpan({
+						cls: "vault-code-setting-filename",
+						text: filename,
+					});
+				}
+			}
+		} else {
+			frag.append(template);
+		}
+	});
+}
+
 class VaultCodeSettingTab extends PluginSettingTab {
 	plugin: VaultCodePlugin;
 	updateButtonState?: () => Promise<void>;
@@ -5760,10 +5785,17 @@ class VaultCodeSettingTab extends PluginSettingTab {
 		this.updateButtonState = updateButtonState;
 
 		new Setting(containerEl)
-			.setName(t("settingsObsidianIgnoreName"))
+			.setName(
+				createSettingNameWithFilename(
+					t("settingsObsidianIgnoreName"),
+					".obsidianignore",
+				),
+			)
 			.setDesc(t("settingsObsidianIgnoreDesc"))
 			.addButton((button) => {
 				obsidianIgnoreButton = button;
+				button.setCta();
+				button.setClass("vault-code-ignore-btn");
 				button.onClick(async () => {
 					try {
 						const exists = await this.app.vault.adapter.exists(".obsidianignore");
@@ -5821,7 +5853,12 @@ class VaultCodeSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName(t("settingsGitIgnoreName"))
+			.setName(
+				createSettingNameWithFilename(
+					t("settingsGitIgnoreName"),
+					".gitignore",
+				),
+			)
 			.setDesc(t("settingsGitIgnoreDesc"))
 			.addToggle((toggle) =>
 				toggle

@@ -1150,4 +1150,23 @@ body .hidden-files-editor-wrapper .cm-searchMatch-selected {
 	color: var(--text-accent);
 }
 
+/* Settings: highlight ignore filenames in theme accent color */
+.vault-code-setting-filename {
+	color: var(--text-accent);
+	font-weight: 600;
+	font-family: var(--font-monospace, monospace);
+}
+
+/* Prominent CTA button for default ignore rules */
+button.vault-code-ignore-btn.mod-cta,
+button.vault-code-ignore-btn {
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+button.vault-code-ignore-btn.mod-cta:hover,
+button.vault-code-ignore-btn:hover {
+	background-color: var(--interactive-accent-hover);
+}
+
 
