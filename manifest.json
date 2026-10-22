@@ -6,5 +6,5 @@
 	"description": "Turn your vault into a lightweight IDE and code editor. Reveal hidden dotfiles, edit 70+ programming languages, live-preview HTML & SVG, and search & replace with zero bloat.",
 	"author": "SPACESODA",
 	"authorUrl": "https://github.com/SPACESODA",
-	"isDesktopOnly": true
+	"isDesktopOnly": false
 }

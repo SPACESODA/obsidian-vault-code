@@ -2861,6 +2861,7 @@ export default class VaultCodePlugin extends Plugin {
 
 	private patchAdapter() {
 		const adapter = this.adapter();
+		if (!adapter || !adapter.reconcileDeletion) return;
 
 		if (this.originalReconcileDeletion) return; // already patched
 		this.originalReconcileDeletion =
@@ -2880,8 +2881,8 @@ export default class VaultCodePlugin extends Plugin {
 
 				if (isDotPath(path)) {
 					// File exists on disk — re-register it instead of deleting
-					const fullPath = adapter.getFullPath(path);
-					if (await adapter._exists(fullPath, path)) {
+					const fullPath = adapter.getFullPath ? adapter.getFullPath(path) : path;
+					if (adapter._exists && (await adapter._exists(fullPath, path))) {
 						this.hiddenPaths.add(path);
 						await this.showFile(path);
 						return;
@@ -2896,12 +2897,14 @@ export default class VaultCodePlugin extends Plugin {
 	private async restoreAdapter(): Promise<void> {
 		if (this.originalReconcileDeletion) {
 			const adapter = this.adapter();
+			if (!adapter) return;
 			adapter.reconcileDeletion = this.originalReconcileDeletion;
 			this.originalReconcileDeletion = null;
 
 			// Hide all files we previously revealed
 			for (const path of this.hiddenPaths) {
-				await adapter.reconcileDeletion(adapter.getRealPath(path), path);
+				const realPath = adapter.getRealPath ? adapter.getRealPath(path) : path;
+				await adapter.reconcileDeletion(realPath, path);
 			}
 			this.hiddenPaths.clear();
 		}
@@ -2910,7 +2913,8 @@ export default class VaultCodePlugin extends Plugin {
 	/** Re-register a dotfile/dotfolder with the vault. */
 	private async showFile(path: string): Promise<void> {
 		const adapter = this.adapter();
-		const realPath = adapter.getRealPath(path);
+		if (!adapter) return;
+		const realPath = adapter.getRealPath ? adapter.getRealPath(path) : path;
 
 		if (adapter.reconcileFileInternal) {
 			await adapter.reconcileFileInternal(realPath, path);
@@ -2920,9 +2924,11 @@ export default class VaultCodePlugin extends Plugin {
 	/** Hide a previously shown dotfile. */
 	private async hideFile(path: string): Promise<void> {
 		const adapter = this.adapter();
+		if (!adapter) return;
+		const realPath = adapter.getRealPath ? adapter.getRealPath(path) : path;
 		if (this.originalReconcileDeletion) {
 			await this.originalReconcileDeletion(
-				adapter.getRealPath(path),
+				realPath,
 				path,
 			);
 		}
@@ -3111,7 +3117,8 @@ export default class VaultCodePlugin extends Plugin {
 	async registerHiddenPath(path: string): Promise<void> {
 		this.hiddenPaths.add(path);
 		const adapter = this.adapter();
-		const realPath = adapter.getRealPath(path);
+		if (!adapter) return;
+		const realPath = adapter.getRealPath ? adapter.getRealPath(path) : path;
 		try {
 			const stat = await this.app.vault.adapter.stat(path);
 			if (stat?.type === "folder") {
