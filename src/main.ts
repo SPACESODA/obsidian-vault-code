@@ -32,6 +32,7 @@ import {
 	Panel,
 	ViewUpdate,
 	Command,
+	ViewPlugin,
 } from "@codemirror/view";
 import {
 	EditorState,
@@ -1798,6 +1799,185 @@ export const smartNewlineAndIndent: Command = (view: EditorView) => {
 	return true;
 };
 
+/* ── Prevent Stuck Auto-Scroll Extension ────────────────────── */
+
+interface InternalMouseSelection {
+	scrolling?: number;
+	scrollSpeed?: { x: number; y: number };
+	setScrollSpeed?: (x: number, y: number) => void;
+	destroy?: () => void;
+	select?: (event: unknown) => void;
+	lastEvent?: unknown;
+	dragging?: boolean | null;
+}
+
+interface InternalInputState {
+	mouseSelection?: InternalMouseSelection | null;
+}
+
+interface InternalEditorView {
+	inputState?: InternalInputState;
+}
+
+function stopInternalMouseSelection(
+	view: EditorView,
+	selectLastEvent = false,
+): void {
+	const inputState = (view as unknown as InternalEditorView).inputState;
+	const mouseSel = inputState?.mouseSelection;
+	if (!mouseSel) return;
+
+	if (
+		selectLastEvent &&
+		mouseSel.dragging == null &&
+		typeof mouseSel.select === "function" &&
+		mouseSel.lastEvent
+	) {
+		try {
+			mouseSel.select(mouseSel.lastEvent);
+		} catch {
+			// ignore
+		}
+	}
+
+	if (typeof mouseSel.setScrollSpeed === "function") {
+		try {
+			mouseSel.setScrollSpeed(0, 0);
+		} catch {
+			// ignore
+		}
+	}
+
+	if (mouseSel.scrolling != null && mouseSel.scrolling > -1) {
+		try {
+			clearInterval(mouseSel.scrolling);
+			mouseSel.scrolling = -1;
+		} catch {
+			// ignore
+		}
+	}
+
+	if (typeof mouseSel.destroy === "function") {
+		try {
+			mouseSel.destroy();
+		} catch {
+			// ignore
+		}
+	}
+
+	if (inputState) {
+		inputState.mouseSelection = null;
+	}
+}
+
+/**
+ * Extension to prevent and immediately cancel any stuck auto-scrolling loops.
+ *
+ * In CodeMirror 6, dragging text selection near the top/bottom boundary triggers
+ * an internal `setInterval(..., 50)` in `MouseSelection.prototype.setScrollSpeed`.
+ * If mouseup occurs outside the editor or is swallowed by another Obsidian UI
+ * element calling stopPropagation(), CodeMirror never clears this interval,
+ * causing endless slow auto-scrolling until the tab is closed.
+ * Middle-click in Chromium/Electron can also trigger continuous autoscroll mode.
+ *
+ * This extension registers capture-phase listeners on window and view DOM to
+ * immediately cancel any mouse-selection scroll loop whenever:
+ * 1. Mouse/pointer is released anywhere on the screen (capture phase).
+ * 2. Mouse/pointer moves with no buttons held down (e.buttons === 0).
+ * 3. The user scrolls manually via trackpad / mouse wheel.
+ * 4. The user presses any key (or Escape).
+ * 5. The editor or window loses focus (blur) or opens a context menu.
+ * 6. Middle-click autoscroll is attempted (e.button === 1).
+ */
+export function preventStuckAutoScrollExtension(): Extension {
+	return ViewPlugin.fromClass(
+		class {
+			private cleanups: (() => void)[] = [];
+
+			constructor(view: EditorView) {
+				const win = view.dom.ownerDocument?.defaultView ?? window;
+
+				const onGlobalUp = (e: MouseEvent | PointerEvent) => {
+					if (e.buttons === 0 || e.button === 0) {
+						stopInternalMouseSelection(view, true);
+					}
+				};
+
+				const onGlobalMove = (e: MouseEvent | PointerEvent) => {
+					if (e.buttons === 0) {
+						const inputState = (view as unknown as InternalEditorView)
+							.inputState;
+						if (inputState?.mouseSelection) {
+							stopInternalMouseSelection(view, false);
+						}
+					}
+				};
+
+				const onCancel = () => {
+					stopInternalMouseSelection(view, false);
+				};
+
+				const onGlobalKeyDown = (e: KeyboardEvent) => {
+					if (e.key === "Escape") {
+						stopInternalMouseSelection(view, false);
+					}
+				};
+
+				const onEditorMouseDown = (e: MouseEvent) => {
+					if (e.button === 1) {
+						// Prevent Chromium middle-click autoscroll mode
+						e.preventDefault();
+						stopInternalMouseSelection(view, false);
+					}
+				};
+
+				// Register global capture-phase listeners on the window
+				win.addEventListener("mouseup", onGlobalUp, true);
+				win.addEventListener("pointerup", onGlobalUp, true);
+				win.addEventListener("mousemove", onGlobalMove, true);
+				win.addEventListener("pointermove", onGlobalMove, true);
+				win.addEventListener("blur", onCancel, true);
+				win.addEventListener("contextmenu", onCancel, true);
+				win.addEventListener("keydown", onGlobalKeyDown, {
+					capture: true,
+					passive: true,
+				});
+
+				// Register view-level listeners for scroll wheel and typing
+				view.dom.addEventListener("wheel", onCancel, { passive: true });
+				view.dom.addEventListener("keydown", onCancel, {
+					passive: true,
+				});
+				view.dom.addEventListener("mousedown", onEditorMouseDown);
+
+				this.cleanups.push(() => {
+					win.removeEventListener("mouseup", onGlobalUp, true);
+					win.removeEventListener("pointerup", onGlobalUp, true);
+					win.removeEventListener("mousemove", onGlobalMove, true);
+					win.removeEventListener("pointermove", onGlobalMove, true);
+					win.removeEventListener("blur", onCancel, true);
+					win.removeEventListener("contextmenu", onCancel, true);
+					win.removeEventListener("keydown", onGlobalKeyDown, true);
+
+					view.dom.removeEventListener("wheel", onCancel);
+					view.dom.removeEventListener("keydown", onCancel);
+					view.dom.removeEventListener(
+						"mousedown",
+						onEditorMouseDown,
+					);
+				});
+			}
+
+			destroy() {
+				for (const cleanup of this.cleanups) {
+					cleanup();
+				}
+				this.cleanups = [];
+			}
+		},
+	);
+}
+
 /* ── Dotfile & Code Editor View ────────────────────────────── */
 
 export class DotfileView extends TextFileView {
@@ -2208,6 +2388,7 @@ export class DotfileView extends TextFileView {
 		}
 
 		const extensions: Extension[] = [
+			preventStuckAutoScrollExtension(),
 			lineNumbers(),
 			highlightActiveLineGutter(),
 			highlightSpecialChars(),
