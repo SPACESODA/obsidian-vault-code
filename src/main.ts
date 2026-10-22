@@ -533,9 +533,11 @@ const DEFAULT_SETTINGS: VaultCodeSettings = {
 };
 
 interface IgnoreRule {
-	regex: RegExp;
-	negate: boolean;
 	dirOnly: boolean;
+	negate: boolean;
+	exactRegex: RegExp;
+	childRegex: RegExp;
+	fullRegex: RegExp;
 }
 
 function parseGitignore(text: string): IgnoreRule[] {
@@ -600,17 +602,27 @@ function parseGitignore(text: string): IgnoreRule[] {
 			}
 		}
 
+		let exactRegex: RegExp;
+		let childRegex: RegExp;
+		let fullRegex: RegExp;
+
 		if (hasSlash) {
-			regexStr = "^" + regexStr + "(?:/.*)?$";
+			exactRegex = new RegExp("^" + regexStr + "$", "i");
+			childRegex = new RegExp("^" + regexStr + "/.*$", "i");
+			fullRegex = new RegExp("^" + regexStr + "(?:/.*)?$", "i");
 		} else {
-			regexStr = "(?:^|/)" + regexStr + "(?:/.*)?$";
+			exactRegex = new RegExp("(?:^|/)" + regexStr + "$", "i");
+			childRegex = new RegExp("(?:^|/)" + regexStr + "/.*$", "i");
+			fullRegex = new RegExp("(?:^|/)" + regexStr + "(?:/.*)?$", "i");
 		}
 
 		try {
 			rules.push({
-				regex: new RegExp(regexStr, "i"),
-				negate,
 				dirOnly,
+				negate,
+				exactRegex,
+				childRegex,
+				fullRegex,
 			});
 		} catch {
 			// Skip invalid regex pattern
@@ -4438,7 +4450,7 @@ export default class VaultCodePlugin extends Plugin {
 		]);
 	}
 
-	isPathIgnored(path: string, isDirectory = false): boolean {
+	isPathIgnored(path: string, isDirectory?: boolean): boolean {
 		const normalized = normalizePath(path).replace(/^\/+|\/+$/g, "");
 		if (!normalized) return false;
 
@@ -4447,15 +4459,29 @@ export default class VaultCodePlugin extends Plugin {
 			return false;
 		}
 
+		const isDir =
+			isDirectory ??
+			(this.app.vault.getAbstractFileByPath(normalized) instanceof TFolder);
+
+		const matchRule = (rule: IgnoreRule): boolean => {
+			if (rule.dirOnly) {
+				if (rule.exactRegex.test(normalized)) {
+					return isDir;
+				}
+				if (rule.childRegex.test(normalized)) {
+					return true;
+				}
+				return false;
+			}
+			return rule.fullRegex.test(normalized);
+		};
+
 		let ignored = false;
 
 		// 1. Check .gitignore rules if enabled
 		if (this.settings.useGitIgnore && this.cachedGitIgnoreRules.length > 0) {
 			for (const rule of this.cachedGitIgnoreRules) {
-				if (rule.dirOnly && !isDirectory) {
-					continue;
-				}
-				if (rule.regex.test(normalized)) {
+				if (matchRule(rule)) {
 					ignored = !rule.negate;
 				}
 			}
@@ -4467,10 +4493,7 @@ export default class VaultCodePlugin extends Plugin {
 			this.cachedObsidianIgnoreRules.length > 0
 		) {
 			for (const rule of this.cachedObsidianIgnoreRules) {
-				if (rule.dirOnly && !isDirectory) {
-					continue;
-				}
-				if (rule.regex.test(normalized)) {
+				if (matchRule(rule)) {
 					ignored = !rule.negate;
 				}
 			}
