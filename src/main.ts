@@ -2528,7 +2528,9 @@ export class DotfileView extends TextFileView {
 		void this.updateGitStatus();
 		if (this.initialDiffRequested) {
 			this.initialDiffRequested = false;
-			void this.setDiffMode(true);
+			if (this.plugin.isGitAvailable()) {
+				void this.setDiffMode(true);
+			}
 		}
 	}
 
@@ -4169,14 +4171,29 @@ export class DotfileView extends TextFileView {
 		await this.setDiffMode(false);
 	}
 
+	public hideGitUI(): void {
+		if (this.gitDiffStatsBtnEl) {
+			this.gitDiffStatsBtnEl.hide();
+		}
+		if (this.isDiffMode) {
+			void this.setDiffMode(false);
+		}
+	}
+
 	public async updateGitStatus(): Promise<void> {
 		if (!this.file || !this.plugin.isGitAvailable()) {
 			if (this.gitDiffStatsBtnEl) this.gitDiffStatsBtnEl.hide();
+			if (this.isDiffMode) {
+				void this.setDiffMode(false);
+			}
 			return;
 		}
 
 		if (!this.plugin.isFileSupportedForGitDiff(this.file)) {
 			if (this.gitDiffStatsBtnEl) this.gitDiffStatsBtnEl.hide();
+			if (this.isDiffMode) {
+				void this.setDiffMode(false);
+			}
 			return;
 		}
 
@@ -4701,7 +4718,7 @@ export default class VaultCodePlugin extends Plugin {
 				await this.rescanVault();
 			}
 
-			if (Platform.isDesktop) {
+			if (Platform.isDesktop && this.isGitAvailable()) {
 				void this.gitService.getRepoRoot().then(() => {
 					this.updateAllLeafHeaderActions();
 					void this.updateStatusBarGit();
@@ -4715,7 +4732,7 @@ export default class VaultCodePlugin extends Plugin {
 
 		if (this.app.workspace.layoutReady) {
 			void this.reloadCodeEditorLeaves();
-			if (Platform.isDesktop) {
+			if (Platform.isDesktop && this.isGitAvailable()) {
 				void this.gitService.getRepoRoot().then(() => {
 					this.updateAllLeafHeaderActions();
 					void this.updateStatusBarGit();
@@ -5299,6 +5316,7 @@ export default class VaultCodePlugin extends Plugin {
 	}
 
 	public async openFileInDiffView(file: TFile): Promise<void> {
+		if (!this.isGitAvailable()) return;
 		if (!this.isFileSupportedForGitDiff(file)) {
 			new Notice(t("gitBinaryDiffUnsupported"));
 			const leaf = this.app.workspace.getLeaf(false);
@@ -5458,6 +5476,46 @@ export default class VaultCodePlugin extends Plugin {
 
 			menu.showAtMouseEvent(e);
 		};
+	}
+
+	public async applyGitIntegrationToggle(enabled: boolean): Promise<void> {
+		this.settings.enableGitIntegration = enabled;
+		await this.saveSettings();
+
+		if (this.gitStatusDebounceTimer !== null) {
+			window.clearTimeout(this.gitStatusDebounceTimer);
+			this.gitStatusDebounceTimer = null;
+		}
+
+		if (!enabled) {
+			this.cachedModifiedFiles.clear();
+
+			if (this.statusBarGitEl) {
+				this.statusBarGitEl.empty();
+				this.statusBarGitEl.hide();
+			}
+
+			// Cleanly remove all Git UI and exit diff mode across all open views
+			this.app.workspace.iterateAllLeaves((leaf) => {
+				if (leaf.view instanceof DotfileView) {
+					leaf.view.hideGitUI();
+				}
+			});
+
+			this.updateAllLeafHeaderActions();
+		} else {
+			if (Platform.isDesktop) {
+				await this.gitService.getRepoRoot();
+				await this.updateStatusBarGit();
+				this.updateAllLeafHeaderActions();
+
+				this.app.workspace.iterateAllLeaves((leaf) => {
+					if (leaf.view instanceof DotfileView) {
+						void leaf.view.updateGitStatus();
+					}
+				});
+			}
+		}
 	}
 
 	/* ── editability & extension handling ──────────────────── */
@@ -7870,9 +7928,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 				toggle
 					.setValue(this.plugin.settings.enableGitIntegration ?? true)
 					.onChange(async (value) => {
-						this.plugin.settings.enableGitIntegration = value;
-						await this.plugin.saveSettings();
-						void this.plugin.updateStatusBarGit();
+						await this.plugin.applyGitIntegrationToggle(value);
 					}),
 			);
 
@@ -7897,6 +7953,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 						} else {
 							await this.plugin.disableHiddenFiles();
 						}
+						await this.plugin.applyGitIntegrationToggle(this.plugin.settings.enableGitIntegration);
 						this.display();
 						new Notice(t("noticeAllSettingsReset"));
 					}),
