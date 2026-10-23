@@ -157,31 +157,83 @@ export const PREVIEWABLE_EXTENSIONS = new Set(["svg", "html", "htm", "mjml"]);
 
 /** All code and data file extensions supported for direct opening and editing. */
 export const SUPPORTED_EXTENSIONS = new Set([
+	"asm",
 	"astro",
 	"bash",
 	"bat",
 	"bib",
 	"c",
+	"c3",
+	"cc",
 	"cjs",
+	"cl",
+	"clj",
+	"cljc",
+	"cljs",
+	"cls",
+	"cmake",
 	"cmd",
+	"comp",
 	"cpp",
 	"cs",
 	"css",
 	"csv",
+	"cts",
+	"cu",
+	"cuh",
+	"cxx",
 	"dart",
 	"diff",
+	"dpk",
+	"dpr",
+	"edn",
+	"el",
+	"elm",
 	"email",
 	"eml",
+	"erl",
+	"ex",
+	"exs",
+	"f",
+	"f03",
+	"f08",
+	"f77",
+	"f90",
+	"f95",
 	"fish",
+	"for",
+	"frag",
+	"fs",
+	"fsi",
+	"fsx",
+	"fx",
+	"fxh",
+	"gd",
+	"gdshader",
+	"gdshaderinc",
+	"geom",
+	"gleam",
+	"glsl",
 	"go",
 	"gql",
+	"gradle",
 	"graphql",
+	"groovy",
+	"gsh",
+	"gvy",
+	"gy",
 	"h",
 	"handlebars",
 	"hbs",
+	"hcl",
+	"hh",
+	"hlsl",
 	"hpp",
+	"hrl",
+	"hs",
 	"htm",
 	"html",
+	"hxx",
 	"ini",
 	"java",
 	"jl",
@@ -189,42 +241,90 @@ export const SUPPORTED_EXTENSIONS = new Set([
 	"json",
 	"json5",
 	"jsonc",
+	"jsonl",
 	"jsx",
 	"kt",
+	"kts",
 	"less",
+	"lhs",
 	"liquid",
+	"lisp",
 	"log",
+	"lsp",
 	"lua",
+	"m",
+	"make",
 	"mdx",
 	"mjml",
 	"mjs",
+	"mk",
+	"ml",
+	"mli",
+	"mm",
+	"mts",
+	"ndjson",
+	"nim",
+	"nimble",
+	"nims",
+	"nix",
+	"odin",
+	"pas",
 	"patch",
 	"php",
+	"phtml",
 	"pine",
+	"pl",
+	"pm",
+	"pp",
 	"prisma",
+	"proto",
 	"ps1",
+	"psd1",
+	"psm1",
 	"py",
+	"pyi",
+	"pyw",
 	"r",
+	"rake",
 	"rb",
 	"rs",
+	"s",
 	"sass",
+	"sbt",
+	"sc",
+	"scala",
+	"scm",
 	"scss",
 	"sh",
+	"sol",
 	"sql",
+	"ss",
+	"sty",
 	"svelte",
 	"svg",
 	"swift",
 	"tex",
+	"text",
+	"tf",
+	"tfvars",
 	"toml",
+	"tres",
 	"ts",
-	"tsx",
+	"tscn",
+	"tsrx",
 	"tsv",
+	"tsx",
 	"txt",
+	"vert",
 	"vue",
+	"wat",
+	"wgsl",
 	"xml",
+	"xsd",
 	"yaml",
 	"yml",
 	"zig",
+	"zon",
 	"zsh",
 ]);
 
@@ -517,7 +617,7 @@ interface VaultCodeSettings {
 }
 
 const DEFAULT_EXTENSIONS =
-	"astro, bash, bat, bib, c, cjs, cmd, cpp, cs, css, csv, dart, diff, email, eml, fish, go, gql, graphql, h, handlebars, hbs, hpp, htm, html, ini, java, jl, js, json, json5, jsonc, jsx, kt, less, liquid, log, lua, mdx, mjml, mjs, patch, php, pine, prisma, ps1, py, r, rb, rs, sass, scss, sh, sql, svelte, svg, swift, tex, toml, ts, tsx, tsv, txt, vue, xml, yaml, yml, zig, zsh";
+	"asm, astro, bash, bat, bib, c, c3, cc, cjs, cl, clj, cljc, cljs, cls, cmake, cmd, comp, cpp, cs, css, csv, cts, cu, cuh, cxx, dart, diff, dpk, dpr, edn, el, elm, email, eml, erl, ex, exs, f, f03, f08, f77, f90, f95, fish, for, frag, fs, fsi, fsx, fx, fxh, gd, gdshader, gdshaderinc, geom, gleam, glsl, go, gql, gradle, graphql, groovy, gsh, gvy, gy, h, handlebars, hbs, hcl, hh, hlsl, hpp, hrl, hs, htm, html, hxx, ini, java, jl, js, json, json5, jsonc, jsonl, jsx, kt, kts, less, lhs, liquid, lisp, log, lsp, lua, m, make, mdx, mjml, mjs, mk, ml, mli, mm, mts, ndjson, nim, nimble, nims, nix, odin, pas, patch, php, phtml, pine, pl, pm, pp, prisma, proto, ps1, psd1, psm1, py, pyi, pyw, r, rake, rb, rs, s, sass, sbt, sc, scala, scm, scss, sh, sol, sql, ss, sty, svelte, svg, swift, tex, text, tf, tfvars, toml, tres, ts, tscn, tsrx, tsv, tsx, txt, vert, vue, wat, wgsl, xml, xsd, yaml, yml, zig, zon, zsh";
 
 export const DEFAULT_OBSIDIANIGNORE_CONTENT = `# Obsidian & Git
 .obsidian/
@@ -3107,7 +3207,7 @@ export class DotfileView extends TextFileView {
 			(ext === "pine"
 				? LanguageDescription.matchFilename(languages, "file.py")
 				: null) ||
-			(ext === "json5" || ext === "jsonc"
+			(ext === "json5" || ext === "jsonc" || ext === "jsonl" || ext === "ndjson"
 				? LanguageDescription.matchFilename(languages, "file.json")
 				: null) ||
 			(ext === "bash" || ext === "zsh" || ext === "fish"
@@ -3116,7 +3216,7 @@ export class DotfileView extends TextFileView {
 			(ext === "patch"
 				? LanguageDescription.matchFilename(languages, "file.diff")
 				: null) ||
-			(ext === "bib"
+			(ext === "bib" || ext === "cls" || ext === "sty"
 				? LanguageDescription.matchFilename(languages, "file.tex")
 				: null) ||
 			(ext === "gql"
@@ -3124,6 +3224,63 @@ export class DotfileView extends TextFileView {
 				: null) ||
 			(ext === "cmd" || ext === "bat"
 				? LanguageDescription.matchFilename(languages, "file.cmd")
+				: null) ||
+			(ext === "cu" || ext === "cuh"
+				? LanguageDescription.matchFilename(languages, "file.cpp")
+				: null) ||
+			(ext === "comp" || ext === "frag" || ext === "vert" || ext === "geom" || ext === "glsl" || ext === "hlsl" || ext === "fx" || ext === "fxh" || ext === "wgsl"
+				? LanguageDescription.matchFilename(languages, "file.c")
+				: null) ||
+			(ext === "ex" || ext === "exs" || ext === "hrl"
+				? LanguageDescription.matchFilename(languages, "file.erl")
+				: null) ||
+			(ext === "f03" || ext === "f08"
+				? LanguageDescription.matchFilename(languages, "file.f90")
+				: null) ||
+			(ext === "fsi" || ext === "fsx"
+				? LanguageDescription.matchFilename(languages, "file.fs")
+				: null) ||
+			(ext === "gsh" || ext === "gvy" || ext === "gy"
+				? LanguageDescription.matchFilename(languages, "file.groovy")
+				: null) ||
+			(ext === "lhs"
+				? LanguageDescription.matchFilename(languages, "file.hs")
+				: null) ||
+			(ext === "lsp"
+				? LanguageDescription.matchFilename(languages, "file.lisp")
+				: null) ||
+			(ext === "make" || ext === "mk"
+				? LanguageDescription.matchFilename(languages, "Makefile")
+				: null) ||
+			(ext === "pyi" || ext === "pyw"
+				? LanguageDescription.matchFilename(languages, "file.py")
+				: null) ||
+			(ext === "rake"
+				? LanguageDescription.matchFilename(languages, "file.rb")
+				: null) ||
+			(ext === "sbt" || ext === "sc"
+				? LanguageDescription.matchFilename(languages, "file.scala")
+				: null) ||
+			(ext === "tf" || ext === "tfvars" || ext === "hcl"
+				? LanguageDescription.matchFilename(languages, "file.yaml")
+				: null) ||
+			(ext === "tres" || ext === "tscn" || ext === "gd" || ext === "gdshader" || ext === "gdshaderinc"
+				? LanguageDescription.matchFilename(languages, "file.ini")
+				: null) ||
+			(ext === "dpk" || ext === "dpr"
+				? LanguageDescription.matchFilename(languages, "file.pas")
+				: null) ||
+			(ext === "asm"
+				? LanguageDescription.matchFilename(languages, "file.s")
+				: null) ||
+			(ext === "zig" || ext === "zon"
+				? LanguageDescription.matchFilename(languages, "file.rs")
+				: null) ||
+			(ext === "sol" || ext === "tsrx"
+				? LanguageDescription.matchFilename(languages, "file.js")
+				: null) ||
+			(ext === "odin" || ext === "c3" || ext === "gleam" || ext === "nim" || ext === "nimble" || ext === "nims" || ext === "nix"
+				? LanguageDescription.matchFilename(languages, "file.rs")
 				: null) ||
 			(ext
 				? LanguageDescription.matchFilename(languages, `file.${ext}`)
