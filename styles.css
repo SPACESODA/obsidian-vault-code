@@ -1593,36 +1593,36 @@ button.vault-code-ignore-btn:hover {
 .hidden-files-editor-wrapper .cm-editor .cm-deletedText,
 .hidden-files-editor-wrapper .cm-editor .cm-deletedChunk .cm-deletedText,
 .cm-editor .cm-deletedText {
-	background-color: rgba(248, 81, 73, 0.38);
+	background-color: rgba(248, 81, 73, 0.25);
 	background-image: none;
 	text-decoration: line-through;
-	border-radius: 3px;
-	padding: 1px 3px;
+	border-radius: 2px;
+	padding: 0 2px;
 }
 
 .hidden-files-editor-wrapper .cm-editor .cm-changedText,
 .hidden-files-editor-wrapper .cm-editor.cm-merge-b .cm-changedText,
 .hidden-files-editor-wrapper .cm-editor.cm-merge-a .cm-changedText,
 .cm-editor .cm-changedText {
-	background-color: rgba(46, 160, 67, 0.38);
+	background-color: rgba(46, 160, 67, 0.25);
 	background-image: none;
 	text-decoration: none;
-	border-radius: 3px;
-	padding: 1px 3px;
+	border-radius: 2px;
+	padding: 0 2px;
 }
 
-/* Dark theme specific high-contrast diff highlights */
+/* Dark theme specific diff highlights */
 .theme-dark .hidden-files-editor-wrapper .cm-editor .cm-changedText,
 .theme-dark .hidden-files-editor-wrapper .cm-editor.cm-merge-b .cm-changedText,
 .theme-dark .cm-editor .cm-changedText {
-	background-color: rgba(63, 185, 80, 0.42);
+	background-color: rgba(46, 160, 67, 0.25);
 	background-image: none;
 }
 
 .theme-dark .hidden-files-editor-wrapper .cm-editor .cm-deletedText,
 .theme-dark .hidden-files-editor-wrapper .cm-editor .cm-deletedChunk .cm-deletedText,
 .theme-dark .cm-editor .cm-deletedText {
-	background-color: rgba(248, 81, 73, 0.42);
+	background-color: rgba(248, 81, 73, 0.25);
 	background-image: none;
 }
 
@@ -2030,13 +2030,13 @@ button.vault-code-ignore-btn:hover {
 .theme-light .hidden-files-editor-wrapper .cm-editor .cm-deletedLine,
 .theme-light .cm-editor .cm-deletedChunk,
 .theme-light .cm-editor .cm-deletedLine {
-	background-color: rgba(255, 129, 130, 0.16);
+	background-color: rgba(255, 129, 130, 0.14);
 }
 
 .theme-light .hidden-files-editor-wrapper .cm-editor .cm-deletedText,
 .theme-light .hidden-files-editor-wrapper .cm-editor .cm-deletedChunk .cm-deletedText,
 .theme-light .cm-editor .cm-deletedText {
-	background-color: rgba(255, 129, 130, 0.38);
+	background-color: rgba(255, 129, 130, 0.24);
 	background-image: none;
 }
 
@@ -2044,13 +2044,13 @@ button.vault-code-ignore-btn:hover {
 .theme-light .hidden-files-editor-wrapper .cm-editor .cm-changedLine,
 .theme-light .cm-editor .cm-insertedLine,
 .theme-light .cm-editor .cm-changedLine {
-	background-color: rgba(74, 194, 107, 0.16);
+	background-color: rgba(74, 194, 107, 0.14);
 }
 
 .theme-light .hidden-files-editor-wrapper .cm-editor .cm-changedText,
 .theme-light .hidden-files-editor-wrapper .cm-editor.cm-merge-b .cm-changedText,
 .theme-light .cm-editor .cm-changedText {
-	background-color: rgba(74, 194, 107, 0.38);
+	background-color: rgba(74, 194, 107, 0.24);
 	background-image: none;
 }
 
