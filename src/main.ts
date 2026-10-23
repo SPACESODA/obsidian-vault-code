@@ -5510,10 +5510,15 @@ export default class VaultCodePlugin extends Plugin {
 
 	private async reloadCodeEditorLeaves(): Promise<void> {
 		const leavesToReload: WorkspaceLeaf[] = [];
+		const sidebarLeavesToDetach: WorkspaceLeaf[] = [];
 
 		this.app.workspace.iterateAllLeaves((leaf) => {
 			const viewState = leaf.getViewState();
 			if (viewState && viewState.type === VIEW_TYPE_DOTFILE) {
+				if (leaf.getRoot() !== this.app.workspace.rootSplit) {
+					sidebarLeavesToDetach.push(leaf);
+					return;
+				}
 				const view = leaf.view;
 				const isDeadOrStale =
 					!(view instanceof DotfileView) ||
@@ -5526,6 +5531,10 @@ export default class VaultCodePlugin extends Plugin {
 				}
 			}
 		});
+
+		for (const leaf of sidebarLeavesToDetach) {
+			leaf.detach();
+		}
 
 		for (const leaf of leavesToReload) {
 			const viewState = leaf.getViewState();
