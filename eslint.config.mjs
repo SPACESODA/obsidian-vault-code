@@ -12,6 +12,14 @@ export default tseslint.config(
 				tsconfigRootDir: import.meta.dirname,
 			},
 		},
+		rules: {
+			"obsidianmd/ui/sentence-case-locale-module": [
+				"warn",
+				{
+					ignoreWords: ["Aa"],
+				},
+			],
+		},
 	},
 	{
 		ignores: [

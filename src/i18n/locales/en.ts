@@ -13,7 +13,7 @@ export const en = {
 	searchFindPlaceholder: "Find...",
 	searchFindAriaLabel: "Find",
 	searchToggleReplaceTooltip: "Toggle replace",
-	searchMatchCase: "Match case",
+	searchMatchCase: "Match case (Aa)",
 	searchWholeWord: "Match whole word (\\b)",
 	searchRegex: "Use regular expression (.*)",
 	searchPreviousMatch: "Previous match",
