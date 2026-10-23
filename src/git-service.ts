@@ -29,8 +29,8 @@ type ExecFileFn = (
 	},
 	callback: (
 		error: ExecFileError | null,
-		stdout: string | Buffer | null | undefined,
-		stderr: string | Buffer | null | undefined,
+		stdout: string | Uint8Array | null | undefined,
+		stderr: string | Uint8Array | null | undefined,
 	) => void,
 ) => void;
 
@@ -166,8 +166,8 @@ export class GitService {
 					},
 					(
 						error: ExecFileError | null,
-						stdout: string | Buffer | null | undefined,
-						stderr: string | Buffer | null | undefined,
+						stdout: string | Uint8Array | null | undefined,
+						stderr: string | Uint8Array | null | undefined,
 					) => {
 						const code =
 							error && typeof error.code === "number"

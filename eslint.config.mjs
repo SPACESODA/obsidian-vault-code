@@ -2,13 +2,13 @@ import obsidianmd from "eslint-plugin-obsidianmd";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-	...obsidianmd.configs.recommended,
-	...tseslint.configs.recommendedTypeChecked,
+	...obsidianmd.configs.recommendedWithLocalesEn,
 	{
-		files: ["src/**/*.ts"],
 		languageOptions: {
 			parserOptions: {
-				project: "./tsconfig.eslint.json",
+				projectService: {
+					allowDefaultProject: ["eslint.config.*"],
+				},
 				tsconfigRootDir: import.meta.dirname,
 			},
 		},
