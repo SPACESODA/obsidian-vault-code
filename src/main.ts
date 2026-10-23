@@ -2713,6 +2713,23 @@ export class DotfileView extends TextFileView {
 		const s = state as Record<string, unknown> | null | undefined;
 		if (s && typeof s.file === "string") {
 			this.filePath = s.file;
+			if (!this.file || this.file.path !== s.file) {
+				const abstractFile = this.app.vault.getAbstractFileByPath(s.file);
+				if (abstractFile instanceof TFile) {
+					if (this.file) {
+						await this.onUnloadFile(this.file);
+					}
+					this.file = abstractFile;
+					let content = "";
+					try {
+						content = await this.app.vault.read(abstractFile);
+					} catch {
+						// ignore
+					}
+					await this.onLoadFile(abstractFile);
+					this.setViewData(content, true);
+				}
+			}
 		}
 		if (s && typeof s.preview === "boolean") {
 			this.isPreviewMode = s.preview;
@@ -2768,9 +2785,6 @@ export class DotfileView extends TextFileView {
 
 	isDirty(): boolean {
 		if (this.discardOnClose) return false;
-		if (this.editor) {
-			return this.editor.state.doc.toString() !== (this.data ?? "");
-		}
 		return this.isModified;
 	}
 
@@ -5607,20 +5621,6 @@ export default class VaultCodePlugin extends Plugin {
 		if (view instanceof DotfileView) {
 			return view.isDirty();
 		}
-		const anyView = view as unknown as {
-			isDirty?: () => boolean;
-			isModified?: boolean;
-		};
-		if (typeof anyView.isDirty === "function") {
-			try {
-				return Boolean(anyView.isDirty());
-			} catch {
-				// ignore
-			}
-		}
-		if (typeof anyView.isModified === "boolean") {
-			return anyView.isModified;
-		}
 		return false;
 	}
 
@@ -5690,10 +5690,7 @@ export default class VaultCodePlugin extends Plugin {
 			await existingLeaf.setViewState({
 				type: VIEW_TYPE_DOTFILE,
 				active: true,
-			});
-			await existingLeaf.openFile(file, {
-				active: true,
-				state: { diff: true },
+				state: { file: file.path, diff: true },
 			});
 			if (existingLeaf.view instanceof DotfileView) {
 				await existingLeaf.view.setDiffMode(true);
@@ -5716,16 +5713,10 @@ export default class VaultCodePlugin extends Plugin {
 
 		this.app.workspace.setActiveLeaf(targetLeaf, { focus: true });
 
-		if (!(targetLeaf.view instanceof DotfileView)) {
-			await targetLeaf.setViewState({
-				type: VIEW_TYPE_DOTFILE,
-				active: true,
-			});
-		}
-
-		await targetLeaf.openFile(file, {
+		await targetLeaf.setViewState({
+			type: VIEW_TYPE_DOTFILE,
 			active: true,
-			state: { diff: true },
+			state: { file: file.path, diff: true },
 		});
 
 		if (targetLeaf.view instanceof DotfileView) {
@@ -6491,15 +6482,13 @@ export default class VaultCodePlugin extends Plugin {
 							? Boolean(stateObj.active)
 							: true;
 
-					if (!(this.view instanceof DotfileView)) {
-						await this.setViewState({
-							type: VIEW_TYPE_DOTFILE,
-							state: innerState,
-							active: active,
-							group: stateObj.group as WorkspaceLeaf | undefined,
-						});
-					}
-					return origOpenFile.call(this, file, openState);
+					await this.setViewState({
+						type: VIEW_TYPE_DOTFILE,
+						state: innerState,
+						active: active,
+						group: stateObj.group as WorkspaceLeaf | undefined,
+					});
+					return;
 				}
 
 				const stateObj =
@@ -6513,6 +6502,27 @@ export default class VaultCodePlugin extends Plugin {
 				const isDiffRequested = Boolean(
 					stateObj.diff || innerState.diff,
 				);
+
+				if (
+					isDiffRequested &&
+					file instanceof TFile &&
+					plugin.isMarkdownFile(file)
+				) {
+					innerState.file = file.path;
+					innerState.diff = true;
+					const active =
+						stateObj.active !== undefined
+							? Boolean(stateObj.active)
+							: true;
+
+					await this.setViewState({
+						type: VIEW_TYPE_DOTFILE,
+						state: innerState,
+						active: active,
+						group: stateObj.group as WorkspaceLeaf | undefined,
+					});
+					return;
+				}
 
 				if (
 					!isDiffRequested &&
