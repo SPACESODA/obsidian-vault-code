@@ -5862,6 +5862,15 @@ export default class VaultCodePlugin extends Plugin {
 			e.preventDefault();
 			e.stopPropagation();
 			const menu = new Menu();
+			(
+				menu as unknown as {
+					setUseNativeMenu?: (use: boolean) => Menu;
+					useNativeMenu?: boolean;
+				}
+			).setUseNativeMenu?.(false);
+			(
+				menu as unknown as { useNativeMenu?: boolean }
+			).useNativeMenu = false;
 
 			menu.addItem((item) => {
 				item
