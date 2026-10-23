@@ -185,6 +185,7 @@ export const ja: TranslationSchema = {
 	gitUntrackedDiffStats: "+{0}",
 	gitBinaryDiffUnsupported: "バイナリまたは非テキストファイルの差分表示には対応していません",
 	gitAllChangesResolved: "すべての変更が解決されました",
+	settingsGroupGit: "Git",
 	settingsGitName: "Git連携",
 	settingsGitDesc: "保管庫がGitリポジトリの場合に変更状況やブランチ表示、インライン差分比較を有効にします。",
 	commandGitViewChanges: "アクティブファイルの変更差分を表示（Git Diff）",

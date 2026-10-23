@@ -824,13 +824,14 @@ body .hidden-files-editor-wrapper .cm-searchMatch-selected {
 
 /* Settings tab grouping & headings */
 .hidden-files-settings .setting-item-heading {
-	border-top: none;
-	padding-top: 20px;
-	padding-bottom: 6px;
+	border-top: 1px solid var(--background-modifier-border);
+	padding-top: 28px;
+	padding-bottom: 8px;
+	margin-top: 18px;
 }
 
-.hidden-files-settings .setting-item-heading:first-child {
-	padding-top: 0;
+.hidden-files-settings .setting-item-heading:first-of-type {
+	margin-top: 8px;
 }
 
 /* Warning box when auto-save is enabled (switch is off) */
@@ -869,7 +870,9 @@ body .hidden-files-editor-wrapper .cm-searchMatch-selected {
 /* Reset all settings block spacing */
 .hidden-files-settings .vault-code-reset-setting,
 .vault-code-reset-setting {
+	border-top: 1px solid var(--background-modifier-border);
 	margin-top: 36px;
+	padding-top: 24px;
 }
 
 /* Settings tab footer */

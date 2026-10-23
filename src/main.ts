@@ -642,7 +642,7 @@ const DEFAULT_SETTINGS: VaultCodeSettings = {
 	disableAutoSave: true,
 	customFileExtensions: DEFAULT_EXTENSIONS,
 	preventAutoOpenUnsupported: true,
-	openUnsupportedOnDoubleClick: true,
+	openUnsupportedOnDoubleClick: false,
 	useObsidianIgnore: true,
 	useGitIgnore: false,
 	language: "auto",
@@ -7759,7 +7759,6 @@ class VaultCodeSettingTab extends PluginSettingTab {
 			);
 
 		// Group 2: Code editor
-		// Group 2: Code editor
 		new Setting(containerEl)
 			.setName(t("settingsGroupCodeEditor"))
 			.setHeading();
@@ -7920,6 +7919,11 @@ class VaultCodeSettingTab extends PluginSettingTab {
 					);
 				}),
 		);
+
+		// Group 3: Git
+		new Setting(containerEl)
+			.setName(t("settingsGroupGit"))
+			.setHeading();
 
 		new Setting(containerEl)
 			.setName(t("settingsGitName"))

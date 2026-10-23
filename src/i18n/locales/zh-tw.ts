@@ -185,6 +185,7 @@ export const zhTw: TranslationSchema = {
 	gitUntrackedDiffStats: "+{0}",
 	gitBinaryDiffUnsupported: "不支援二進位或非文字檔案的差異對比",
 	gitAllChangesResolved: "所有變更均已解決",
+	settingsGroupGit: "Git",
 	settingsGitName: "Git 整合",
 	settingsGitDesc: "當保管庫位於 Git 存放庫時，顯示檔案變更、分支指示器和行內差異比對。",
 	commandGitViewChanges: "檢視目前檔案變更 (Git Diff)",

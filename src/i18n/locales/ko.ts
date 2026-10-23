@@ -185,6 +185,7 @@ export const ko: TranslationSchema = {
 	gitUntrackedDiffStats: "+{0}",
 	gitBinaryDiffUnsupported: "바이너리 또는 비텍스트 파일의 차이점 보기는 지원되지 않습니다",
 	gitAllChangesResolved: "모든 변경 사항이 해결되었습니다",
+	settingsGroupGit: "Git",
 	settingsGitName: "Git 연동",
 	settingsGitDesc: "보관함이 Git 저장소 내에 있을 때 파일 변경 사항, 브랜치 표시 및 인라인 차이 비교를 지원합니다.",
 	commandGitViewChanges: "현재 파일 변경 사항 보기 (Git Diff)",

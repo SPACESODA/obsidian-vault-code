@@ -185,6 +185,7 @@ export const fr: TranslationSchema = {
 	gitUntrackedDiffStats: "+{0}",
 	gitBinaryDiffUnsupported: "La vue des différences n'est pas prise en charge pour les fichiers binaires ou non textuels",
 	gitAllChangesResolved: "Toutes les modifications ont été résolues",
+	settingsGroupGit: "Git",
 	settingsGitName: "Intégration Git",
 	settingsGitDesc: "Affiche les modifications, l'indicateur de branche et la comparaison visuelle quand le coffre est un dépôt Git.",
 	commandGitViewChanges: "Afficher les modifications du fichier actif (Git Diff)",

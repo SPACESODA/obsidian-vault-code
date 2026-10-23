@@ -185,6 +185,7 @@ export const zhCn: TranslationSchema = {
 	gitUntrackedDiffStats: "+{0}",
 	gitBinaryDiffUnsupported: "不支持二进制或非文本文件的差异对比",
 	gitAllChangesResolved: "所有更改均已解决",
+	settingsGroupGit: "Git",
 	settingsGitName: "Git 集成",
 	settingsGitDesc: "当仓库位于 Git 版本库时，显示文件更改、分支指示器和行内差异对比。",
 	commandGitViewChanges: "查看当前文件更改 (Git Diff)",

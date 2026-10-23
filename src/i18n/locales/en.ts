@@ -183,6 +183,7 @@ export const en = {
 	gitUntrackedDiffStats: "+{0}",
 	gitBinaryDiffUnsupported: "Diff view is not supported for binary or non-text files",
 	gitAllChangesResolved: "All changes have been resolved",
+	settingsGroupGit: "Git",
 	settingsGitName: "Git integration",
 	settingsGitDesc: "Show file changes, branch indicator, and inline diff comparison when vault is inside a Git repository.",
 	commandGitViewChanges: "View changes in active file (Git Diff)",

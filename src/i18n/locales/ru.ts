@@ -185,6 +185,7 @@ export const ru: TranslationSchema = {
 	gitUntrackedDiffStats: "+{0}",
 	gitBinaryDiffUnsupported: "Просмотр различий не поддерживается для бинарных или нетекстовых файлов",
 	gitAllChangesResolved: "Все изменения разрешены",
+	settingsGroupGit: "Git",
 	settingsGitName: "Интеграция с Git",
 	settingsGitDesc: "Отображает изменения файлов, индикатор ветки и встроенное сравнение различий, если хранилище находится в Git-репозитории.",
 	commandGitViewChanges: "Показать изменения в активном файле (Git Diff)",
