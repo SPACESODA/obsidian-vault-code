@@ -12,6 +12,8 @@ import {
 	TextAreaComponent,
 	ButtonComponent,
 	Modal,
+	FuzzySuggestModal,
+	FuzzyMatch,
 	OpenViewState,
 	Platform,
 	setIcon,
@@ -1045,6 +1047,175 @@ class CommitFileModal extends Modal {
 				this.inputEl.select();
 			}
 		}, 30);
+	}
+
+	onClose(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+	}
+}
+
+/* ── Branch Switcher Modal ─────────────────────────────────── */
+
+class BranchSwitcherModal extends FuzzySuggestModal<string> {
+	private plugin: VaultCodePlugin;
+	private branches: string[];
+	private currentBranch: string;
+
+	constructor(
+		app: App,
+		plugin: VaultCodePlugin,
+		branches: string[],
+		currentBranch: string,
+	) {
+		super(app);
+		this.plugin = plugin;
+		this.branches = branches;
+		this.currentBranch = currentBranch;
+		this.setPlaceholder(t("gitSwitchBranchPlaceholder"));
+	}
+
+	getItems(): string[] {
+		return this.branches;
+	}
+
+	getItemText(item: string): string {
+		return item;
+	}
+
+	renderSuggestion(match: FuzzyMatch<string>, el: HTMLElement): void {
+		super.renderSuggestion(match, el);
+		if (match.item === this.currentBranch) {
+			el.createSpan({
+				cls: "vault-code-branch-current-tag",
+				text: `(${t("gitCurrentBranchBadge")})`,
+			});
+		}
+	}
+
+	onChooseItem(item: string, _evt: MouseEvent | KeyboardEvent): void {
+		if (item === this.currentBranch) {
+			return;
+		}
+		void (async () => {
+			const res = await this.plugin.gitService.checkoutBranch(item);
+			if (res.success) {
+				new Notice(t("gitNoticeBranchSwitched", item));
+				await this.plugin.refreshGitState();
+			} else {
+				new Notice(
+					`${t("gitNoticeBranchSwitchFailed")}${res.error ? `: ${res.error}` : ""}`,
+				);
+			}
+		})();
+	}
+}
+
+/* ── Create Branch Modal ───────────────────────────────────── */
+
+class CreateBranchModal extends Modal {
+	private plugin: VaultCodePlugin;
+	private inputEl!: HTMLInputElement;
+	private errorEl!: HTMLElement;
+
+	constructor(app: App, plugin: VaultCodePlugin) {
+		super(app);
+		this.plugin = plugin;
+	}
+
+	onOpen(): void {
+		this.containerEl.addClass("hidden-files-modal-container");
+		this.modalEl.addClass("hidden-files-modal-window");
+		const { contentEl } = this;
+		contentEl.empty();
+		contentEl.addClass("hidden-files-form-modal");
+
+		contentEl.createEl("h3", { text: t("gitCreateBranchTitle") });
+
+		contentEl.createEl("p", {
+			cls: "hidden-files-modal-desc",
+			text: t("gitCreateBranchDesc"),
+		});
+
+		const inputContainer = contentEl.createDiv({
+			cls: "hidden-files-modal-input-container",
+		});
+		this.inputEl = inputContainer.createEl("input", {
+			type: "text",
+			cls: "hidden-files-modal-input",
+			placeholder: t("gitCreateBranchPlaceholder"),
+		});
+
+		this.errorEl = contentEl.createDiv({
+			cls: "hidden-files-modal-error",
+		});
+		this.errorEl.hide();
+
+		const btnContainer = contentEl.createDiv({
+			cls: "hidden-files-modal-buttons",
+		});
+
+		const cancelBtn = btnContainer.createEl("button", {
+			text: t("modalButtonCancel"),
+		});
+		cancelBtn.addEventListener("click", () => this.close());
+
+		const createBtn = btnContainer.createEl("button", {
+			cls: "mod-cta",
+			text: t("gitButtonCreateBranch"),
+		});
+		createBtn.addEventListener("click", () => void this.handleSubmit());
+
+		this.inputEl.addEventListener("keydown", (evt: KeyboardEvent) => {
+			if (evt.key === "Enter") {
+				evt.preventDefault();
+				void this.handleSubmit();
+			} else if (evt.key === "Escape") {
+				this.close();
+			}
+		});
+
+		this.inputEl.addEventListener("input", () => {
+			this.clearError();
+		});
+
+		window.setTimeout(() => {
+			this.inputEl.focus();
+		}, 50);
+	}
+
+	private showError(message: string): void {
+		this.errorEl.setText(message);
+		this.errorEl.show();
+		this.inputEl.addClass("has-error");
+		this.inputEl.focus();
+	}
+
+	private clearError(): void {
+		this.errorEl.setText("");
+		this.errorEl.hide();
+		this.inputEl.removeClass("has-error");
+	}
+
+	private async handleSubmit(): Promise<void> {
+		const raw = this.inputEl.value.trim();
+		if (!raw) {
+			this.showError(t("gitBranchEmptyError"));
+			return;
+		}
+		if (/\s/.test(raw)) {
+			this.showError(t("gitBranchSpaceError"));
+			return;
+		}
+
+		const res = await this.plugin.gitService.createBranch(raw);
+		if (res.success) {
+			this.close();
+			new Notice(t("gitNoticeBranchCreated", raw));
+			await this.plugin.refreshGitState();
+		} else {
+			this.showError(res.error ?? t("gitNoticeBranchCreateFailed"));
+		}
 	}
 
 	onClose(): void {
@@ -5226,6 +5397,30 @@ export default class VaultCodePlugin extends Plugin {
 				return true;
 			},
 		});
+
+		this.addCommand({
+			id: "git-switch-branch",
+			name: t("commandGitSwitchBranch"),
+			checkCallback: (checking: boolean) => {
+				if (!this.isGitAvailable()) return false;
+				if (!checking) {
+					void this.openBranchSwitcherModal();
+				}
+				return true;
+			},
+		});
+
+		this.addCommand({
+			id: "git-create-branch",
+			name: t("commandGitCreateBranch"),
+			checkCallback: (checking: boolean) => {
+				if (!this.isGitAvailable()) return false;
+				if (!checking) {
+					void this.openCreateBranchModal();
+				}
+				return true;
+			},
+		});
 	}
 
 	private async reloadCodeEditorLeaves(): Promise<void> {
@@ -5438,6 +5633,26 @@ export default class VaultCodePlugin extends Plugin {
 
 			menu.addSeparator();
 
+			menu.addItem((item) => {
+				item
+					.setTitle(t("gitSwitchBranch"))
+					.setIcon(getIcon("arrow-left-right") ? "arrow-left-right" : "git-branch")
+					.onClick(() => {
+						void this.openBranchSwitcherModal();
+					});
+			});
+
+			menu.addItem((item) => {
+				item
+					.setTitle(t("gitCreateBranch"))
+					.setIcon(getIcon("git-branch-plus") ? "git-branch-plus" : "plus")
+					.onClick(() => {
+						void this.openCreateBranchModal();
+					});
+			});
+
+			menu.addSeparator();
+
 			if (count > 0) {
 				menu.addItem((item) => {
 					item
@@ -5481,6 +5696,35 @@ export default class VaultCodePlugin extends Plugin {
 
 			menu.showAtMouseEvent(e);
 		};
+	}
+
+	public async refreshGitState(): Promise<void> {
+		await this.updateStatusBarGit();
+		this.app.workspace.iterateAllLeaves((leaf) => {
+			if (leaf.view instanceof DotfileView) {
+				void leaf.view.updateGitStatus();
+			}
+		});
+	}
+
+	public async openBranchSwitcherModal(): Promise<void> {
+		if (!this.isGitAvailable()) return;
+		const isRepo = await this.gitService.isGitRepo();
+		if (!isRepo) return;
+		const currentBranch = (await this.gitService.getCurrentBranch()) ?? "";
+		const branches = await this.gitService.getLocalBranches();
+		if (branches.length === 0) {
+			new Notice(t("gitNoBranchesFound"));
+			return;
+		}
+		new BranchSwitcherModal(this.app, this, branches, currentBranch).open();
+	}
+
+	public async openCreateBranchModal(): Promise<void> {
+		if (!this.isGitAvailable()) return;
+		const isRepo = await this.gitService.isGitRepo();
+		if (!isRepo) return;
+		new CreateBranchModal(this.app, this).open();
 	}
 
 	public async applyGitIntegrationToggle(enabled: boolean): Promise<void> {

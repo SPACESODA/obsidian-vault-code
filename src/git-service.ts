@@ -471,4 +471,54 @@ export class GitService {
 
 		return modifiedSet;
 	}
+
+	/**
+	 * Gets all local Git branch names.
+	 */
+	public async getLocalBranches(vaultPath?: string): Promise<string[]> {
+		const root = await this.getRepoRoot(vaultPath);
+		if (!root) return [];
+
+		const res = await this.execGit(["branch", "--format=%(refname:short)"], root);
+		if (res.code === 0 && res.stdout) {
+			return res.stdout
+				.split("\n")
+				.map((b) => b.trim())
+				.filter((b) => b.length > 0 && !b.startsWith("(") && !b.includes("HEAD detached"));
+		}
+		return [];
+	}
+
+	/**
+	 * Switches to a different local branch.
+	 */
+	public async checkoutBranch(branchName: string, vaultPath?: string): Promise<{ success: boolean; error?: string }> {
+		const root = await this.getRepoRoot(vaultPath);
+		if (!root) return { success: false, error: "Not a git repository" };
+
+		const res = await this.execGit(["checkout", branchName], root);
+		if (res.code !== 0) {
+			return { success: false, error: res.stderr.trim() || "Failed to switch branch" };
+		}
+		return { success: true };
+	}
+
+	/**
+	 * Creates a new branch and checks it out.
+	 */
+	public async createBranch(branchName: string, vaultPath?: string): Promise<{ success: boolean; error?: string }> {
+		const root = await this.getRepoRoot(vaultPath);
+		if (!root) return { success: false, error: "Not a git repository" };
+
+		const cleanName = branchName.trim();
+		if (!cleanName || /\s/.test(cleanName)) {
+			return { success: false, error: "Branch name cannot be empty or contain spaces" };
+		}
+
+		const res = await this.execGit(["checkout", "-b", cleanName], root);
+		if (res.code !== 0) {
+			return { success: false, error: res.stderr.trim() || "Failed to create branch" };
+		}
+		return { success: true };
+	}
 }
