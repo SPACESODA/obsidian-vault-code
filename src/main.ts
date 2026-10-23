@@ -2699,7 +2699,7 @@ export class DotfileView extends TextFileView {
 	}
 
 	override getIcon(): string {
-		return "document-code";
+		return "file-code";
 	}
 
 	override getState(): Record<string, unknown> {
@@ -5121,7 +5121,11 @@ export default class VaultCodePlugin extends Plugin {
 							menu.addItem((item) => {
 								item
 									.setTitle(t("contextEditInCodeEditor"))
-									.setIcon("document-code");
+									.setIcon(
+										getIcon("file-code")
+											? "file-code"
+											: "code",
+									);
 
 								if (source === "more-options") {
 									item.setSection("pane");
@@ -5942,6 +5946,11 @@ export default class VaultCodePlugin extends Plugin {
 									"gitUnsupportedOrIgnoredCount",
 									unsupportedOrIgnoredCount,
 								),
+							)
+							.setIcon(
+								getIcon("eye-off")
+									? "eye-off"
+									: (getIcon("file-minus") ? "file-minus" : "slash"),
 							)
 							.setDisabled(true);
 					});
