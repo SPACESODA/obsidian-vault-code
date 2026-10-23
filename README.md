@@ -1,14 +1,27 @@
 # Vault Code
 
-A lightweight code editor and hidden file manager for Obsidian.
+**The must-have all-in-one workspace for Obsidian.**  
+A file manager to display and manage all file types, including hidden files, plus a beautiful code editor and more.
 
 ---
 
-Obsidian is where you think, write, and organize your knowledge. But the moment you need to tweak a Python script, check a `.env` file, or preview an HTML mock-up, you're usually forced to jump out to VS Code or another window.
+Obsidian is where you think, write, and organize your knowledge. But when you need to tweak a script, check a `.env` file, or preview an HTML, you're usually forced to jump out to VS Code or another window.
 
-**Vault Code keeps you in flow.** It turns your vault into a fast, focused developer workspace where you can view hidden dotfiles, edit code across 70+ languages, and live-preview HTML, SVG, and MJML files—all while feeling completely native to your Obsidian theme.
+**Vault Code keeps you in flow.** It turns your vault into a fast, focused workspace where you can view hidden dotfiles, edit code across 70+ languages, and live-preview HTML, SVG, and MJML files, all while feeling completely native to your Obsidian experience.
 
 Vault Code automatically adapts to your Obsidian display language: English, 繁體中文, 简体中文, 日本語, 한국어, Español, Français, Italiano, Deutsch, and Русский.
+
+---
+
+## ⚡ Features at a Glance
+
+* **Reveal Hidden Files & Folders**: View and edit dotfiles and extensionless files.
+* **Universal File Creator**: Create dotfiles, dotfolders, and any file extension.
+* **Manage Ignore Rules**: Filter files with `.obsidianignore` and `.gitignore` files.
+* **Beautiful Code Editor**: Fast syntax highlighting for over 70 languages.
+* **Find & Replace**: Multiline search, regex, case and word matching, and jump navigation.
+* **Live Preview**: Toggle live preview for HTML, SVG, and MJML email templates.
+* **Mobile & Tablet Ready**: Edit code and manage files comfortably on phones and tablets.
 
 ---
 
@@ -80,13 +93,13 @@ Tailor Vault Code to your workflow in **Settings → Community plugins → Vault
 * **Ignored files and folders**: Add standard `.gitignore` rules (e.g. `node_modules/`, `.git/`) to hide specific noisy folders.
 * **Prevent automatic opening of unsupported files**: Stop accidental double/single-click launches on system files.
 * **Editable file extensions**: Add custom extensions you want Vault Code to open.
-* **Disable auto-save**: Prefer manual saving? Turn this on to require <kbd>Cmd</kbd> / <kbd>Ctrl</kbd> + <kbd>S</kbd>, complete with a dirty dot indicator (`●`).
+* **Disable auto-save**: Prefer manual saving? Turn this on to require <kbd>Cmd</kbd> / <kbd>Ctrl</kbd> + <kbd>S</kbd>, complete with a dirty dot indicator `●`.
 
 ---
 
 ## Installation
 
-### From Obsidian Community Plugins *(Recommended once listed)*
+### From Obsidian Community Plugins *(Recommended)*
 1. Open Obsidian **Settings → Community plugins**.
 2. Make sure **Restricted mode** is turned off.
 3. Click **Browse** and search for `Vault Code`.
