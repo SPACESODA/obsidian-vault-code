@@ -1187,6 +1187,9 @@ class CreateBranchModal extends Modal {
 			type: "text",
 			cls: "hidden-files-modal-input",
 			placeholder: t("gitCreateBranchPlaceholder"),
+			attr: {
+				"aria-label": t("gitCreateBranchName"),
+			},
 		});
 
 		this.errorEl = contentEl.createDiv({
