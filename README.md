@@ -19,6 +19,7 @@ Vault Code automatically adapts to your Obsidian display language: English, 繁�
 * **Universal File Creator**: Create dotfiles, dotfolders, and any file extension.
 * **Manage Ignore Rules**: Filter files with `.obsidianignore` and `.gitignore` files.
 * **Beautiful Code Editor**: Fast syntax highlighting for over 70 languages.
+* **Edit Notes as Source Code**: Toggle between native note view and code editor in one click.
 * **Find & Replace**: Multiline search, regex, case and word matching, and jump navigation.
 * **Live Preview**: Toggle live preview for HTML, SVG, and MJML email templates.
 * **Mobile & Tablet Ready**: Edit code and manage files comfortably on phones and tablets.
@@ -110,6 +111,16 @@ Tailor Vault Code to your workflow in **Settings → Community plugins → Vault
 2. Create a folder named `vault-code` inside your vault's `.obsidian/plugins/` directory.
 3. Copy the 3 downloaded files into `.obsidian/plugins/vault-code/`.
 4. In Obsidian, go to **Settings → Community plugins**, refresh the list, and turn on **Vault Code**.
+
+---
+
+## Privacy & Network Disclosure
+
+Vault Code runs locally in your vault and **NEVER** tracks, collects, or transmits your data.
+
+The only network requests made are:
+* **Live HTML Preview**: When previewing an HTML file that references remote stylesheets (such as Google Fonts or CDN CSS), Vault Code fetches the stylesheet so it renders securely inside Obsidian's sandbox.
+* **External Links**: Clicking author or GitHub links in Settings opens them in your default browser.
 
 ---
 
