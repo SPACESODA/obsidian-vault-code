@@ -185,7 +185,7 @@ export const en = {
 	commandGitCommitFile: "Commit changes in active file",
 	gitSwitchBranch: "Switch branch...",
 	gitCreateBranch: "Create branch...",
-	gitSwitchBranchPlaceholder: "Type branch name to switch...",
+	gitSwitchBranchPlaceholder: "Search branches to switch...",
 	gitCurrentBranchBadge: "Current",
 	gitNoticeBranchSwitched: "Switched to branch '{0}'",
 	gitNoticeBranchSwitchFailed: "Failed to switch branch",
@@ -204,7 +204,7 @@ export const en = {
 	settingsGitWorkflowNote: "This plugin provides an essential, user-friendly workflow for basic Git diffs and branch management. If you need comprehensive features, please use {0} or rely on {1}.",
 	gitUnsupportedOrIgnoredCount: "Unsupported or ignored files ({0})",
 	gitMoreFilesCount: "And {0} more files...",
-	gitChangedFilesModalPlaceholder: "Type file name to view changes...",
+	gitChangedFilesModalPlaceholder: "Search changed files...",
 };
 
 export type TranslationSchema = typeof en;

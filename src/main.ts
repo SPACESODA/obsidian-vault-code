@@ -5919,7 +5919,7 @@ export default class VaultCodePlugin extends Plugin {
 						menu.addItem((item) => {
 							item
 								.setTitle(tfile.name)
-								.setIcon("file-code")
+								.setIcon("git-compare")
 								.onClick(() => {
 									void this.openFileInDiffView(tfile);
 								});
