@@ -7,14 +7,41 @@ export interface FileDiffStats {
 	isModified: boolean;
 }
 
-type NodeChildProcess = typeof import("child_process");
-type NodeFs = typeof import("fs");
+interface ExecFileError extends Error {
+	code?: number;
+}
+
+export interface ExecFileResult {
+	stdout: string;
+	stderr: string;
+	code: number;
+}
+
+type ExecFileFn = (
+	file: string,
+	args: readonly string[],
+	options: {
+		cwd?: string;
+		timeout?: number;
+		maxBuffer?: number;
+		windowsHide?: boolean;
+		env?: Record<string, string>;
+	},
+	callback: (
+		error: ExecFileError | null,
+		stdout: string | Buffer | null | undefined,
+		stderr: string | Buffer | null | undefined,
+	) => void,
+) => void;
+
+interface NodeChildProcess {
+	execFile: ExecFileFn;
+}
 
 export class GitService {
 	private app: App;
 	private repoRootCache: Map<string, string | null> = new Map();
 	private cachedCp: NodeChildProcess | null = null;
-	private cachedFs: NodeFs | null = null;
 
 	constructor(app: App) {
 		this.app = app;
@@ -37,54 +64,25 @@ export class GitService {
 
 		try {
 			const win = window as unknown as {
-				require?: (mod: string) => NodeChildProcess;
+				require?: (mod: string) => unknown;
 			};
 			if (typeof win.require === "function") {
-				this.cachedCp = win.require("child_process");
+				const cpModule = win.require("child_process") as NodeChildProcess | undefined;
+				if (cpModule && typeof cpModule.execFile === "function") {
+					this.cachedCp = cpModule;
+					return this.cachedCp;
+				}
+			}
+		} catch {
+			// ignore
+		}
+
+		try {
+			const cpModule = (await import("child_process")) as unknown as NodeChildProcess;
+			if (cpModule && typeof cpModule.execFile === "function") {
+				this.cachedCp = cpModule;
 				return this.cachedCp;
 			}
-		} catch {
-			// ignore
-		}
-
-		try {
-			this.cachedCp = await import("child_process");
-			return this.cachedCp;
-		} catch {
-			// ignore
-		}
-
-		return null;
-	}
-
-	/**
-	 * Resolves Node fs module safely across Electron environments.
-	 */
-	private async resolveFs(): Promise<NodeFs | null> {
-		if (!Platform.isDesktop) return null;
-		if (this.cachedFs) return this.cachedFs;
-
-		const adapter = this.app.vault.adapter as unknown as { fs?: NodeFs };
-		if (adapter?.fs) {
-			this.cachedFs = adapter.fs;
-			return this.cachedFs;
-		}
-
-		try {
-			const win = window as unknown as {
-				require?: (mod: string) => NodeFs;
-			};
-			if (typeof win.require === "function") {
-				this.cachedFs = win.require("fs");
-				return this.cachedFs;
-			}
-		} catch {
-			// ignore
-		}
-
-		try {
-			this.cachedFs = await import("fs");
-			return this.cachedFs;
 		} catch {
 			// ignore
 		}
@@ -127,7 +125,7 @@ export class GitService {
 		args: string[],
 		cwd: string,
 		timeoutMs = 8000,
-	): Promise<{ stdout: string; stderr: string; code: number }> {
+	): Promise<ExecFileResult> {
 		if (!Platform.isDesktop) {
 			return { stdout: "", stderr: "Not supported on mobile", code: -1 };
 		}
@@ -140,7 +138,7 @@ export class GitService {
 			const proc = (
 				window as unknown as { process?: { env?: Record<string, string> } }
 			).process;
-			const procEnv = proc?.env ?? {};
+			const procEnv: Record<string, string> = proc?.env ?? {};
 			const customPath = [
 				"/opt/homebrew/bin",
 				"/opt/homebrew/sbin",
@@ -152,7 +150,7 @@ export class GitService {
 				procEnv.PATH || "",
 			].join(":");
 
-			return await new Promise((resolve) => {
+			return await new Promise<ExecFileResult>((resolve) => {
 				cp.execFile(
 					"git",
 					args,
@@ -166,7 +164,11 @@ export class GitService {
 							PATH: customPath,
 						},
 					},
-					(error, stdout, stderr) => {
+					(
+						error: ExecFileError | null,
+						stdout: string | Buffer | null | undefined,
+						stderr: string | Buffer | null | undefined,
+					) => {
 						const code =
 							error && typeof error.code === "number"
 								? error.code
@@ -174,55 +176,20 @@ export class GitService {
 									? 1
 									: 0;
 						resolve({
-							stdout: String(stdout || ""),
-							stderr: String(stderr || ""),
+							stdout: typeof stdout === "string" ? stdout : stdout ? stdout.toString() : "",
+							stderr: typeof stderr === "string" ? stderr : stderr ? stderr.toString() : "",
 							code,
 						});
 					},
 				);
 			});
-		} catch (e) {
+		} catch (e: unknown) {
 			return {
 				stdout: "",
 				stderr: e instanceof Error ? e.message : String(e),
 				code: -1,
 			};
 		}
-	}
-
-	/**
-	 * Walks upward through parent directories looking for an enclosing .git repository.
-	 * (Identical to how VS Code searches parent directories for the closest workspace Git root).
-	 */
-	public async findGitRootUpward(startDir: string): Promise<string | null> {
-		if (!Platform.isDesktop) return null;
-		try {
-			const fs = await this.resolveFs();
-			if (!fs || typeof fs.existsSync !== "function") return null;
-
-			let current = this.normalizePath(startDir);
-			while (
-				current &&
-				current !== "/" &&
-				current !== "." &&
-				!current.endsWith(":")
-			) {
-				const gitPath = `${current}/.git`;
-				try {
-					if (fs.existsSync(gitPath)) {
-						return current;
-					}
-				} catch {
-					// Permission or read error, continue upward
-				}
-				const parent = current.substring(0, current.lastIndexOf("/"));
-				if (parent === current || !parent) break;
-				current = parent;
-			}
-		} catch {
-			// ignore
-		}
-		return null;
 	}
 
 	/**
@@ -236,14 +203,6 @@ export class GitService {
 			return this.repoRootCache.get(targetPath) ?? null;
 		}
 
-		// 1. Walk upward looking for enclosing .git repository
-		const upwardRoot = await this.findGitRootUpward(targetPath);
-		if (upwardRoot) {
-			this.repoRootCache.set(targetPath, upwardRoot);
-			return upwardRoot;
-		}
-
-		// 2. Fallback to git rev-parse --show-toplevel
 		const res = await this.execGit(["rev-parse", "--show-toplevel"], targetPath);
 		if (res.code === 0 && res.stdout.trim().length > 0) {
 			const root = this.normalizePath(res.stdout.trim());
@@ -319,22 +278,20 @@ export class GitService {
 	}
 
 	/**
-	 * Gets git diff stats (+additions, -deletions) for a specific file vs HEAD.
+	 * Computes diff statistics for a specific file compared to Git HEAD.
+	 * Automatically handles untracked files by counting their non-empty lines.
 	 */
-	public async getFileDiffStats(vaultRelPath: string): Promise<FileDiffStats | null> {
+	public async getFileDiffStats(vaultRelPath: string): Promise<FileDiffStats> {
 		const repoRoot = await this.getRepoRoot();
-		if (!repoRoot) return null;
-
-		const gitRel = await this.getGitRelativePath(vaultRelPath);
-		if (!gitRel) return null;
-
-		// Check if target is a folder
-		const abstractItem = this.app.vault.getAbstractFileByPath(vaultRelPath);
-		if (abstractItem instanceof TFolder) {
-			return null;
+		if (!repoRoot) {
+			return { additions: 0, deletions: 0, isUntracked: false, isModified: false };
 		}
 
-		// 1. Check porcelain status with -uall to see if it is untracked or modified
+		const gitRel = await this.getGitRelativePath(vaultRelPath);
+		if (!gitRel) {
+			return { additions: 0, deletions: 0, isUntracked: false, isModified: false };
+		}
+
 		const statusRes = await this.execGit(
 			["status", "--porcelain=v1", "-uall", "--", gitRel],
 			repoRoot,
@@ -353,15 +310,7 @@ export class GitService {
 			try {
 				content = await this.app.vault.adapter.read(vaultRelPath);
 			} catch {
-				try {
-					const fs = await this.resolveFs();
-					const fullPath = `${this.getVaultPath()}/${vaultRelPath}`;
-					if (fs && fs.existsSync(fullPath)) {
-						content = fs.readFileSync(fullPath, "utf8");
-					}
-				} catch {
-					// ignore
-				}
+				// Failed to read (e.g. binary file or permission error)
 			}
 
 			// If empty file (0 bytes), it has 0 additions and is not modified
@@ -373,7 +322,7 @@ export class GitService {
 			return { additions: lineCount, deletions: 0, isUntracked: true, isModified: true };
 		}
 
-		// 2. Query numstat vs HEAD
+		// Tracked file: compute diff against HEAD
 		const numstatRes = await this.execGit(
 			["diff", "--numstat", "HEAD", "--", gitRel],
 			repoRoot,

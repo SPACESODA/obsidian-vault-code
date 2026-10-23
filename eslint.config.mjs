@@ -3,6 +3,7 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
 	...obsidianmd.configs.recommended,
+	...tseslint.configs.recommendedTypeChecked,
 	{
 		files: ["src/**/*.ts"],
 		languageOptions: {
