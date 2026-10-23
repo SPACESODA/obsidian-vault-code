@@ -1581,13 +1581,13 @@ button.vault-code-ignore-btn:hover {
 .cm-editor .cm-collapsedLines {
 	display: block;
 	width: 100%;
-	margin: 0;
+	margin: 2px 0;
 	padding: 3px 16px;
 	box-sizing: border-box;
 	background: transparent;
 	border: none;
 	color: var(--interactive-accent);
-	opacity: 0.5;
+	opacity: 0.75;
 	font-size: var(--font-ui-smaller, 11px);
 	font-family: var(--font-ui);
 	cursor: pointer;
@@ -1596,17 +1596,18 @@ button.vault-code-ignore-btn:hover {
 }
 
 .cm-editor .cm-collapsedLines:hover {
-	opacity: 0.9;
+	opacity: 1;
 	color: var(--interactive-accent);
 }
 
 .cm-editor .cm-collapsedLines::before {
-	content: "↕  ";
-	opacity: 0.8;
+	content: "---  ";
+	opacity: 0.85;
 }
 
 .cm-editor .cm-collapsedLines::after {
-	content: "";
+	content: "  ---";
+	opacity: 0.85;
 }
 
 .cm-editor .vault-code-chunk-actions-bar {
@@ -1614,7 +1615,7 @@ button.vault-code-ignore-btn:hover {
 	justify-content: flex-end;
 	align-items: center;
 	margin: 0;
-	padding: 2px 16px 4px 0;
+	padding: 6px 16px 4px 0;
 	box-sizing: border-box;
 	background: transparent;
 	line-height: 1;

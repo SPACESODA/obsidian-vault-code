@@ -4039,7 +4039,6 @@ export class DotfileView extends TextFileView {
 					cls: "vault-code-merge-chunk-btn is-reject",
 					attr: {
 						type: "button",
-						title: t("gitUndoChunk"),
 						"aria-label": t("gitUndoChunk"),
 					},
 				});
@@ -4062,8 +4061,6 @@ export class DotfileView extends TextFileView {
 					cls: "vault-code-merge-chunk-btn is-accept",
 					attr: {
 						type: "button",
-						title: t("gitKeepChunk"),
-						"aria-label": t("gitKeepChunk"),
 					},
 				});
 				const keepIcon = keepBtn.createSpan({ cls: "vault-code-btn-icon" });
