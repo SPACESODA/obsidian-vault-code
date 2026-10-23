@@ -47,7 +47,6 @@ export const de: TranslationSchema = {
 	modalButtonCancel: "Abbrechen",
 
 	// Modals - Rename
-	modalRenameFileTitle: "Datei umbenennen",
 	modalEditFileNameAndExtensionTitle: "Dateiname und Dateiendung bearbeiten",
 	modalRenameFolderTitle: "Ordner umbenennen",
 	modalRenamePlaceholder: "Neuer Name",
@@ -82,8 +81,6 @@ export const de: TranslationSchema = {
 	settingsShowHiddenDotfilesDesc: "Dateien und Verzeichnisse anzeigen, deren Name mit einem Punkt beginnt (z. B. .gitignore, .env, .github/). Interne Systemordner wie .trash bleiben sicher ausgeblendet.",
 	settingsShowAllFileTypesName: "Alle Dateitypen anzeigen",
 	settingsShowAllFileTypesDesc: "Alle Dateien im Tresor im Dateiexplorer anzeigen (z. B. Code-, JSON-, Daten- und dateiendungslose Dateien), nicht nur Markdown-Notizen.",
-	settingsPreventAutoOpenName: "Automatisches Öffnen nicht unterstützter Dateien verhindern",
-	settingsPreventAutoOpenDesc: "Ein einfacher Klick auf nicht unterstützte Binär- oder Dokumentdateien (.zip, .exe, .docx, .dmg) wählt diese nur aus, um ein versehentliches Entpacken oder Starten externer Programme zu verhindern.",
 	settingsOpenOnDoubleClickName: "Nicht unterstützte Dateien per Doppelklick öffnen",
 	settingsOpenOnDoubleClickDesc: "Nicht unterstützte Dateien (wie .zip, .docx oder .pdf) per Doppelklick in der Standard-App des Systems öffnen. Hinweis: Sie können jederzeit per Rechtsklick geöffnet werden.",
 	settingsObsidianIgnoreName: "Dateien und Ordner mit {0} ignorieren",
@@ -129,7 +126,6 @@ export const de: TranslationSchema = {
 
 	// Notices
 	noticeCreated: "{0} erstellt",
-	noticeSaved: "Gespeichert",
 	noticeHiddenFilesVisible: "Versteckte Dateien und Ordner sind jetzt sichtbar.",
 	noticeHiddenFilesHidden: "Versteckte Dateien und Ordner sind jetzt ausgeblendet.",
 	noticeAllFilesVisible: "Alle Dateitypen sind jetzt sichtbar.",
@@ -163,11 +159,9 @@ export const de: TranslationSchema = {
 	gitUndoChunk: "Rückgängig",
 	gitKeepChunk: "Behalten",
 	gitCommitFile: "Datei committen",
-	gitCommitChanges: "Änderungen committen",
 	gitNoChanges: "Keine Änderungen seit dem letzten Commit",
 	gitNextChange: "Nächste Änderung",
 	gitPreviousChange: "Vorherige Änderung",
-	gitDiffStats: "+{0} -{1}",
 	gitModalRevertTitle: "Änderungen verwerfen",
 	gitModalRevertDesc: "Alle Änderungen in \"{0}\" verwerfen? Die Datei wird auf den letzten Commit zurückgesetzt.",
 	gitModalRevertConfirm: "Verwerfen",
@@ -182,7 +176,6 @@ export const de: TranslationSchema = {
 	gitBranchStatus: "Branch: {0}",
 	gitRefreshStatus: "Git-Status aktualisieren",
 	gitChangedFilesCount: "Geänderte Dateien ({0})",
-	gitUntrackedDiffStats: "+{0}",
 	gitBinaryDiffUnsupported: "Diff-Ansicht wird für Binär- oder Nicht-Textdateien nicht unterstützt",
 	gitAllChangesResolved: "Alle Änderungen wurden aufgelöst",
 	settingsGroupGit: "Git",

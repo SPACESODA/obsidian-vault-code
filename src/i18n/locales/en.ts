@@ -45,7 +45,6 @@ export const en = {
 	modalButtonCancel: "Cancel",
 
 	// Modals - Rename
-	modalRenameFileTitle: "Rename file",
 	modalEditFileNameAndExtensionTitle: "Edit file name and extension",
 	modalRenameFolderTitle: "Rename folder",
 	modalRenamePlaceholder: "New name",
@@ -80,8 +79,6 @@ export const en = {
 	settingsShowHiddenDotfilesDesc: "Reveal files and directories whose names start with a dot (e.g. .gitignore, .env, .github/). Internal system directories like .trash remain safely hidden.",
 	settingsShowAllFileTypesName: "Show all file types",
 	settingsShowAllFileTypesDesc: "Display all files in your vault in the file explorer (such as code, JSON, data, and extensionless files), not just Markdown notes.",
-	settingsPreventAutoOpenName: "Prevent automatic opening of unsupported files",
-	settingsPreventAutoOpenDesc: "Single-clicking unsupported binary or document files (such as .zip, .exe, .docx, .dmg) in the file explorer only selects them, preventing accidental unzipping or application launching.",
 	settingsOpenOnDoubleClickName: "Open unsupported files on double-click",
 	settingsOpenOnDoubleClickDesc: "Open unsupported files (such as .zip, .docx, or .pdf) in your system's default app when double-clicked. Note: You can always open them by right-clicking.",
 	settingsObsidianIgnoreName: "Ignore files and folders with {0}",
@@ -127,7 +124,6 @@ export const en = {
 
 	// Notices
 	noticeCreated: "Created {0}",
-	noticeSaved: "Saved",
 	noticeHiddenFilesVisible: "Hidden dotfiles and folders are now visible.",
 	noticeHiddenFilesHidden: "Hidden dotfiles and folders are now hidden.",
 	noticeAllFilesVisible: "All file types are now visible.",
@@ -161,11 +157,9 @@ export const en = {
 	gitUndoChunk: "Undo",
 	gitKeepChunk: "Keep",
 	gitCommitFile: "Commit file",
-	gitCommitChanges: "Commit changes",
 	gitNoChanges: "No changes compared to last commit",
 	gitNextChange: "Next change",
 	gitPreviousChange: "Previous change",
-	gitDiffStats: "+{0} -{1}",
 	gitModalRevertTitle: "Revert changes",
 	gitModalRevertDesc: "Discard all changes in \"{0}\"? This will revert the file to its last commit and cannot be undone.",
 	gitModalRevertConfirm: "Revert",
@@ -180,7 +174,6 @@ export const en = {
 	gitBranchStatus: "Branch: {0}",
 	gitRefreshStatus: "Refresh Git status",
 	gitChangedFilesCount: "Changed files ({0})",
-	gitUntrackedDiffStats: "+{0}",
 	gitBinaryDiffUnsupported: "Diff view is not supported for binary or non-text files",
 	gitAllChangesResolved: "All changes have been resolved",
 	settingsGroupGit: "Git",

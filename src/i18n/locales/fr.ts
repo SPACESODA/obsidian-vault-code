@@ -47,7 +47,6 @@ export const fr: TranslationSchema = {
 	modalButtonCancel: "Annuler",
 
 	// Modals - Rename
-	modalRenameFileTitle: "Renommer le fichier",
 	modalEditFileNameAndExtensionTitle: "Modifier le nom et l'extension du fichier",
 	modalRenameFolderTitle: "Renommer le dossier",
 	modalRenamePlaceholder: "Nouveau nom",
@@ -82,8 +81,6 @@ export const fr: TranslationSchema = {
 	settingsShowHiddenDotfilesDesc: "Afficher les fichiers et dossiers commençant par un point (ex. .gitignore, .env, .github/). Les dossiers système internes tels que .trash restent masqués.",
 	settingsShowAllFileTypesName: "Afficher tous les types de fichiers",
 	settingsShowAllFileTypesDesc: "Afficher tous les fichiers du coffre dans l'explorateur (fichiers de code, JSON, données et sans extension), et pas seulement les notes Markdown.",
-	settingsPreventAutoOpenName: "Empêcher l'ouverture automatique des fichiers non pris en charge",
-	settingsPreventAutoOpenDesc: "Un simple clic sur des fichiers binaires ou documents non pris en charge (.zip, .exe, .docx, .dmg) les sélectionne uniquement, évitant ainsi toute décompression accidentelle ou lancement d'application externe.",
 	settingsOpenOnDoubleClickName: "Ouvrir les fichiers non pris en charge par double-clic",
 	settingsOpenOnDoubleClickDesc: "Ouvrir les fichiers non pris en charge (comme .zip, .docx ou .pdf) dans l'application par défaut du système lors d'un double-clic. Remarque : Vous pouvez toujours les ouvrir par un clic droit.",
 	settingsObsidianIgnoreName: "Ignorer les fichiers et dossiers avec {0}",
@@ -129,7 +126,6 @@ export const fr: TranslationSchema = {
 
 	// Notices
 	noticeCreated: "Créé {0}",
-	noticeSaved: "Enregistré",
 	noticeHiddenFilesVisible: "Les fichiers et dossiers masqués sont maintenant visibles.",
 	noticeHiddenFilesHidden: "Les fichiers et dossiers masqués sont maintenant masqués.",
 	noticeAllFilesVisible: "Tous les types de fichiers sont maintenant visibles.",
@@ -163,11 +159,9 @@ export const fr: TranslationSchema = {
 	gitUndoChunk: "Annuler",
 	gitKeepChunk: "Conserver",
 	gitCommitFile: "Valider le fichier",
-	gitCommitChanges: "Valider les modifications",
 	gitNoChanges: "Aucune modification par rapport au dernier commit",
 	gitNextChange: "Modification suivante",
 	gitPreviousChange: "Modification précédente",
-	gitDiffStats: "+{0} -{1}",
 	gitModalRevertTitle: "Annuler les modifications",
 	gitModalRevertDesc: "Annuler toutes les modifications dans \"{0}\" ? Le fichier reviendra à son dernier commit et cette action est irréversible.",
 	gitModalRevertConfirm: "Annuler les modifications",
@@ -182,7 +176,6 @@ export const fr: TranslationSchema = {
 	gitBranchStatus: "Branche : {0}",
 	gitRefreshStatus: "Actualiser le statut Git",
 	gitChangedFilesCount: "Fichiers modifiés ({0})",
-	gitUntrackedDiffStats: "+{0}",
 	gitBinaryDiffUnsupported: "La vue des différences n'est pas prise en charge pour les fichiers binaires ou non textuels",
 	gitAllChangesResolved: "Toutes les modifications ont été résolues",
 	settingsGroupGit: "Git",

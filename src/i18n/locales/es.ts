@@ -47,7 +47,6 @@ export const es: TranslationSchema = {
 	modalButtonCancel: "Cancelar",
 
 	// Modals - Rename
-	modalRenameFileTitle: "Renombrar archivo",
 	modalEditFileNameAndExtensionTitle: "Editar nombre y extensión del archivo",
 	modalRenameFolderTitle: "Renombrar carpeta",
 	modalRenamePlaceholder: "Nuevo nombre",
@@ -82,8 +81,6 @@ export const es: TranslationSchema = {
 	settingsShowHiddenDotfilesDesc: "Mostrar archivos y directorios cuyos nombres comiencen con un punto (p. ej., .gitignore, .env, .github/). Los directorios internos como .trash permanecerán ocultos.",
 	settingsShowAllFileTypesName: "Mostrar todos los tipos de archivo",
 	settingsShowAllFileTypesDesc: "Mostrar todos los archivos de la bóveda en el explorador (código, JSON, datos y sin extensión), no solo notas Markdown.",
-	settingsPreventAutoOpenName: "Evitar apertura automática de archivos no compatibles",
-	settingsPreventAutoOpenDesc: "Al hacer un solo clic en archivos binarios o documentos no compatibles (.zip, .exe, .docx, .dmg), solo se seleccionarán, evitando descompresiones accidentales o aperturas de programas externos.",
 	settingsOpenOnDoubleClickName: "Abrir archivos no compatibles con doble clic",
 	settingsOpenOnDoubleClickDesc: "Abre los archivos no compatibles (como .zip, .docx o .pdf) en la aplicación predeterminada del sistema al hacer doble clic. Nota: Siempre puedes abrirlos mediante clic derecho.",
 	settingsObsidianIgnoreName: "Ignorar archivos y carpetas con {0}",
@@ -129,7 +126,6 @@ export const es: TranslationSchema = {
 
 	// Notices
 	noticeCreated: "Creado {0}",
-	noticeSaved: "Guardado",
 	noticeHiddenFilesVisible: "Los archivos y carpetas ocultos ahora son visibles.",
 	noticeHiddenFilesHidden: "Los archivos y carpetas ocultos ahora están ocultos.",
 	noticeAllFilesVisible: "Todos los tipos de archivo ahora son visibles.",
@@ -163,11 +159,9 @@ export const es: TranslationSchema = {
 	gitUndoChunk: "Deshacer",
 	gitKeepChunk: "Mantener",
 	gitCommitFile: "Confirmar archivo",
-	gitCommitChanges: "Confirmar cambios",
 	gitNoChanges: "Sin cambios desde el último commit",
 	gitNextChange: "Siguiente cambio",
 	gitPreviousChange: "Cambio anterior",
-	gitDiffStats: "+{0} -{1}",
 	gitModalRevertTitle: "Descartar cambios",
 	gitModalRevertDesc: "¿Descartar todos los cambios en \"{0}\"? El archivo volverá a su último commit y no se podrá deshacer.",
 	gitModalRevertConfirm: "Descartar",
@@ -182,7 +176,6 @@ export const es: TranslationSchema = {
 	gitBranchStatus: "Rama: {0}",
 	gitRefreshStatus: "Actualizar estado de Git",
 	gitChangedFilesCount: "Archivos modificados ({0})",
-	gitUntrackedDiffStats: "+{0}",
 	gitBinaryDiffUnsupported: "La vista de diferencias no es compatible con archivos binarios o sin texto",
 	gitAllChangesResolved: "Se han resuelto todos los cambios",
 	settingsGroupGit: "Git",

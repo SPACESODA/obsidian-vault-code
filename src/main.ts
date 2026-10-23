@@ -7911,19 +7911,21 @@ class VaultCodeSettingTab extends PluginSettingTab {
 				}),
 		);
 
-		// Group 3: Git
-		createSectionHeading(t("settingsGroupGit"));
+		// Group 3: Git (Desktop only)
+		if (Platform.isDesktop) {
+			createSectionHeading(t("settingsGroupGit"));
 
-		new Setting(containerEl)
-			.setName(t("settingsGitName"))
-			.setDesc(t("settingsGitDesc"))
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.enableGitIntegration ?? true)
-					.onChange(async (value) => {
-						await this.plugin.applyGitIntegrationToggle(value);
-					}),
-			);
+			new Setting(containerEl)
+				.setName(t("settingsGitName"))
+				.setDesc(t("settingsGitDesc"))
+				.addToggle((toggle) =>
+					toggle
+						.setValue(this.plugin.settings.enableGitIntegration ?? true)
+						.onChange(async (value) => {
+							await this.plugin.applyGitIntegrationToggle(value);
+						}),
+				);
+		}
 
 		new Setting(containerEl)
 			.setClass("vault-code-reset-setting")

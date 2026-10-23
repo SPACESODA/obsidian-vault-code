@@ -47,7 +47,6 @@ export const ko: TranslationSchema = {
 	modalButtonCancel: "취소",
 
 	// Modals - Rename
-	modalRenameFileTitle: "파일 이름 바꾸기",
 	modalEditFileNameAndExtensionTitle: "파일 이름 및 확장자 편집",
 	modalRenameFolderTitle: "폴더 이름 바꾸기",
 	modalRenamePlaceholder: "새 이름",
@@ -82,8 +81,6 @@ export const ko: TranslationSchema = {
 	settingsShowHiddenDotfilesDesc: "점(.)으로 시작하는 파일 및 디렉토리(예: .gitignore, .env, .github/)를 표시합니다. .trash와 같은 내부 시스템 디렉토리는 안전하게 숨겨집니다.",
 	settingsShowAllFileTypesName: "모든 파일 형식 표시",
 	settingsShowAllFileTypesDesc: "Markdown 노트뿐만 아니라 보관함의 모든 파일(코드, JSON, 데이터, 확장자 없는 파일 등)을 파일 탐색기에 표시합니다.",
-	settingsPreventAutoOpenName: "지원되지 않는 파일의 자동 실행 방지",
-	settingsPreventAutoOpenDesc: "파일 탐색기에서 지원되지 않는 바이너리 또는 문서 파일(.zip, .exe, .docx, .dmg 등)을 한 번 클릭할 때 선택만 수행하여 원치 않는 압축 해제나 외부 프로그램 실행을 방지합니다.",
 	settingsOpenOnDoubleClickName: "더블 클릭으로 지원되지 않는 파일 열기",
 	settingsOpenOnDoubleClickDesc: "Obsidian에서 지원하지 않는 파일(.zip, .docx, .pdf 등)을 더블 클릭할 때 시스템 기본 앱으로 엽니다. 참고: 마우스 오른쪽 버튼 메뉴를 통해 언제든지 열 수 있습니다.",
 	settingsObsidianIgnoreName: "{0} 파일로 파일 및 폴더 제외",
@@ -129,7 +126,6 @@ export const ko: TranslationSchema = {
 
 	// Notices
 	noticeCreated: "{0} 파일이 생성되었습니다",
-	noticeSaved: "저장되었습니다",
 	noticeHiddenFilesVisible: "이제 숨김 파일 및 폴더가 표시됩니다.",
 	noticeHiddenFilesHidden: "이제 숨김 파일 및 폴더가 숨겨집니다.",
 	noticeAllFilesVisible: "이제 모든 파일 형식이 표시됩니다.",
@@ -163,11 +159,9 @@ export const ko: TranslationSchema = {
 	gitUndoChunk: "되돌리기",
 	gitKeepChunk: "유지",
 	gitCommitFile: "파일 커밋",
-	gitCommitChanges: "변경 사항 커밋",
 	gitNoChanges: "마지막 커밋과 비교하여 변경 사항이 없습니다",
 	gitNextChange: "다음 변경 위치",
 	gitPreviousChange: "이전 변경 위치",
-	gitDiffStats: "+{0} -{1}",
 	gitModalRevertTitle: "변경 사항 되돌리기",
 	gitModalRevertDesc: "\"{0}\"의 모든 변경 사항을 취소하시겠습니까? 마지막 커밋 상태로 복원되며 되돌릴 수 없습니다.",
 	gitModalRevertConfirm: "되돌리기",
@@ -182,7 +176,6 @@ export const ko: TranslationSchema = {
 	gitBranchStatus: "브랜치: {0}",
 	gitRefreshStatus: "Git 상태 새로고침",
 	gitChangedFilesCount: "변경된 파일 ({0})",
-	gitUntrackedDiffStats: "+{0}",
 	gitBinaryDiffUnsupported: "바이너리 또는 비텍스트 파일의 차이점 보기는 지원되지 않습니다",
 	gitAllChangesResolved: "모든 변경 사항이 해결되었습니다",
 	settingsGroupGit: "Git",

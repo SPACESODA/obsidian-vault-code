@@ -47,7 +47,6 @@ export const ja: TranslationSchema = {
 	modalButtonCancel: "キャンセル",
 
 	// Modals - Rename
-	modalRenameFileTitle: "ファイル名を変更",
 	modalEditFileNameAndExtensionTitle: "ファイル名と拡張子の編集",
 	modalRenameFolderTitle: "フォルダ名を変更",
 	modalRenamePlaceholder: "新しい名前",
@@ -82,8 +81,6 @@ export const ja: TranslationSchema = {
 	settingsShowHiddenDotfilesDesc: "名前がドットで始まるファイルやディレクトリ（例: .gitignore, .env, .github/）を表示します。.trash などのシステム内部ディレクトリは非表示のまま保護されます。",
 	settingsShowAllFileTypesName: "すべてのファイル形式を表示",
 	settingsShowAllFileTypesDesc: "Markdown ノートだけでなく、保管庫内のすべてのファイル（コード、JSON、データファイル、拡張子のないファイルなど）をファイルエクスプローラーに表示します。",
-	settingsPreventAutoOpenName: "未サポートファイルの自動起動を防止",
-	settingsPreventAutoOpenDesc: "ファイルエクスプローラーで未サポートのバイナリやドキュメントファイル（.zip、.exe、.docx、.dmg など）をシングルクリックした際に選択のみ行い、誤った解凍や外部アプリの起動を防ぎます。",
 	settingsOpenOnDoubleClickName: "ダブルクリックで未サポートファイルを開く",
 	settingsOpenOnDoubleClickDesc: "Obsidian がサポートしていないファイル（.zip、.docx、.pdf など）をダブルクリックしたときに、システムの既定アプリで開きます。注記：右クリックメニューからいつでも開くことができます。",
 	settingsObsidianIgnoreName: "{0} でファイルとフォルダーを除外",
@@ -129,7 +126,6 @@ export const ja: TranslationSchema = {
 
 	// Notices
 	noticeCreated: "{0} を作成しました",
-	noticeSaved: "保存しました",
 	noticeHiddenFilesVisible: "隠しファイルとフォルダが表示されるようになりました。",
 	noticeHiddenFilesHidden: "隠しファイルとフォルダが非表示になりました。",
 	noticeAllFilesVisible: "すべてのファイル形式が表示されるようになりました。",
@@ -163,11 +159,9 @@ export const ja: TranslationSchema = {
 	gitUndoChunk: "元に戻す",
 	gitKeepChunk: "保持",
 	gitCommitFile: "ファイルをコミット",
-	gitCommitChanges: "変更をコミット",
 	gitNoChanges: "前回のコミットからの変更はありません",
 	gitNextChange: "次の変更箇所へ",
 	gitPreviousChange: "前の変更箇所へ",
-	gitDiffStats: "+{0} -{1}",
 	gitModalRevertTitle: "変更を元に戻す",
 	gitModalRevertDesc: "「{0}」の変更を破棄しますか？前回のコミットの状態に戻り、取り消すことはできません。",
 	gitModalRevertConfirm: "元に戻す",
@@ -182,7 +176,6 @@ export const ja: TranslationSchema = {
 	gitBranchStatus: "ブランチ: {0}",
 	gitRefreshStatus: "Gitステータスを更新",
 	gitChangedFilesCount: "変更されたファイル ({0})",
-	gitUntrackedDiffStats: "+{0}",
 	gitBinaryDiffUnsupported: "バイナリまたは非テキストファイルの差分表示には対応していません",
 	gitAllChangesResolved: "すべての変更が解決されました",
 	settingsGroupGit: "Git",

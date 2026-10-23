@@ -17,11 +17,13 @@ Vault Code automatically adapts to your Obsidian display language: English, 繁�
 
 * **Reveal Hidden Files & Folders**: View and edit dotfiles and extensionless files.
 * **Universal File Creator**: Create dotfiles, dotfolders, and any file extension.
+* **Edit File Name & Extension**: Rename files and change extensions freely with built-in safety.
 * **Manage Ignore Rules**: Filter files with `.obsidianignore` and `.gitignore` files.
 * **Beautiful Code Editor**: Fast syntax highlighting for over 70 languages.
 * **Edit Notes as Source Code**: Toggle between native note view and code editor in one click.
 * **Find & Replace**: Multiline search, regex, case and word matching, and jump navigation.
 * **Live Preview**: Toggle live preview for HTML, SVG, and MJML email templates.
+* **Git Integration (Desktop)**: View branch indicator, inline diff comparisons, and file change stats.
 * **Mobile & Tablet Ready**: Edit code and manage files comfortably on phones and tablets.
 
 ---
@@ -52,14 +54,23 @@ Press <kbd>Cmd</kbd> / <kbd>Ctrl</kbd> + <kbd>F</kbd> (or <kbd>Cmd</kbd> / <kbd>
 * Jump through matches with live count indicators (`1 of 14`).
 * Toggle case matching (`Aa`), whole-word matching (`\b`), and regular expressions (`.*`) with a single click.
 
-### 📂 Create files & folders anywhere
+### 📂 Create, rename & manage files anywhere
 Right-click any file or folder in your file explorer to:
 * **New note here**: Create a markdown note directly inside that folder.
 * **New folder here**: Create a new folder at the exact same location using Obsidian's native inline folder creation.
-* **New file here (any type)**: Create any file with any extension (or no extension), and even type nested paths like `src/components/Button.tsx` to create folders and files in one go.
+* **New file here (any extension)**: Create any file with any extension (or no extension), and even type nested paths like `src/components/Button.tsx` to create folders and files in one go.
+* **Edit file name and extension...**: Freely rename files and modify extensions, dotfiles, or extensionless formats with built-in validation.
+
+### 🌿 Git integration (Desktop)
+When your vault is inside a Git repository:
+* **Inline diff comparison**: View unstaged additions, deletions, and modifications directly alongside your code.
+* **Diff navigation & hunk controls**: Jump between changes, revert individual hunks, or keep them.
+* **Status bar & branch indicator**: See current Git branch and file modification counts at a glance.
+* **Commit & revert**: Stage and commit changes with a commit message, or discard changes to revert to the last commit.
 
 ### 🛡️ Thoughtful safety guardrails & mobile support
-* **No accidental launches**: Single-clicking unsupported files (like `.zip`, `.pdf`, or binaries) safely selects them without unzipping archives or launching external OS apps.
+* **Safe single-click**: Single-clicking unsupported files (like `.zip`, `.pdf`, or binaries) safely selects them without unzipping archives or launching external OS apps.
+* **Double-click controls**: Optionally enable opening unsupported files in your system's default app on double-click (disabled by default; right-click is always available).
 * **Unsaved changes prompt**: Warns you before closing a tab with unsaved work, with optional auto-save settings if you prefer saving manually (<kbd>Cmd</kbd> / <kbd>Ctrl</kbd> + <kbd>S</kbd>).
 * **Tablet & Mobile ready**: Fully responsive controls and touch-friendly targets ensure seamless editing on iOS, iPadOS, and Android.
 
@@ -88,13 +99,21 @@ Right-click any file or folder in your file explorer to:
 
 Tailor Vault Code to your workflow in **Settings → Community plugins → Vault Code**:
 
-* **Display language**: Choose your preferred language or leave on *Auto (follow Obsidian)*.
+* **Language**: Choose your preferred language or leave on *Auto (follow Obsidian)*.
+
+#### File explorer
 * **Show hidden dotfiles & folders**: Toggle visibility of files and folders starting with `.`.
 * **Show all file types**: Toggle visibility of non-markdown files in your explorer.
-* **Ignored files and folders**: Add standard `.gitignore` rules (e.g. `node_modules/`, `.git/`) to hide specific noisy folders.
-* **Prevent automatic opening of unsupported files**: Stop accidental double/single-click launches on system files.
+* **Open unsupported files on double-click**: Optionally open files Obsidian cannot view (such as .zip, .docx, or .pdf) in your system's default app on double-click. (Note: Single-click safely selects files, and right-click is always available).
+* **Ignored files and folders**: Filter vault contents with standard `.gitignore` rules using `.obsidianignore` and `.gitignore`.
+
+#### Code editor
+* **Allow editing dotfiles and extensionless files**: Secure toggle with a safety reminder to edit sensitive files.
 * **Editable file extensions**: Add custom extensions you want Vault Code to open.
 * **Disable auto-save**: Prefer manual saving? Turn this on to require <kbd>Cmd</kbd> / <kbd>Ctrl</kbd> + <kbd>S</kbd>, complete with a dirty dot indicator `●`.
+
+#### Git (Desktop)
+* **Git integration**: Show file changes, branch indicator, and inline diff comparison when vault is inside a Git repository. Cleanly shuts down all Git operations when disabled.
 
 ---
 

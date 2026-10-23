@@ -47,7 +47,6 @@ export const zhTw: TranslationSchema = {
 	modalButtonCancel: "取消",
 
 	// Modals - Rename
-	modalRenameFileTitle: "重新命名檔案",
 	modalEditFileNameAndExtensionTitle: "編輯檔案名稱和副檔名",
 	modalRenameFolderTitle: "重新命名資料夾",
 	modalRenamePlaceholder: "新名稱",
@@ -82,8 +81,6 @@ export const zhTw: TranslationSchema = {
 	settingsShowHiddenDotfilesDesc: "顯示名稱以點開頭的檔案和目錄（例如 .gitignore、.env、.github/）。系統內部目錄（如 .trash）仍會安全隱藏。",
 	settingsShowAllFileTypesName: "顯示所有檔案類型",
 	settingsShowAllFileTypesDesc: "在檔案總管中顯示保存庫中的所有檔案（例如程式碼、JSON、資料檔以及無副檔名檔案），而不僅是 Markdown 筆記。",
-	settingsPreventAutoOpenName: "防止自動開啟不支援的檔案",
-	settingsPreventAutoOpenDesc: "在檔案總管中單擊不支援的二進位或文件檔案（例如 .zip、.exe、.docx、.dmg）時僅選取檔案，防止意外解壓縮或啟動外部應用程式。",
 	settingsOpenOnDoubleClickName: "按兩下開啟不支援的檔案",
 	settingsOpenOnDoubleClickDesc: "按兩下時，使用系統預設應用程式開啟 Obsidian 不支援的檔案（如 .zip、.docx 或 .pdf）。備註：你隨時可以透過右鍵選單開啟它們。",
 	settingsObsidianIgnoreName: "使用 {0} 忽略檔案與資料夾",
@@ -129,7 +126,6 @@ export const zhTw: TranslationSchema = {
 
 	// Notices
 	noticeCreated: "已建立 {0}",
-	noticeSaved: "已儲存",
 	noticeHiddenFilesVisible: "隱藏檔案與資料夾現已顯示。",
 	noticeHiddenFilesHidden: "隱藏檔案與資料夾現已隱藏。",
 	noticeAllFilesVisible: "所有檔案類型現已顯示。",
@@ -163,11 +159,9 @@ export const zhTw: TranslationSchema = {
 	gitUndoChunk: "還原",
 	gitKeepChunk: "保留",
 	gitCommitFile: "提交檔案",
-	gitCommitChanges: "提交變更",
 	gitNoChanges: "與上次提交相比無變更",
 	gitNextChange: "下一個變更",
 	gitPreviousChange: "上一個變更",
-	gitDiffStats: "+{0} -{1}",
 	gitModalRevertTitle: "還原變更",
 	gitModalRevertDesc: "確定要捨棄 \"{0}\" 中的所有變更嗎？檔案將恢復至上次提交狀態，且無法復原。",
 	gitModalRevertConfirm: "還原",
@@ -182,7 +176,6 @@ export const zhTw: TranslationSchema = {
 	gitBranchStatus: "分支：{0}",
 	gitRefreshStatus: "重新整理 Git 狀態",
 	gitChangedFilesCount: "已變更檔案 ({0})",
-	gitUntrackedDiffStats: "+{0}",
 	gitBinaryDiffUnsupported: "不支援二進位或非文字檔案的差異對比",
 	gitAllChangesResolved: "所有變更均已解決",
 	settingsGroupGit: "Git",

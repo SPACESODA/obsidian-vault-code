@@ -47,7 +47,6 @@ export const it: TranslationSchema = {
 	modalButtonCancel: "Annulla",
 
 	// Modals - Rename
-	modalRenameFileTitle: "Rinomina file",
 	modalEditFileNameAndExtensionTitle: "Modifica nome ed estensione del file",
 	modalRenameFolderTitle: "Rinomina cartella",
 	modalRenamePlaceholder: "Nuovo nome",
@@ -82,8 +81,6 @@ export const it: TranslationSchema = {
 	settingsShowHiddenDotfilesDesc: "Mostra file e directory i cui nomi iniziano con un punto (es. .gitignore, .env, .github/). Le directory interne come .trash rimarranno nascoste.",
 	settingsShowAllFileTypesName: "Mostra tutti i tipi di file",
 	settingsShowAllFileTypesDesc: "Visualizza tutti i file del vault in esplora file (codice, JSON, dati e file senza estensione), non solo le note Markdown.",
-	settingsPreventAutoOpenName: "Impedisci l'apertura automatica dei file non supportati",
-	settingsPreventAutoOpenDesc: "Facendo un singolo clic su file binari o documenti non supportati (.zip, .exe, .docx, .dmg), questi vengono solo selezionati, evitando estrazioni o avvii accidentali di app esterne.",
 	settingsOpenOnDoubleClickName: "Apri file non supportati con doppio clic",
 	settingsOpenOnDoubleClickDesc: "Apri i file non supportati (come .zip, .docx o .pdf) nell'applicazione predefinita del sistema con un doppio clic. Nota: Puoi sempre aprirli con il tasto destro.",
 	settingsObsidianIgnoreName: "Ignora file e cartelle con {0}",
@@ -129,7 +126,6 @@ export const it: TranslationSchema = {
 
 	// Notices
 	noticeCreated: "Creato {0}",
-	noticeSaved: "Salvato",
 	noticeHiddenFilesVisible: "I file e le cartelle nascosti sono ora visibili.",
 	noticeHiddenFilesHidden: "I file e le cartelle nascosti sono ora nascosti.",
 	noticeAllFilesVisible: "Tutti i tipi di file sono ora visibili.",
@@ -163,11 +159,9 @@ export const it: TranslationSchema = {
 	gitUndoChunk: "Annulla",
 	gitKeepChunk: "Mantieni",
 	gitCommitFile: "Esegui commit file",
-	gitCommitChanges: "Esegui commit modifiche",
 	gitNoChanges: "Nessuna modifica rispetto all'ultimo commit",
 	gitNextChange: "Modifica successiva",
 	gitPreviousChange: "Modifica precedente",
-	gitDiffStats: "+{0} -{1}",
 	gitModalRevertTitle: "Annulla modifiche",
 	gitModalRevertDesc: "Annullare tutte le modifiche in \"{0}\"? Il file verrà ripristinato all'ultimo commit e l'azione non può essere annullata.",
 	gitModalRevertConfirm: "Annulla",
@@ -182,7 +176,6 @@ export const it: TranslationSchema = {
 	gitBranchStatus: "Ramo: {0}",
 	gitRefreshStatus: "Aggiorna stato Git",
 	gitChangedFilesCount: "File modificati ({0})",
-	gitUntrackedDiffStats: "+{0}",
 	gitBinaryDiffUnsupported: "La visualizzazione delle differenze non è supportata per file binari o non testuali",
 	gitAllChangesResolved: "Tutte le modifiche sono state risolte",
 	settingsGroupGit: "Git",

@@ -47,7 +47,6 @@ export const zhCn: TranslationSchema = {
 	modalButtonCancel: "取消",
 
 	// Modals - Rename
-	modalRenameFileTitle: "重命名文件",
 	modalEditFileNameAndExtensionTitle: "编辑文件名和扩展名",
 	modalRenameFolderTitle: "重命名文件夹",
 	modalRenamePlaceholder: "新名称",
@@ -82,8 +81,6 @@ export const zhCn: TranslationSchema = {
 	settingsShowHiddenDotfilesDesc: "显示名称以点开头的文件和目录（例如 .gitignore、.env、.github/）。系统内部目录（如 .trash）仍将安全隐藏。",
 	settingsShowAllFileTypesName: "显示所有文件类型",
 	settingsShowAllFileTypesDesc: "在文件列表中显示仓库中的所有文件（例如代码、JSON、数据文件以及无扩展名文件），而不仅是 Markdown 笔记。",
-	settingsPreventAutoOpenName: "阻止自动打开不支持的文件",
-	settingsPreventAutoOpenDesc: "在文件列表中单击不支持的二进制或文档文件（例如 .zip、.exe、.docx、.dmg）时仅选中该文件，防止意外解压或启动外部应用程序。",
 	settingsOpenOnDoubleClickName: "双击打开不支持的文件",
 	settingsOpenOnDoubleClickDesc: "双击时，使用系统默认应用打开 Obsidian 不支持的文件（如 .zip、.docx 或 .pdf）。备注：你随时可以通过右键菜单打开它们。",
 	settingsObsidianIgnoreName: "使用 {0} 忽略文件和文件夹",
@@ -129,7 +126,6 @@ export const zhCn: TranslationSchema = {
 
 	// Notices
 	noticeCreated: "已创建 {0}",
-	noticeSaved: "已保存",
 	noticeHiddenFilesVisible: "隐藏文件与文件夹现已显示。",
 	noticeHiddenFilesHidden: "隐藏文件与文件夹现已隐藏。",
 	noticeAllFilesVisible: "所有文件类型现已显示。",
@@ -163,11 +159,9 @@ export const zhCn: TranslationSchema = {
 	gitUndoChunk: "还原",
 	gitKeepChunk: "保留",
 	gitCommitFile: "提交文件",
-	gitCommitChanges: "提交更改",
 	gitNoChanges: "与上次提交相比无更改",
 	gitNextChange: "下一个更改",
 	gitPreviousChange: "上一个更改",
-	gitDiffStats: "+{0} -{1}",
 	gitModalRevertTitle: "还原更改",
 	gitModalRevertDesc: "确定要放弃 \"{0}\" 中的所有更改吗？文件将恢复到上次提交状态，且无法撤销。",
 	gitModalRevertConfirm: "还原",
@@ -182,7 +176,6 @@ export const zhCn: TranslationSchema = {
 	gitBranchStatus: "分支：{0}",
 	gitRefreshStatus: "刷新 Git 状态",
 	gitChangedFilesCount: "已更改文件 ({0})",
-	gitUntrackedDiffStats: "+{0}",
 	gitBinaryDiffUnsupported: "不支持二进制或非文本文件的差异对比",
 	gitAllChangesResolved: "所有更改均已解决",
 	settingsGroupGit: "Git",

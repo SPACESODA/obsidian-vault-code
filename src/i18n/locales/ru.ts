@@ -47,7 +47,6 @@ export const ru: TranslationSchema = {
 	modalButtonCancel: "Отмена",
 
 	// Modals - Rename
-	modalRenameFileTitle: "Переименовать файл",
 	modalEditFileNameAndExtensionTitle: "Изменить имя и расширение файла",
 	modalRenameFolderTitle: "Переименовать папку",
 	modalRenamePlaceholder: "Новое имя",
@@ -82,8 +81,6 @@ export const ru: TranslationSchema = {
 	settingsShowHiddenDotfilesDesc: "Отображать файлы и папки, имена которых начинаются с точки (например, .gitignore, .env, .github/). Системные каталоги (например, .trash) останутся скрытыми.",
 	settingsShowAllFileTypesName: "Показывать файлы всех типов",
 	settingsShowAllFileTypesDesc: "Отображать все файлы хранилища в проводнике (файлы кода, JSON, данных и файлы без расширений), а не только заметки Markdown.",
-	settingsPreventAutoOpenName: "Предотвращать автооткрытие неподдерживаемых файлов",
-	settingsPreventAutoOpenDesc: "Одиночный щелчок по неподдерживаемым двоичным файлам или документам (.zip, .exe, .docx, .dmg) только выбирает их, предотвращая случайную распаковку или запуск внешних приложений.",
 	settingsOpenOnDoubleClickName: "Открывать неподдерживаемые файлы двойным щелчком",
 	settingsOpenOnDoubleClickDesc: "Открывать неподдерживаемые файлы (например, .zip, .docx или .pdf) в приложении по умолчанию при двойном щелчке. Примечание: их всегда можно открыть через правый клик.",
 	settingsObsidianIgnoreName: "Игнорировать файлы и папки с помощью {0}",
@@ -129,7 +126,6 @@ export const ru: TranslationSchema = {
 
 	// Notices
 	noticeCreated: "Создан {0}",
-	noticeSaved: "Сохранено",
 	noticeHiddenFilesVisible: "Скрытые файлы и папки теперь видны.",
 	noticeHiddenFilesHidden: "Скрытые файлы и папки теперь скрыты.",
 	noticeAllFilesVisible: "Все типы файлов теперь видны.",
@@ -163,11 +159,9 @@ export const ru: TranslationSchema = {
 	gitUndoChunk: "Отменить",
 	gitKeepChunk: "Оставить",
 	gitCommitFile: "Закоммитить файл",
-	gitCommitChanges: "Закоммитить изменения",
 	gitNoChanges: "Нет изменений по сравнению с последним коммитом",
 	gitNextChange: "Следующее изменение",
 	gitPreviousChange: "Предыдущее изменение",
-	gitDiffStats: "+{0} -{1}",
 	gitModalRevertTitle: "Отменить изменения",
 	gitModalRevertDesc: "Отменить все изменения в \"{0}\"? Файл вернётся к состоянию последнего коммита, это действие нельзя отменить.",
 	gitModalRevertConfirm: "Отменить",
@@ -182,7 +176,6 @@ export const ru: TranslationSchema = {
 	gitBranchStatus: "Ветка: {0}",
 	gitRefreshStatus: "Обновить статус Git",
 	gitChangedFilesCount: "Изменённые файлы ({0})",
-	gitUntrackedDiffStats: "+{0}",
 	gitBinaryDiffUnsupported: "Просмотр различий не поддерживается для бинарных или нетекстовых файлов",
 	gitAllChangesResolved: "Все изменения разрешены",
 	settingsGroupGit: "Git",
