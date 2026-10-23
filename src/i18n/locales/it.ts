@@ -2,7 +2,7 @@ import { TranslationSchema } from "./en";
 
 export const it: TranslationSchema = {
 	// Ribbon & Toolbars
-	ribbonNewFileTooltip: "Nuovo file (qualsiasi tipo)",
+	ribbonNewFileTooltip: "Nuovo file (qualsiasi estensione)",
 	viewToggleCode: "Codice",
 	viewToggleRendered: "Anteprima",
 	viewToggleTooltip: "Passa dalla visualizzazione codice a quella anteprima",
@@ -31,10 +31,11 @@ export const it: TranslationSchema = {
 
 	// Context Menu
 	contextNewNoteHere: "Nuova nota qui",
-	contextNewFileHere: "Nuovo file qui (qualsiasi tipo)",
+	contextNewFileHere: "Nuovo file qui (qualsiasi estensione)",
 	contextNewFolderHere: "Nuova cartella qui",
-	contextNewFile: "Nuovo file (qualsiasi tipo)",
+	contextNewFile: "Nuovo file (qualsiasi estensione)",
 	contextEditInCodeEditor: "Modifica nell'editor di codice",
+	contextEditFileNameAndExtension: "Modifica nome ed estensione del file...",
 
 	// Modals - Create File
 	modalCreateFileTitle: "Crea nuovo file",
@@ -47,6 +48,7 @@ export const it: TranslationSchema = {
 
 	// Modals - Rename
 	modalRenameFileTitle: "Rinomina file",
+	modalEditFileNameAndExtensionTitle: "Modifica nome ed estensione del file",
 	modalRenameFolderTitle: "Rinomina cartella",
 	modalRenamePlaceholder: "Nuovo nome",
 	modalButtonRename: "Rinomina",
@@ -144,9 +146,9 @@ export const it: TranslationSchema = {
 	noticeReplaceAllSuccess: "Sostituite {0} occorrenze.",
 
 	// Commands
-	commandCreateFile: "Crea nuovo file (qualsiasi tipo)",
+	commandCreateFile: "Crea nuovo file (qualsiasi estensione)",
 	commandCreateFolder: "Crea nuova cartella (incluse cartelle con punto)",
-	commandRenameActive: "Rinomina file o cartella attivo",
+	commandRenameActive: "Modifica nome ed estensione del file attivo",
 	commandToggleHidden: "Attiva/disattiva visibilità file e cartelle nascosti",
 	commandToggleAllTypes: "Attiva/disattiva visibilità di tutti i tipi di file",
 	commandToggleAllowEditDotfiles: "Attiva/disattiva modifica file nascosti e senza estensione",

@@ -2,7 +2,7 @@ import { TranslationSchema } from "./en";
 
 export const zhTw: TranslationSchema = {
 	// Ribbon & Toolbars
-	ribbonNewFileTooltip: "新增檔案（任何類型）",
+	ribbonNewFileTooltip: "新增檔案（任何副檔名）",
 	viewToggleCode: "原始碼",
 	viewToggleRendered: "預覽",
 	viewToggleTooltip: "切換原始碼與預覽檢視",
@@ -31,10 +31,11 @@ export const zhTw: TranslationSchema = {
 
 	// Context Menu
 	contextNewNoteHere: "在此新增筆記",
-	contextNewFileHere: "在此新增檔案（任何類型）",
+	contextNewFileHere: "在此新增檔案（任何副檔名）",
 	contextNewFolderHere: "在此新增資料夾",
-	contextNewFile: "新增檔案（任何類型）",
+	contextNewFile: "新增檔案（任何副檔名）",
 	contextEditInCodeEditor: "在程式碼編輯器中編輯",
+	contextEditFileNameAndExtension: "編輯檔案名稱和副檔名...",
 
 	// Modals - Create File
 	modalCreateFileTitle: "新增檔案",
@@ -47,6 +48,7 @@ export const zhTw: TranslationSchema = {
 
 	// Modals - Rename
 	modalRenameFileTitle: "重新命名檔案",
+	modalEditFileNameAndExtensionTitle: "編輯檔案名稱和副檔名",
 	modalRenameFolderTitle: "重新命名資料夾",
 	modalRenamePlaceholder: "新名稱",
 	modalButtonRename: "重新命名",
@@ -144,9 +146,9 @@ export const zhTw: TranslationSchema = {
 	noticeReplaceAllSuccess: "已取代 {0} 個相符項目。",
 
 	// Commands
-	commandCreateFile: "新增檔案（任何類型）",
+	commandCreateFile: "新增檔案（任何副檔名）",
 	commandCreateFolder: "新增資料夾（包含點資料夾）",
-	commandRenameActive: "重新命名目前檔案或資料夾",
+	commandRenameActive: "編輯目前檔案名稱和副檔名",
 	commandToggleHidden: "切換隱藏檔案與資料夾顯示狀態",
 	commandToggleAllTypes: "切換所有檔案類型顯示狀態",
 	commandToggleAllowEditDotfiles: "切換隱藏檔案與無副檔名檔案編輯狀態",

@@ -2,7 +2,7 @@ import { TranslationSchema } from "./en";
 
 export const zhCn: TranslationSchema = {
 	// Ribbon & Toolbars
-	ribbonNewFileTooltip: "新建文件（任何类型）",
+	ribbonNewFileTooltip: "新建文件（任何扩展名）",
 	viewToggleCode: "源码",
 	viewToggleRendered: "预览",
 	viewToggleTooltip: "切换源码与预览视图",
@@ -31,10 +31,11 @@ export const zhCn: TranslationSchema = {
 
 	// Context Menu
 	contextNewNoteHere: "在此新建笔记",
-	contextNewFileHere: "在此新建文件（任何类型）",
+	contextNewFileHere: "在此新建文件（任何扩展名）",
 	contextNewFolderHere: "在此新建文件夹",
-	contextNewFile: "新建文件（任何类型）",
+	contextNewFile: "新建文件（任何扩展名）",
 	contextEditInCodeEditor: "在代码编辑器中编辑",
+	contextEditFileNameAndExtension: "编辑文件名和扩展名...",
 
 	// Modals - Create File
 	modalCreateFileTitle: "新建文件",
@@ -47,6 +48,7 @@ export const zhCn: TranslationSchema = {
 
 	// Modals - Rename
 	modalRenameFileTitle: "重命名文件",
+	modalEditFileNameAndExtensionTitle: "编辑文件名和扩展名",
 	modalRenameFolderTitle: "重命名文件夹",
 	modalRenamePlaceholder: "新名称",
 	modalButtonRename: "重命名",
@@ -144,9 +146,9 @@ export const zhCn: TranslationSchema = {
 	noticeReplaceAllSuccess: "已替换 {0} 个匹配项。",
 
 	// Commands
-	commandCreateFile: "新建文件（任何类型）",
+	commandCreateFile: "新建文件（任何扩展名）",
 	commandCreateFolder: "新建文件夹（包含点文件夹）",
-	commandRenameActive: "重命名当前文件或文件夹",
+	commandRenameActive: "编辑当前文件名和扩展名",
 	commandToggleHidden: "切换隐藏文件与文件夹显示状态",
 	commandToggleAllTypes: "切换所有文件类型显示状态",
 	commandToggleAllowEditDotfiles: "切换隐藏文件与无扩展名文件编辑状态",

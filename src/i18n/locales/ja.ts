@@ -2,7 +2,7 @@ import { TranslationSchema } from "./en";
 
 export const ja: TranslationSchema = {
 	// Ribbon & Toolbars
-	ribbonNewFileTooltip: "新規ファイル（任意の形式）",
+	ribbonNewFileTooltip: "新規ファイル（任意の拡張子）",
 	viewToggleCode: "コード",
 	viewToggleRendered: "プレビュー",
 	viewToggleTooltip: "コードとプレビューの切り替え",
@@ -31,10 +31,11 @@ export const ja: TranslationSchema = {
 
 	// Context Menu
 	contextNewNoteHere: "ここに新規ノートを作成",
-	contextNewFileHere: "ここに新規ファイルを作成（任意の形式）",
+	contextNewFileHere: "ここに新規ファイルを作成（任意の拡張子）",
 	contextNewFolderHere: "ここに新規フォルダを作成",
-	contextNewFile: "新規ファイル（任意の形式）",
+	contextNewFile: "新規ファイル（任意の拡張子）",
 	contextEditInCodeEditor: "コードエディタで編集",
+	contextEditFileNameAndExtension: "ファイル名と拡張子を編集...",
 
 	// Modals - Create File
 	modalCreateFileTitle: "新規ファイルを作成",
@@ -47,6 +48,7 @@ export const ja: TranslationSchema = {
 
 	// Modals - Rename
 	modalRenameFileTitle: "ファイル名を変更",
+	modalEditFileNameAndExtensionTitle: "ファイル名と拡張子の編集",
 	modalRenameFolderTitle: "フォルダ名を変更",
 	modalRenamePlaceholder: "新しい名前",
 	modalButtonRename: "変更",
@@ -144,9 +146,9 @@ export const ja: TranslationSchema = {
 	noticeReplaceAllSuccess: "{0} 件の一致項目を置換しました。",
 
 	// Commands
-	commandCreateFile: "新規ファイルを作成（任意の形式）",
+	commandCreateFile: "新規ファイルを作成（任意の拡張子）",
 	commandCreateFolder: "新規フォルダを作成（ドットフォルダ含む）",
-	commandRenameActive: "アクティブなファイルまたはフォルダの名前を変更",
+	commandRenameActive: "アクティブなファイル名と拡張子を変更",
 	commandToggleHidden: "隠しファイルとフォルダの表示・非表示を切り替え",
 	commandToggleAllTypes: "すべてのファイル形式の表示・非表示を切り替え",
 	commandToggleAllowEditDotfiles: "ドットファイルおよび拡張子なしファイル編集の切り替え",

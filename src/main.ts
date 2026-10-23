@@ -1259,7 +1259,9 @@ class RenameModal extends Modal {
 
 		const isFolder = this.file instanceof TFolder;
 		contentEl.createEl("h3", {
-			text: isFolder ? t("modalRenameFolderTitle") : t("modalRenameFileTitle"),
+			text: isFolder
+				? t("modalRenameFolderTitle")
+				: t("modalEditFileNameAndExtensionTitle"),
 		});
 
 		const infoDiv = contentEl.createDiv({
@@ -1356,7 +1358,11 @@ class RenameModal extends Modal {
 			return;
 		}
 
-		if (/[\\/:*?"<>|]/.test(newName)) {
+		if (
+			/[\\/:*?"<>|]/.test(newName) ||
+			newName === "." ||
+			newName === ".."
+		) {
 			this.showError(t("modalCreateFilePathInvalidError"));
 			return;
 		}
@@ -4815,6 +4821,16 @@ export default class VaultCodePlugin extends Plugin {
 								});
 						});
 
+						menu.addItem((item) => {
+							item
+								.setTitle(t("contextEditFileNameAndExtension"))
+								.setIcon("pencil")
+								.setSection("action")
+								.onClick(() => {
+									new RenameModal(this.app, this, file).open();
+								});
+						});
+
 						if (this.isViewableInCodeEditor(file)) {
 							const isCurrentCodeEditor =
 								leaf?.view instanceof DotfileView;
@@ -6676,10 +6692,19 @@ export default class VaultCodePlugin extends Plugin {
 			parentPath ? `${parentPath}/${newName}` : newName,
 		);
 
+		const isExplicitFile = file instanceof TFile;
+		if (isExplicitFile) {
+			(file as TFile & { _explicitRename?: boolean })._explicitRename = true;
+		}
+
 		try {
 			await this.app.fileManager.renameFile(file, newPath);
 		} catch {
 			await this.app.vault.adapter.rename(file.path, newPath);
+		} finally {
+			if (isExplicitFile) {
+				delete (file as TFile & { _explicitRename?: boolean })._explicitRename;
+			}
 		}
 
 		if (
@@ -6687,6 +6712,32 @@ export default class VaultCodePlugin extends Plugin {
 			isDotPath(newPath)
 		) {
 			await this.registerHiddenPath(newPath);
+		}
+
+		const newFile = this.app.vault.getAbstractFileByPath(newPath);
+		if (newFile instanceof TFile) {
+			const isMarkdown = this.isMarkdownFile(newFile);
+			const isCode = this.isViewableInCodeEditor(newFile);
+
+			this.app.workspace.iterateAllLeaves((leaf) => {
+				const leafFile = (leaf.view as { file?: TFile })?.file;
+				if (leafFile?.path === newPath || leafFile?.path === file.path) {
+					if (isMarkdown && leaf.view instanceof DotfileView) {
+						void leaf.setViewState({
+							type: "markdown",
+							state: { file: newPath },
+							active: true,
+						});
+					} else if (isCode && !(leaf.view instanceof DotfileView)) {
+						void leaf.setViewState({
+							type: VIEW_TYPE_DOTFILE,
+							state: { file: newPath },
+							active: true,
+						});
+					}
+				}
+			});
+			this.updateAllLeafHeaderActions();
 		}
 	}
 
@@ -6785,12 +6836,18 @@ export default class VaultCodePlugin extends Plugin {
 		const plugin = this;
 
 		proto.getNewPathAfterRename = function (
-			this: TFile,
+			this: TFile & { _explicitRename?: boolean },
 			newName: string,
 		): string {
 			// eslint-disable-next-line no-control-regex -- Needed to strip control characters from filename
 			let cleanName = newName.replace(/[\x00-\x1F]/g, " ").trim();
 			if (!cleanName) return "";
+
+			if (this._explicitRename) {
+				const parentPath =
+					!this.parent || this.parent.isRoot() ? "" : this.parent.path;
+				return parentPath ? `${parentPath}/${cleanName}` : cleanName;
+			}
 
 			const isMarkdown = plugin.isMarkdownFile(this);
 

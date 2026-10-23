@@ -2,7 +2,7 @@ import { TranslationSchema } from "./en";
 
 export const ru: TranslationSchema = {
 	// Ribbon & Toolbars
-	ribbonNewFileTooltip: "Новый файл (любой тип)",
+	ribbonNewFileTooltip: "Новый файл (любое расширение)",
 	viewToggleCode: "Код",
 	viewToggleRendered: "Просмотр",
 	viewToggleTooltip: "Переключение между режимами кода и просмотра",
@@ -31,10 +31,11 @@ export const ru: TranslationSchema = {
 
 	// Context Menu
 	contextNewNoteHere: "Новая заметка здесь",
-	contextNewFileHere: "Новый файл здесь (любой тип)",
+	contextNewFileHere: "Новый файл здесь (любое расширение)",
 	contextNewFolderHere: "Новая папка здесь",
-	contextNewFile: "Новый файл (любой тип)",
+	contextNewFile: "Новый файл (любое расширение)",
 	contextEditInCodeEditor: "Редактировать в редакторе кода",
+	contextEditFileNameAndExtension: "Изменить имя и расширение файла...",
 
 	// Modals - Create File
 	modalCreateFileTitle: "Создать новый файл",
@@ -47,6 +48,7 @@ export const ru: TranslationSchema = {
 
 	// Modals - Rename
 	modalRenameFileTitle: "Переименовать файл",
+	modalEditFileNameAndExtensionTitle: "Изменить имя и расширение файла",
 	modalRenameFolderTitle: "Переименовать папку",
 	modalRenamePlaceholder: "Новое имя",
 	modalButtonRename: "Переименовать",
@@ -144,9 +146,9 @@ export const ru: TranslationSchema = {
 	noticeReplaceAllSuccess: "Заменено совпадений: {0}.",
 
 	// Commands
-	commandCreateFile: "Создать новый файл (любой тип)",
+	commandCreateFile: "Создать новый файл (любое расширение)",
 	commandCreateFolder: "Создать новую папку (включая скрытую)",
-	commandRenameActive: "Переименовать активный файл или папку",
+	commandRenameActive: "Изменить имя и расширение активного файла",
 	commandToggleHidden: "Переключить отображение скрытых файлов и папок",
 	commandToggleAllTypes: "Переключить видимость всех типов файлов",
 	commandToggleAllowEditDotfiles: "Переключить редактирование скрытых файлов и файлов без расширения",

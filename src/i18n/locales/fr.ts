@@ -2,7 +2,7 @@ import { TranslationSchema } from "./en";
 
 export const fr: TranslationSchema = {
 	// Ribbon & Toolbars
-	ribbonNewFileTooltip: "Nouveau fichier (tout type)",
+	ribbonNewFileTooltip: "Nouveau fichier (toute extension)",
 	viewToggleCode: "Code",
 	viewToggleRendered: "Aperçu",
 	viewToggleTooltip: "Basculer entre la vue code et la vue aperçu",
@@ -31,10 +31,11 @@ export const fr: TranslationSchema = {
 
 	// Context Menu
 	contextNewNoteHere: "Nouvelle note ici",
-	contextNewFileHere: "Nouveau fichier ici (tout type)",
+	contextNewFileHere: "Nouveau fichier ici (toute extension)",
 	contextNewFolderHere: "Nouveau dossier ici",
-	contextNewFile: "Nouveau fichier (tout type)",
+	contextNewFile: "Nouveau fichier (toute extension)",
 	contextEditInCodeEditor: "Modifier dans l'éditeur de code",
+	contextEditFileNameAndExtension: "Modifier le nom et l'extension du fichier...",
 
 	// Modals - Create File
 	modalCreateFileTitle: "Créer un nouveau fichier",
@@ -47,6 +48,7 @@ export const fr: TranslationSchema = {
 
 	// Modals - Rename
 	modalRenameFileTitle: "Renommer le fichier",
+	modalEditFileNameAndExtensionTitle: "Modifier le nom et l'extension du fichier",
 	modalRenameFolderTitle: "Renommer le dossier",
 	modalRenamePlaceholder: "Nouveau nom",
 	modalButtonRename: "Renommer",
@@ -144,9 +146,9 @@ export const fr: TranslationSchema = {
 	noticeReplaceAllSuccess: "{0} occurrences ont été remplacées.",
 
 	// Commands
-	commandCreateFile: "Créer un nouveau fichier (tout type)",
+	commandCreateFile: "Créer un nouveau fichier (toute extension)",
 	commandCreateFolder: "Créer un nouveau dossier (y compris dossier masqué)",
-	commandRenameActive: "Renommer le fichier ou dossier actif",
+	commandRenameActive: "Modifier le nom et l'extension du fichier actif",
 	commandToggleHidden: "Basculer l'affichage des fichiers et dossiers masqués",
 	commandToggleAllTypes: "Basculer l'affichage de tous les types de fichiers",
 	commandToggleAllowEditDotfiles: "Basculer la modification des fichiers masqués et sans extension",

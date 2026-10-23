@@ -2,7 +2,7 @@ import { TranslationSchema } from "./en";
 
 export const es: TranslationSchema = {
 	// Ribbon & Toolbars
-	ribbonNewFileTooltip: "Nuevo archivo (cualquier tipo)",
+	ribbonNewFileTooltip: "Nuevo archivo (cualquier extensión)",
 	viewToggleCode: "Código",
 	viewToggleRendered: "Vista previa",
 	viewToggleTooltip: "Alternar entre vista de código y vista previa",
@@ -31,10 +31,11 @@ export const es: TranslationSchema = {
 
 	// Context Menu
 	contextNewNoteHere: "Nueva nota aquí",
-	contextNewFileHere: "Nuevo archivo aquí (cualquier tipo)",
+	contextNewFileHere: "Nuevo archivo aquí (cualquier extensión)",
 	contextNewFolderHere: "Nueva carpeta aquí",
-	contextNewFile: "Nuevo archivo (cualquier tipo)",
+	contextNewFile: "Nuevo archivo (cualquier extensión)",
 	contextEditInCodeEditor: "Editar en editor de código",
+	contextEditFileNameAndExtension: "Editar nombre y extensión del archivo...",
 
 	// Modals - Create File
 	modalCreateFileTitle: "Crear nuevo archivo",
@@ -47,6 +48,7 @@ export const es: TranslationSchema = {
 
 	// Modals - Rename
 	modalRenameFileTitle: "Renombrar archivo",
+	modalEditFileNameAndExtensionTitle: "Editar nombre y extensión del archivo",
 	modalRenameFolderTitle: "Renombrar carpeta",
 	modalRenamePlaceholder: "Nuevo nombre",
 	modalButtonRename: "Renombrar",
@@ -144,9 +146,9 @@ export const es: TranslationSchema = {
 	noticeReplaceAllSuccess: "Se han reemplazado {0} coincidencias.",
 
 	// Commands
-	commandCreateFile: "Crear nuevo archivo (cualquier tipo)",
+	commandCreateFile: "Crear nuevo archivo (cualquier extensión)",
 	commandCreateFolder: "Crear nueva carpeta (incluye carpetas con punto)",
-	commandRenameActive: "Renombrar archivo o carpeta activo",
+	commandRenameActive: "Editar nombre y extensión del archivo activo",
 	commandToggleHidden: "Alternar visibilidad de archivos y carpetas ocultos",
 	commandToggleAllTypes: "Alternar visibilidad de todos los tipos de archivo",
 	commandToggleAllowEditDotfiles: "Alternar edición de archivos ocultos y sin extensión",

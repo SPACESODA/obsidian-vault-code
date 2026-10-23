@@ -1,6 +1,6 @@
 export const en = {
 	// Ribbon & Toolbars
-	ribbonNewFileTooltip: "New file (any type)",
+	ribbonNewFileTooltip: "New file (any extension)",
 	viewToggleCode: "Code",
 	viewToggleRendered: "Preview",
 	viewToggleTooltip: "Switch between code and preview",
@@ -29,10 +29,11 @@ export const en = {
 
 	// Context Menu
 	contextNewNoteHere: "New note here",
-	contextNewFileHere: "New file here (any type)",
+	contextNewFileHere: "New file here (any extension)",
 	contextNewFolderHere: "New folder here",
-	contextNewFile: "New file (any type)",
+	contextNewFile: "New file (any extension)",
 	contextEditInCodeEditor: "Edit in code editor",
+	contextEditFileNameAndExtension: "Edit file name and extension...",
 
 	// Modals - Create File
 	modalCreateFileTitle: "Create new file",
@@ -45,6 +46,7 @@ export const en = {
 
 	// Modals - Rename
 	modalRenameFileTitle: "Rename file",
+	modalEditFileNameAndExtensionTitle: "Edit file name and extension",
 	modalRenameFolderTitle: "Rename folder",
 	modalRenamePlaceholder: "New name",
 	modalButtonRename: "Rename",
@@ -142,9 +144,9 @@ export const en = {
 	noticeReplaceAllSuccess: "Replaced {0} occurrences.",
 
 	// Commands
-	commandCreateFile: "Create new file (any type)",
+	commandCreateFile: "Create new file (any extension)",
 	commandCreateFolder: "Create new folder (including dotfolder)",
-	commandRenameActive: "Rename active file or folder",
+	commandRenameActive: "Edit active file name and extension",
 	commandToggleHidden: "Toggle hidden dotfiles and folders",
 	commandToggleAllTypes: "Toggle all file types visibility",
 	commandToggleAllowEditDotfiles: "Toggle dotfile and extensionless file editing",

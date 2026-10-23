@@ -2,7 +2,7 @@ import { TranslationSchema } from "./en";
 
 export const ko: TranslationSchema = {
 	// Ribbon & Toolbars
-	ribbonNewFileTooltip: "새 파일 (모든 형식)",
+	ribbonNewFileTooltip: "새 파일 (모든 확장자)",
 	viewToggleCode: "코드",
 	viewToggleRendered: "미리보기",
 	viewToggleTooltip: "코드 및 미리보기 보기 전환",
@@ -31,10 +31,11 @@ export const ko: TranslationSchema = {
 
 	// Context Menu
 	contextNewNoteHere: "여기에 새 노트 만들기",
-	contextNewFileHere: "여기에 새 파일 만들기 (모든 형식)",
+	contextNewFileHere: "여기에 새 파일 만들기 (모든 확장자)",
 	contextNewFolderHere: "여기에 새 폴더 만들기",
-	contextNewFile: "새 파일 만들기 (모든 형식)",
+	contextNewFile: "새 파일 (모든 확장자)",
 	contextEditInCodeEditor: "코드 편집기에서 편집",
+	contextEditFileNameAndExtension: "파일 이름 및 확장자 편집...",
 
 	// Modals - Create File
 	modalCreateFileTitle: "새 파일 만들기",
@@ -47,6 +48,7 @@ export const ko: TranslationSchema = {
 
 	// Modals - Rename
 	modalRenameFileTitle: "파일 이름 바꾸기",
+	modalEditFileNameAndExtensionTitle: "파일 이름 및 확장자 편집",
 	modalRenameFolderTitle: "폴더 이름 바꾸기",
 	modalRenamePlaceholder: "새 이름",
 	modalButtonRename: "이름 바꾸기",
@@ -144,9 +146,9 @@ export const ko: TranslationSchema = {
 	noticeReplaceAllSuccess: "{0}개의 일치 항목을 바꿨습니다.",
 
 	// Commands
-	commandCreateFile: "새 파일 만들기 (모든 형식)",
+	commandCreateFile: "새 파일 만들기 (모든 확장자)",
 	commandCreateFolder: "새 폴더 만들기 (점 폴더 포함)",
-	commandRenameActive: "현재 파일 또는 폴더 이름 바꾸기",
+	commandRenameActive: "현재 파일 이름 및 확장자 편집",
 	commandToggleHidden: "숨김 파일 및 폴더 표시 전환",
 	commandToggleAllTypes: "모든 파일 형식 표시 전환",
 	commandToggleAllowEditDotfiles: "숨김 파일 및 확장자 없는 파일 편집 전환",

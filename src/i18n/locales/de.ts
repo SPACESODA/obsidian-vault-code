@@ -2,7 +2,7 @@ import { TranslationSchema } from "./en";
 
 export const de: TranslationSchema = {
 	// Ribbon & Toolbars
-	ribbonNewFileTooltip: "Neue Datei (beliebiger Typ)",
+	ribbonNewFileTooltip: "Neue Datei (beliebige Dateiendung)",
 	viewToggleCode: "Code",
 	viewToggleRendered: "Vorschau",
 	viewToggleTooltip: "Zwischen Code- und Vorschauansicht wechseln",
@@ -31,10 +31,11 @@ export const de: TranslationSchema = {
 
 	// Context Menu
 	contextNewNoteHere: "Neue Notiz hier",
-	contextNewFileHere: "Neue Datei hier (beliebiger Typ)",
+	contextNewFileHere: "Neue Datei hier (beliebige Dateiendung)",
 	contextNewFolderHere: "Neuer Ordner hier",
-	contextNewFile: "Neue Datei (beliebiger Typ)",
+	contextNewFile: "Neue Datei (beliebige Dateiendung)",
 	contextEditInCodeEditor: "Im Code-Editor bearbeiten",
+	contextEditFileNameAndExtension: "Dateiname und Dateiendung bearbeiten...",
 
 	// Modals - Create File
 	modalCreateFileTitle: "Neue Datei erstellen",
@@ -47,6 +48,7 @@ export const de: TranslationSchema = {
 
 	// Modals - Rename
 	modalRenameFileTitle: "Datei umbenennen",
+	modalEditFileNameAndExtensionTitle: "Dateiname und Dateiendung bearbeiten",
 	modalRenameFolderTitle: "Ordner umbenennen",
 	modalRenamePlaceholder: "Neuer Name",
 	modalButtonRename: "Umbenennen",
@@ -144,9 +146,9 @@ export const de: TranslationSchema = {
 	noticeReplaceAllSuccess: "{0} Vorkommen wurden ersetzt.",
 
 	// Commands
-	commandCreateFile: "Neue Datei erstellen (beliebiger Typ)",
+	commandCreateFile: "Neue Datei erstellen (beliebige Dateiendung)",
 	commandCreateFolder: "Neuen Ordner erstellen (einschließlich Dotfolder)",
-	commandRenameActive: "Aktive Datei oder Ordner umbenennen",
+	commandRenameActive: "Name und Dateiendung der aktiven Datei bearbeiten",
 	commandToggleHidden: "Versteckte Dateien und Ordner umschalten",
 	commandToggleAllTypes: "Sichtbarkeit aller Dateitypen umschalten",
 	commandToggleAllowEditDotfiles: "Bearbeitung von Dotfiles und dateiendungslosen Dateien umschalten",
