@@ -2654,7 +2654,6 @@ export class DotfileView extends TextFileView {
 		this.updateStatus();
 		void this.updateGitStatus();
 		this.plugin.debouncedUpdateGitStatus();
-		new Notice(t("noticeSaved"));
 	}
 
 	private isBinaryOrNonEditable(): boolean {
