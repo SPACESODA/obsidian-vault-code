@@ -204,4 +204,6 @@ export const zhCn: TranslationSchema = {
 	commandGitSwitchBranch: "切换 Git 分支",
 	commandGitCreateBranch: "创建 Git 分支",
 	settingsGitWorkflowNote: "本插件为基本 Git 差异对比与分支管理提供简洁易用的工作流程。如需完整功能，请使用 {0} 或使用 {1}。",
+	gitUnsupportedOrIgnoredCount: "不支持或已忽略的文件 ({0})",
+	gitMoreFilesCount: "还有 {0} 个文件",
 };

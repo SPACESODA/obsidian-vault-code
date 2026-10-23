@@ -204,4 +204,6 @@ export const it: TranslationSchema = {
 	commandGitSwitchBranch: "Cambia branch Git",
 	commandGitCreateBranch: "Crea branch Git",
 	settingsGitWorkflowNote: "Questo plugin offre un flusso di lavoro essenziale e intuitivo per visualizzare differenze Git e gestire branch. Se hai bisogno di funzionalità complete, usa {0} o affidati a {1}.",
+	gitUnsupportedOrIgnoredCount: "File non supportati o ignorati ({0})",
+	gitMoreFilesCount: "E altri {0} file",
 };

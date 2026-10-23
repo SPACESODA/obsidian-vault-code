@@ -204,4 +204,6 @@ export const ko: TranslationSchema = {
 	commandGitSwitchBranch: "Git 브랜치 전환",
 	commandGitCreateBranch: "Git 브랜치 생성",
 	settingsGitWorkflowNote: "이 플러그인은 기본적인 Git 변경 비교 및 브랜치 관리를 위한 직관적이고 필수적인 워크플로를 제공합니다. 고급 기능이 필요한 경우 {0}을(를) 사용하거나 {1}을(를) 활용하세요.",
+	gitUnsupportedOrIgnoredCount: "지원되지 않거나 무시된 파일 ({0})",
+	gitMoreFilesCount: "외 {0}개 파일",
 };

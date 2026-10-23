@@ -204,4 +204,6 @@ export const ja: TranslationSchema = {
 	commandGitSwitchBranch: "Git ブランチを切り替え",
 	commandGitCreateBranch: "Git ブランチを作成",
 	settingsGitWorkflowNote: "本プラグインは、基本的な Git 差分表示とブランチ管理のためのシンプルで使いやすいワークフローを提供します。包括的な機能が必要な場合は、{0} を使用するか、{1} をご利用ください。",
+	gitUnsupportedOrIgnoredCount: "サポート外または無視されたファイル ({0})",
+	gitMoreFilesCount: "他 {0} 件のファイル",
 };

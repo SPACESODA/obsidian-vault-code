@@ -204,4 +204,6 @@ export const ru: TranslationSchema = {
 	commandGitSwitchBranch: "Переключить ветку Git",
 	commandGitCreateBranch: "Создать ветку Git",
 	settingsGitWorkflowNote: "Этот плагин предоставляет удобный базовый рабочий процесс для просмотра различий Git и управления ветками. Если вам требуется расширенный функционал, используйте {0} или {1}.",
+	gitUnsupportedOrIgnoredCount: "Неподдерживаемые или проигнорированные файлы ({0})",
+	gitMoreFilesCount: "И еще {0} файлов",
 };

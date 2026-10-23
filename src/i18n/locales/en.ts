@@ -202,6 +202,8 @@ export const en = {
 	commandGitSwitchBranch: "Switch Git branch",
 	commandGitCreateBranch: "Create Git branch",
 	settingsGitWorkflowNote: "This plugin provides an essential, user-friendly workflow for basic Git diffs and branch management. If you need comprehensive features, please use {0} or rely on {1}.",
+	gitUnsupportedOrIgnoredCount: "Unsupported or ignored files ({0})",
+	gitMoreFilesCount: "And {0} more files",
 };
 
 export type TranslationSchema = typeof en;

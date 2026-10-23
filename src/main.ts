@@ -5697,33 +5697,65 @@ export default class VaultCodePlugin extends Plugin {
 
 			menu.addSeparator();
 
-			if (count > 0) {
-				menu.addItem((item) => {
-					item
-						.setTitle(t("gitChangedFilesCount", count))
-						.setIcon("files")
-						.setDisabled(true);
-				});
+			const supportedFiles: TFile[] = [];
+			let unsupportedOrIgnoredCount = 0;
 
-				let added = 0;
-				for (const filePath of modifiedFiles) {
-					if (added >= 10) break;
+			for (const filePath of modifiedFiles) {
+				if (this.isPathIgnored(filePath, false)) {
+					unsupportedOrIgnoredCount++;
+					continue;
+				}
+				const tfile = this.app.vault.getAbstractFileByPath(filePath);
+				if (tfile instanceof TFile && this.isFileSupportedForGitDiff(tfile)) {
+					supportedFiles.push(tfile);
+				} else {
+					unsupportedOrIgnoredCount++;
+				}
+			}
+
+			if (supportedFiles.length > 0 || unsupportedOrIgnoredCount > 0) {
+				if (supportedFiles.length > 0) {
 					menu.addItem((item) => {
-						const fName = filePath.split("/").pop() ?? filePath;
 						item
-							.setTitle(fName)
-							.setIcon("file-code")
-							.onClick(() => {
-								const tfile =
-									this.app.vault.getAbstractFileByPath(
-										filePath,
-									);
-								if (tfile instanceof TFile) {
-									void this.openFileInDiffView(tfile);
-								}
-							});
+							.setTitle(t("gitChangedFilesCount", supportedFiles.length))
+							.setIcon("files")
+							.setDisabled(true);
 					});
-					added++;
+
+					const maxDisplay = 10;
+					const displayFiles = supportedFiles.slice(0, maxDisplay);
+					for (const tfile of displayFiles) {
+						menu.addItem((item) => {
+							item
+								.setTitle(tfile.name)
+								.setIcon("file-code")
+								.onClick(() => {
+									void this.openFileInDiffView(tfile);
+								});
+						});
+					}
+
+					if (supportedFiles.length > maxDisplay) {
+						const remaining = supportedFiles.length - maxDisplay;
+						menu.addItem((item) => {
+							item
+								.setTitle(t("gitMoreFilesCount", remaining))
+								.setDisabled(true);
+						});
+					}
+				}
+
+				if (unsupportedOrIgnoredCount > 0) {
+					menu.addItem((item) => {
+						item
+							.setTitle(
+								t(
+									"gitUnsupportedOrIgnoredCount",
+									unsupportedOrIgnoredCount,
+								),
+							)
+							.setDisabled(true);
+					});
 				}
 
 				menu.addSeparator();

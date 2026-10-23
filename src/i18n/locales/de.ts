@@ -204,4 +204,6 @@ export const de: TranslationSchema = {
 	commandGitSwitchBranch: "Git-Branch wechseln",
 	commandGitCreateBranch: "Git-Branch erstellen",
 	settingsGitWorkflowNote: "Dieses Plugin bietet einen einfachen, benutzerfreundlichen Workflow für grundlegende Git-Diffs und die Branch-Verwaltung. Für umfassende Funktionen nutzen Sie bitte {0} oder {1}.",
+	gitUnsupportedOrIgnoredCount: "Nicht unterstützte oder ignorierte Dateien ({0})",
+	gitMoreFilesCount: "Und {0} weitere Dateien",
 };
