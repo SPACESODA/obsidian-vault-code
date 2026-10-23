@@ -1,0 +1,12 @@
+# Obsidian & Git
+.obsidian/
+.git/
+.trash/
+
+# macOS
+.DS_Store
+._*
+
+# Windows
+Thumbs.db
+desktop.ini
