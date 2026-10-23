@@ -1,6 +1,6 @@
 {
   "name": "obsidian-vault-code",
-  "version": "2.0.7",
+  "version": "2.0.8",
   "description": "Turn your vault into a lightweight IDE and code editor. Reveal hidden dotfiles, edit code across most programming languages, live-preview HTML, SVG, and MJML, and search and replace with zero bloat.",
   "main": "main.js",
   "type": "module",
