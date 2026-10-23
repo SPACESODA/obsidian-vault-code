@@ -20,3 +20,4 @@ npm-debug.log
 .obsidian/plugins/
 .obsidian/workspace.json
 data.json
+.hotreload

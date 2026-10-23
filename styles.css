@@ -1,4 +1,4 @@
-/* Hidden Files Manager — CodeMirror 6 Editor Styles */
+/* Hidden Files Manager - CodeMirror 6 Editor Styles */
 
 /* ── VS Code Syntax Highlighting Theme ─────────────────────── */
 
@@ -1476,7 +1476,8 @@ body.is-phone .hidden-files-btn-icon svg {
 }
 
 /* Header view action toggle button for code editor */
-.clickable-icon.view-action.vault-code-header-toggle-btn.is-active {
+.clickable-icon.view-action.vault-code-header-toggle-btn.is-active,
+.clickable-icon.view-action.vault-code-header-diff-btn.is-active {
 	color: var(--text-accent);
 }
 
@@ -1514,5 +1515,533 @@ button.vault-code-ignore-btn:hover {
 	height: 14px;
 	display: block;
 }
+
+/* ── Git Diff & Unified Merge View ──────────────────────────── */
+
+.cm-editor .cm-deletedChunk {
+	position: relative;
+	background-color: rgba(248, 81, 73, 0.12);
+	padding: 0;
+	margin: 0;
+	box-sizing: border-box;
+}
+
+.cm-editor .cm-deletedChunk:empty {
+	display: none;
+}
+
+.cm-editor .cm-deletedLine {
+	background-color: transparent;
+	color: var(--text-muted);
+	padding: 0 6px 0 8px;
+	font-family: inherit;
+	font-size: inherit;
+	line-height: inherit;
+	box-sizing: border-box;
+}
+
+.cm-editor .cm-insertedLine,
+.cm-editor .cm-changedLine {
+	background-color: rgba(46, 160, 67, 0.12);
+}
+
+.cm-editor .cm-deletedText {
+	background-color: rgba(248, 81, 73, 0.28);
+	text-decoration: line-through;
+	border-radius: 2px;
+	padding: 0 1px;
+}
+
+.cm-editor .cm-changedText {
+	background-color: rgba(46, 160, 67, 0.28);
+	text-decoration: none;
+	border-radius: 2px;
+	padding: 0 1px;
+}
+
+.cm-editor .cm-changeGutter {
+	width: 3px;
+	padding: 0;
+}
+
+.cm-editor .cm-changedLineGutter,
+.cm-editor .cm-deletedLineGutter,
+.cm-editor .cm-inlineChangedLineGutter {
+	width: 3px;
+}
+
+.cm-editor .cm-changedLineGutter {
+	background-color: var(--text-success, #3fb950);
+}
+
+.cm-editor .cm-deletedLineGutter {
+	background-color: var(--text-error, #f85149);
+}
+
+.cm-editor .cm-collapsedLines {
+	display: block;
+	width: 100%;
+	margin: 0;
+	padding: 4px 16px;
+	box-sizing: border-box;
+	background: transparent;
+	border: none;
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller, 11px);
+	font-family: var(--font-ui);
+	cursor: pointer;
+	user-select: none;
+	transition: color 0.15s ease;
+}
+
+.cm-editor .cm-collapsedLines:hover {
+	color: var(--text-normal);
+}
+
+.cm-editor .cm-collapsedLines::before {
+	content: "↕  ";
+	opacity: 0.7;
+}
+
+.cm-editor .cm-collapsedLines::after {
+	content: "";
+}
+
+.cm-editor .vault-code-chunk-actions-bar {
+	display: flex;
+	justify-content: flex-end;
+	align-items: center;
+	margin: 0;
+	padding: 4px 16px 8px 0;
+	box-sizing: border-box;
+	background: transparent;
+	line-height: 1;
+}
+
+.vault-code-chunk-actions-inner {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.vault-code-merge-chunk-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	box-sizing: border-box;
+	cursor: pointer;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+	transition: all 0.15s ease;
+	line-height: 1;
+}
+
+/* Undo is a solid square button with rounded corners on the left (order: 1) */
+.vault-code-merge-chunk-btn.is-reject {
+	order: 1;
+	width: 24px;
+	height: 24px;
+	padding: 0;
+	border-radius: var(--radius-m, 6px);
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	color: var(--text-muted);
+	flex-shrink: 0;
+}
+
+.vault-code-merge-chunk-btn.is-reject:hover {
+	background: var(--background-modifier-hover);
+	color: var(--text-error, #f85149);
+	border-color: rgba(248, 81, 73, 0.45);
+}
+
+.vault-code-merge-chunk-btn.is-reject .vault-code-btn-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 13px;
+	height: 13px;
+	line-height: 0;
+}
+
+.vault-code-merge-chunk-btn.is-reject .vault-code-btn-icon svg,
+.vault-code-merge-chunk-btn.is-reject .vault-code-btn-icon .svg-icon {
+	width: 13px;
+	height: 13px;
+	display: block;
+	vertical-align: unset;
+}
+
+/* Keep is a theme-colored pill button with checkmark icon + Keep text on the right (order: 2) */
+.vault-code-merge-chunk-btn.is-accept {
+	order: 2;
+	height: 24px;
+	padding: 0 10px;
+	gap: 5px;
+	font-size: 11px;
+	font-weight: 500;
+	border-radius: var(--radius-m, 6px);
+	background: var(--interactive-accent);
+	border: 1px solid var(--interactive-accent);
+	color: var(--text-on-accent, #ffffff);
+	flex-shrink: 0;
+}
+
+.vault-code-merge-chunk-btn.is-accept:hover {
+	background: var(--interactive-accent-hover, var(--interactive-accent));
+	border-color: var(--interactive-accent-hover, var(--interactive-accent));
+	color: var(--text-on-accent, #ffffff);
+	opacity: 0.94;
+}
+
+.vault-code-merge-chunk-btn.is-accept .vault-code-btn-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 12px;
+	height: 12px;
+	line-height: 0;
+}
+
+.vault-code-merge-chunk-btn.is-accept .vault-code-btn-icon svg,
+.vault-code-merge-chunk-btn.is-accept .vault-code-btn-icon .svg-icon {
+	width: 12px;
+	height: 12px;
+	display: block;
+	stroke: var(--text-on-accent, #ffffff);
+	color: var(--text-on-accent, #ffffff);
+	vertical-align: unset;
+}
+
+.vault-code-merge-chunk-btn.is-accept .vault-code-btn-text {
+	display: inline-flex;
+	align-items: center;
+	line-height: 1;
+}
+
+/* ── Diff Toolbar ───────────────────────────────────────────── */
+
+.vault-code-diff-toolbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	height: 34px;
+	padding: 0 12px;
+	background-color: var(--background-secondary);
+	border-bottom: 1px solid var(--background-modifier-border);
+	font-size: var(--font-ui-smaller, 11px);
+	gap: 8px;
+	user-select: none;
+	flex-shrink: 0;
+	box-sizing: border-box;
+}
+
+.vault-code-diff-toolbar-left,
+.vault-code-diff-toolbar-right {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.vault-code-diff-nav-group {
+	display: inline-flex;
+	align-items: center;
+	height: 24px;
+	background-color: var(--background-modifier-form-field);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s, 4px);
+	overflow: hidden;
+	box-sizing: border-box;
+}
+
+.clickable-icon.vault-code-diff-nav-btn {
+	width: 22px;
+	height: 22px;
+	padding: 0;
+	border-radius: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--text-muted);
+	line-height: 0;
+}
+
+.clickable-icon.vault-code-diff-nav-btn:hover {
+	color: var(--text-normal);
+	background-color: var(--background-modifier-hover);
+}
+
+.clickable-icon.vault-code-diff-nav-btn svg,
+.clickable-icon.vault-code-diff-nav-btn .svg-icon {
+	width: 12px;
+	height: 12px;
+	display: block;
+	vertical-align: unset;
+}
+
+.vault-code-diff-action-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 5px;
+	height: 24px;
+	padding: 0 10px;
+	font-size: 11px;
+	font-weight: 500;
+	line-height: 1;
+	border-radius: var(--radius-s, 4px);
+	background: var(--background-modifier-form-field);
+	border: 1px solid var(--background-modifier-border);
+	color: var(--text-muted);
+	cursor: pointer;
+	box-sizing: border-box;
+	vertical-align: middle;
+	transition: all 0.15s ease;
+}
+
+.vault-code-diff-action-btn .vault-code-btn-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 13px;
+	height: 13px;
+	line-height: 0;
+	flex-shrink: 0;
+}
+
+.vault-code-diff-action-btn .vault-code-btn-icon svg,
+.vault-code-diff-action-btn .vault-code-btn-icon .svg-icon {
+	display: block;
+	width: 13px;
+	height: 13px;
+	vertical-align: unset;
+}
+
+.vault-code-diff-action-btn .vault-code-btn-text {
+	display: inline-flex;
+	align-items: center;
+	line-height: 1;
+}
+
+.vault-code-diff-action-btn:hover {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.vault-code-diff-action-btn.mod-revert:hover {
+	color: var(--text-error, #f85149);
+	border-color: rgba(248, 81, 73, 0.4);
+	background: rgba(248, 81, 73, 0.08);
+}
+
+/* Revert two-step confirming state */
+.vault-code-diff-action-btn.mod-revert.is-confirming {
+	background-color: var(--text-error, #f85149);
+	border-color: var(--text-error, #f85149);
+	color: #ffffff;
+}
+
+.vault-code-diff-action-btn.mod-revert.is-confirming:hover {
+	background-color: var(--text-error-hover, #d73a49);
+	border-color: var(--text-error-hover, #d73a49);
+	color: #ffffff;
+}
+
+.vault-code-diff-action-btn.mod-revert.is-confirming .vault-code-btn-icon svg,
+.vault-code-diff-action-btn.mod-revert.is-confirming .vault-code-btn-icon .svg-icon {
+	stroke: #ffffff;
+	color: #ffffff;
+}
+
+.vault-code-diff-action-btn.mod-commit {
+	background-color: var(--interactive-accent);
+	border: 1px solid var(--interactive-accent);
+	color: var(--text-on-accent, #ffffff);
+	font-weight: 500;
+}
+
+.vault-code-diff-action-btn.mod-commit:hover {
+	background-color: var(--interactive-accent-hover, var(--interactive-accent));
+	border-color: var(--interactive-accent-hover, var(--interactive-accent));
+	color: var(--text-on-accent, #ffffff);
+	opacity: 0.92;
+}
+
+.vault-code-diff-action-btn.mod-commit .vault-code-btn-icon svg,
+.vault-code-diff-action-btn.mod-commit .vault-code-btn-icon .svg-icon {
+	color: var(--text-on-accent, #ffffff);
+	stroke: var(--text-on-accent, #ffffff);
+}
+
+.clickable-icon.vault-code-diff-done-btn {
+	width: 24px;
+	height: 24px;
+	padding: 0;
+	margin-left: 2px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--text-muted);
+	border-radius: var(--radius-s, 4px);
+	line-height: 0;
+}
+
+.clickable-icon.vault-code-diff-done-btn:hover {
+	color: var(--text-normal);
+	background-color: var(--background-modifier-hover);
+}
+
+.clickable-icon.vault-code-diff-done-btn svg,
+.clickable-icon.vault-code-diff-done-btn .svg-icon {
+	width: 13px;
+	height: 13px;
+	display: block;
+	vertical-align: unset;
+}
+
+/* ── Editor Toolbar Diff Stats Toggle Button ────────────────── */
+
+.vault-code-diff-stats-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	height: 24px;
+	padding: 0 8px;
+	font-family: var(--font-monospace, monospace);
+	font-size: 11px;
+	font-weight: 600;
+	line-height: 1;
+	border-radius: var(--radius-s, 4px);
+	background-color: var(--interactive-accent);
+	border: 1px solid var(--interactive-accent);
+	color: var(--text-on-accent, #ffffff);
+	margin-right: 4px;
+	cursor: pointer;
+	user-select: none;
+	box-sizing: border-box;
+	vertical-align: middle;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+	transition: all 0.15s ease;
+}
+
+.vault-code-diff-stats-btn:hover {
+	background-color: var(--interactive-accent-hover, var(--interactive-accent));
+	border-color: var(--interactive-accent-hover, var(--interactive-accent));
+	color: var(--text-on-accent, #ffffff);
+	opacity: 0.94;
+}
+
+.vault-code-diff-stats-btn:active {
+	transform: scale(0.97);
+}
+
+.vault-code-diff-stats-btn.is-active {
+	background-color: rgba(var(--interactive-accent-rgb, 120, 80, 255), 0.16);
+	border-color: var(--interactive-accent);
+	color: var(--interactive-accent);
+	box-shadow: none;
+	font-weight: 600;
+}
+
+.vault-code-diff-stats-btn.is-active:hover {
+	background-color: rgba(var(--interactive-accent-rgb, 120, 80, 255), 0.26);
+	border-color: var(--interactive-accent);
+	color: var(--interactive-accent);
+	opacity: 1;
+}
+
+/* ── Light Mode Refinements ─────────────────────────────────── */
+
+.theme-light .cm-editor .cm-deletedChunk,
+.theme-light .cm-editor .cm-deletedLine {
+	background-color: rgba(255, 129, 130, 0.18);
+}
+
+.theme-light .cm-editor .cm-deletedText {
+	background-color: rgba(255, 129, 130, 0.35);
+}
+
+.theme-light .cm-editor .cm-insertedLine,
+.theme-light .cm-editor .cm-changedLine {
+	background-color: rgba(74, 194, 107, 0.18);
+}
+
+.theme-light .cm-editor .cm-changedText {
+	background-color: rgba(74, 194, 107, 0.32);
+}
+
+.theme-light .vault-code-diff-stats-btn {
+	background-color: var(--interactive-accent);
+	border-color: var(--interactive-accent);
+	color: var(--text-on-accent, #ffffff);
+}
+
+.theme-light .vault-code-diff-stats-btn.is-active {
+	background-color: rgba(var(--interactive-accent-rgb, 120, 80, 255), 0.14);
+	border-color: var(--interactive-accent);
+	color: var(--interactive-accent);
+}
+
+.theme-light .vault-code-merge-chunk-btn.is-reject {
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	color: var(--text-muted);
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.theme-light .vault-code-merge-chunk-btn.is-reject:hover {
+	background: var(--background-modifier-hover);
+	color: var(--text-error, #cf222e);
+	border-color: rgba(207, 34, 46, 0.4);
+}
+
+.theme-light .vault-code-merge-chunk-btn.is-accept {
+	background: var(--interactive-accent);
+	border-color: var(--interactive-accent);
+	color: var(--text-on-accent, #ffffff);
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.clickable-icon.hidden-files-editor-diff-btn.is-active {
+	color: var(--text-accent);
+}
+
+.clickable-icon.hidden-files-editor-diff-btn.has-changes {
+	color: var(--text-accent);
+}
+
+/* ── Status Bar Git Indicator ────────────────────────────────── */
+
+.vault-code-status-git {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	cursor: pointer;
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller, 11px);
+}
+
+.vault-code-status-git:hover {
+	color: var(--text-normal);
+}
+
+.vault-code-status-git-icon svg {
+	width: 12px;
+	height: 12px;
+	display: block;
+}
+
+.vault-code-status-git-dot {
+	color: var(--text-accent);
+	font-size: 8px;
+	line-height: 1;
+}
+
+.vault-code-status-git-count {
+	font-family: var(--font-monospace, monospace);
+	font-size: 10px;
+	font-weight: 600;
+	color: var(--text-accent);
+}
+
 
 

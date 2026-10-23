@@ -20,6 +20,7 @@ import {
 	Scope,
 	ViewStateResult,
 	requestUrl,
+	Menu,
 } from "obsidian";
 import {
 	EditorView,
@@ -36,6 +37,9 @@ import {
 	ViewUpdate,
 	Command,
 	ViewPlugin,
+	Decoration,
+	DecorationSet,
+	WidgetType,
 } from "@codemirror/view";
 import {
 	EditorState,
@@ -44,6 +48,8 @@ import {
 	Prec,
 	EditorSelection,
 	countColumn,
+	StateField,
+	RangeSetBuilder,
 } from "@codemirror/state";
 import {
 	defaultKeymap,
@@ -87,8 +93,17 @@ import {
 	closeBracketsKeymap,
 } from "@codemirror/autocomplete";
 import { languages } from "@codemirror/language-data";
+import {
+	unifiedMergeView,
+	goToNextChunk,
+	goToPreviousChunk,
+	getChunks,
+	acceptChunk,
+	rejectChunk,
+} from "@codemirror/merge";
 import mjml2html from "mjml-browser";
 import { t, setLanguage, SUPPORTED_LANGUAGES } from "./i18n";
+import { GitService } from "./git-service";
 
 /* ── View type constants ───────────────────────────────────── */
 
@@ -498,6 +513,7 @@ interface VaultCodeSettings {
 	tabSize: string;
 	indentWithTabs: string;
 	lineWrapping: boolean;
+	enableGitIntegration: boolean;
 }
 
 const DEFAULT_EXTENSIONS =
@@ -532,6 +548,7 @@ const DEFAULT_SETTINGS: VaultCodeSettings = {
 	tabSize: "auto",
 	indentWithTabs: "auto",
 	lineWrapping: true,
+	enableGitIntegration: true,
 };
 
 interface IgnoreRule {
@@ -790,6 +807,143 @@ class ConfirmReplaceAllModal extends Modal {
 
 		// Auto-focus confirm button
 		replaceAllBtn.focus();
+	}
+
+	onClose(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+	}
+}
+
+/* ── Confirm Revert Modal ───────────────────────────────────── */
+
+class ConfirmRevertModal extends Modal {
+	private fileName: string;
+	private onRevert: () => Promise<void> | void;
+
+	constructor(
+		app: App,
+		fileName: string,
+		onRevert: () => Promise<void> | void,
+	) {
+		super(app);
+		this.fileName = fileName;
+		this.onRevert = onRevert;
+	}
+
+	onOpen(): void {
+		this.containerEl.addClass("hidden-files-modal-container");
+		this.modalEl.addClass("hidden-files-modal-window");
+		const { contentEl } = this;
+		contentEl.empty();
+		contentEl.addClass("hidden-files-confirm-modal");
+
+		contentEl.createEl("h3", { text: t("gitModalRevertTitle") });
+		contentEl.createEl("p", {
+			text: t("gitModalRevertDesc", this.fileName),
+		});
+
+		const buttonContainer = contentEl.createDiv({
+			cls: "hidden-files-modal-buttons hidden-files-confirm-buttons",
+		});
+
+		const cancelBtn = buttonContainer.createEl("button", {
+			text: t("modalButtonCancel"),
+		});
+		cancelBtn.addEventListener("click", () => {
+			this.close();
+		});
+
+		const revertBtn = buttonContainer.createEl("button", {
+			cls: "mod-warning",
+			text: t("gitModalRevertConfirm"),
+		});
+		revertBtn.addEventListener("click", () => {
+			this.close();
+			void this.onRevert();
+		});
+
+		revertBtn.focus();
+	}
+
+	onClose(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+	}
+}
+
+/* ── Commit File Modal ─────────────────────────────────────── */
+
+class CommitFileModal extends Modal {
+	private fileName: string;
+	private onCommit: (message: string) => Promise<void> | void;
+	private inputEl: HTMLInputElement | null = null;
+
+	constructor(
+		app: App,
+		fileName: string,
+		onCommit: (message: string) => Promise<void> | void,
+	) {
+		super(app);
+		this.fileName = fileName;
+		this.onCommit = onCommit;
+	}
+
+	onOpen(): void {
+		this.containerEl.addClass("hidden-files-modal-container");
+		this.modalEl.addClass("hidden-files-modal-window");
+		const { contentEl } = this;
+		contentEl.empty();
+		contentEl.addClass("hidden-files-commit-modal");
+
+		contentEl.createEl("h3", { text: t("gitModalCommitTitle") });
+
+		const desc = contentEl.createEl("p", { cls: "hidden-files-modal-desc" });
+		desc.createSpan({
+			text: this.fileName,
+			cls: "vault-code-setting-filename",
+		});
+
+		const form = contentEl.createEl("form");
+		form.addEventListener("submit", (e) => {
+			e.preventDefault();
+			const msg = this.inputEl?.value.trim() || `Update ${this.fileName}`;
+			this.close();
+			void this.onCommit(msg);
+		});
+
+		const defaultMsg = `Update ${this.fileName}`;
+		this.inputEl = form.createEl("input", {
+			type: "text",
+			cls: "hidden-files-modal-input",
+			placeholder: t("gitModalCommitPlaceholder", this.fileName),
+		});
+		this.inputEl.value = defaultMsg;
+
+		const buttonContainer = form.createDiv({
+			cls: "hidden-files-modal-buttons",
+		});
+
+		const cancelBtn = buttonContainer.createEl("button", {
+			type: "button",
+			text: t("modalButtonCancel"),
+		});
+		cancelBtn.addEventListener("click", () => {
+			this.close();
+		});
+
+		buttonContainer.createEl("button", {
+			type: "submit",
+			cls: "mod-cta",
+			text: t("gitModalCommitConfirm"),
+		});
+
+		window.setTimeout(() => {
+			if (this.inputEl) {
+				this.inputEl.focus();
+				this.inputEl.select();
+			}
+		}, 30);
 	}
 
 	onClose(): void {
@@ -2173,6 +2327,11 @@ export class DotfileView extends TextFileView {
 	private filePath: string | null = null;
 	private gotoLineEl: HTMLElement | null = null;
 	private gotoLineInputEl: HTMLInputElement | null = null;
+	private gitDiffStatsBtnEl: HTMLButtonElement | null = null;
+	private diffCompartment = new Compartment();
+	public isDiffMode = false;
+	private diffToolbarEl: HTMLElement | null = null;
+	private initialDiffRequested = false;
 
 	constructor(leaf: WorkspaceLeaf, plugin: VaultCodePlugin) {
 		super(leaf);
@@ -2231,6 +2390,7 @@ export class DotfileView extends TextFileView {
 		const state = super.getState();
 		state.file = this.file ? this.file.path : this.filePath;
 		state.preview = this.isPreviewMode;
+		state.diff = this.isDiffMode;
 		return state;
 	}
 
@@ -2241,6 +2401,9 @@ export class DotfileView extends TextFileView {
 		}
 		if (s && typeof s.preview === "boolean") {
 			this.isPreviewMode = s.preview;
+		}
+		if (s && typeof s.diff === "boolean" && s.diff) {
+			this.initialDiffRequested = true;
 		}
 		await super.setState(state, result);
 	}
@@ -2255,6 +2418,11 @@ export class DotfileView extends TextFileView {
 		this.updateStatus();
 		this.updateDirtyUI();
 		this.updateViewModeUI();
+		void this.updateGitStatus();
+		if (this.initialDiffRequested) {
+			this.initialDiffRequested = false;
+			void this.setDiffMode(true);
+		}
 	}
 
 	canAcceptExtension(extension: string): boolean {
@@ -2484,6 +2652,8 @@ export class DotfileView extends TextFileView {
 		await super.save();
 		this.updateDirtyUI();
 		this.updateStatus();
+		void this.updateGitStatus();
+		this.plugin.debouncedUpdateGitStatus();
 		new Notice(t("noticeSaved"));
 	}
 
@@ -2507,6 +2677,8 @@ export class DotfileView extends TextFileView {
 		this.isModified = false;
 		await super.save(clear);
 		this.updateDirtyUI();
+		void this.updateGitStatus();
+		this.plugin.debouncedUpdateGitStatus();
 	}
 
 	private updateDirtyUI(): void {
@@ -2656,6 +2828,19 @@ export class DotfileView extends TextFileView {
 			this.toggleSearch();
 		});
 
+		// Git diff toggle button displaying diff stats (replaces duplicate git icon)
+		this.gitDiffStatsBtnEl = rightEl.createEl("button", {
+			cls: "vault-code-diff-stats-btn",
+			attr: {
+				type: "button",
+				"aria-label": t("gitViewChanges"),
+			},
+		});
+		this.gitDiffStatsBtnEl.addEventListener("click", () => {
+			void this.toggleDiffMode();
+		});
+		this.gitDiffStatsBtnEl.hide();
+
 		// View / Code toggle button for previewable files (svg, html, htm)
 		this.viewToggleBtnEl = rightEl.createEl("button", {
 			cls: "hidden-files-editor-view-toggle-btn",
@@ -2766,6 +2951,7 @@ export class DotfileView extends TextFileView {
 			this.lineWrappingCompartment.of(
 				this.isLineWrapping ? EditorView.lineWrapping : [],
 			),
+			this.diffCompartment.of([]),
 			Prec.highest(
 				keymap.of([
 					{
@@ -3077,10 +3263,25 @@ export class DotfileView extends TextFileView {
 		this.updateStatus();
 		this.updateDirtyUI();
 		this.updateViewModeUI();
+		void this.updateGitStatus();
+	}
+
+	override async onUnloadFile(file: TFile): Promise<void> {
+		if (this.diffToolbarEl) {
+			this.diffToolbarEl.remove();
+			this.diffToolbarEl = null;
+		}
+		this.isDiffMode = false;
+		await super.onUnloadFile(file);
 	}
 
 	async onClose(): Promise<void> {
 		this.closeGotoLine();
+		if (this.diffToolbarEl) {
+			this.diffToolbarEl.remove();
+			this.diffToolbarEl = null;
+		}
+		this.isDiffMode = false;
 		if (this.editor) {
 			this.editor.destroy();
 			this.editor = null;
@@ -3683,12 +3884,404 @@ export class DotfileView extends TextFileView {
 			});
 		}
 	}
+
+	public async revertToContent(content: string): Promise<void> {
+		this.data = content;
+		if (this.editor) {
+			this.editor.dispatch({
+				changes: {
+					from: 0,
+					to: this.editor.state.doc.length,
+					insert: content,
+				},
+			});
+		}
+		this.isModified = false;
+		this.updateDirtyUI();
+		await this.setDiffMode(false);
+	}
+
+	public async updateGitStatus(): Promise<void> {
+		if (!this.file || !this.plugin.isGitAvailable()) {
+			if (this.gitDiffStatsBtnEl) this.gitDiffStatsBtnEl.hide();
+			return;
+		}
+
+		if (!this.plugin.isFileSupportedForGitDiff(this.file)) {
+			if (this.gitDiffStatsBtnEl) this.gitDiffStatsBtnEl.hide();
+			return;
+		}
+
+		const isRepo = await this.plugin.gitService.isGitRepo();
+		if (!isRepo) {
+			if (this.gitDiffStatsBtnEl) this.gitDiffStatsBtnEl.hide();
+			return;
+		}
+
+		const stats = await this.plugin.gitService.getFileDiffStats(this.file.path);
+		if (this.gitDiffStatsBtnEl) {
+			this.gitDiffStatsBtnEl.empty();
+			if (stats && stats.isModified) {
+				const parts: string[] = [];
+				if (stats.deletions > 0) {
+					parts.push(`-${stats.deletions}`);
+				}
+				if (stats.additions > 0) {
+					parts.push(`+${stats.additions}`);
+				}
+				this.gitDiffStatsBtnEl.setText(parts.join(" "));
+				this.gitDiffStatsBtnEl.show();
+				this.gitDiffStatsBtnEl.addClass("has-changes");
+			} else {
+				this.gitDiffStatsBtnEl.hide();
+				this.gitDiffStatsBtnEl.removeClass("has-changes");
+				if (this.isDiffMode) {
+					void this.setDiffMode(false);
+					new Notice(t("gitAllChangesResolved"));
+				}
+			}
+
+			this.gitDiffStatsBtnEl.toggleClass("is-active", this.isDiffMode);
+			this.gitDiffStatsBtnEl.setAttribute(
+				"aria-label",
+				this.isDiffMode ? t("gitHideChanges") : t("gitViewChanges"),
+			);
+		}
+	}
+
+	public async toggleDiffMode(): Promise<void> {
+		await this.setDiffMode(!this.isDiffMode);
+	}
+
+	public async setDiffMode(enable: boolean): Promise<void> {
+		if (!this.editor || !this.file) return;
+		if (this.isDiffMode === enable) return;
+
+		if (enable) {
+			const stats = await this.plugin.gitService.getFileDiffStats(this.file.path);
+			if (!stats || !stats.isModified) {
+				new Notice(t("gitNoChanges"));
+				return;
+			}
+
+			if (this.isPreviewMode) {
+				this.toggleViewMode();
+			}
+
+			const headContent = await this.plugin.gitService.getHeadContent(this.file.path);
+			this.isDiffMode = true;
+
+			if (this.gitDiffStatsBtnEl) {
+				this.gitDiffStatsBtnEl.addClass("is-active");
+				this.gitDiffStatsBtnEl.setAttribute("aria-label", t("gitHideChanges"));
+			}
+
+			this.editor.dispatch({
+				effects: this.diffCompartment.reconfigure([
+					unifiedMergeView({
+						original: headContent,
+						highlightChanges: true,
+						gutter: true,
+						allowInlineDiffs: true,
+						mergeControls: false,
+						collapseUnchanged: {
+							margin: 3,
+							minSize: 4,
+						},
+					}),
+					this.createChunkActionBarsExtension(),
+				]),
+			});
+
+			this.renderDiffToolbar();
+		} else {
+			this.isDiffMode = false;
+			if (this.gitDiffStatsBtnEl) {
+				this.gitDiffStatsBtnEl.removeClass("is-active");
+				this.gitDiffStatsBtnEl.setAttribute("aria-label", t("gitViewChanges"));
+			}
+
+			this.editor.dispatch({
+				effects: this.diffCompartment.reconfigure([]),
+			});
+
+			if (this.diffToolbarEl) {
+				this.diffToolbarEl.remove();
+				this.diffToolbarEl = null;
+			}
+
+			void this.updateGitStatus();
+		}
+	}
+
+	private createChunkActionBarsExtension(): Extension {
+		class ChunkActionBarWidget extends WidgetType {
+			constructor(
+				private readonly chunkPos: number,
+				private readonly view: DotfileView,
+			) {
+				super();
+			}
+
+			eq(other: ChunkActionBarWidget): boolean {
+				return this.chunkPos === other.chunkPos;
+			}
+
+			toDOM(editorView: EditorView): HTMLElement {
+				const container = createDiv({
+					cls: "vault-code-chunk-actions-bar",
+				});
+				const inner = container.createDiv({
+					cls: "vault-code-chunk-actions-inner",
+				});
+
+				// Undo button (solid square, icon only)
+				const undoBtn = inner.createEl("button", {
+					cls: "vault-code-merge-chunk-btn is-reject",
+					attr: {
+						type: "button",
+						title: t("gitUndoChunk"),
+						"aria-label": t("gitUndoChunk"),
+					},
+				});
+				const undoIcon = undoBtn.createSpan({ cls: "vault-code-btn-icon" });
+				setIcon(undoIcon, "undo");
+
+				undoBtn.addEventListener("mousedown", (e: MouseEvent) => {
+					e.preventDefault();
+					e.stopPropagation();
+					rejectChunk(editorView, this.chunkPos);
+					void (async () => {
+						await this.view.save();
+						void this.view.updateGitStatus();
+						this.view.plugin.debouncedUpdateGitStatus();
+					})();
+				});
+
+				// Keep button (theme color, checkmark + Keep)
+				const keepBtn = inner.createEl("button", {
+					cls: "vault-code-merge-chunk-btn is-accept",
+					attr: {
+						type: "button",
+						title: t("gitKeepChunk"),
+						"aria-label": t("gitKeepChunk"),
+					},
+				});
+				const keepIcon = keepBtn.createSpan({ cls: "vault-code-btn-icon" });
+				setIcon(keepIcon, "check");
+				keepBtn.createSpan({
+					cls: "vault-code-btn-text",
+					text: t("gitKeepChunk"),
+				});
+
+				keepBtn.addEventListener("mousedown", (e: MouseEvent) => {
+					e.preventDefault();
+					e.stopPropagation();
+					acceptChunk(editorView, this.chunkPos);
+					void this.view.updateGitStatus();
+				});
+
+				return container;
+			}
+		}
+
+		const buildDecorations = (state: EditorState): DecorationSet => {
+			const result = getChunks(state);
+			const chunks = result ? result.chunks : [];
+			const builder = new RangeSetBuilder<Decoration>();
+			for (const chunk of chunks) {
+				builder.add(
+					chunk.toB,
+					chunk.toB,
+					Decoration.widget({
+						widget: new ChunkActionBarWidget(chunk.fromB, this),
+						block: true,
+						side: 1,
+					}),
+				);
+			}
+			return builder.finish();
+		};
+
+		return StateField.define<DecorationSet>({
+			create(state) {
+				return buildDecorations(state);
+			},
+			update(deco, tr) {
+				return buildDecorations(tr.state);
+			},
+			provide: (f) => EditorView.decorations.from(f),
+		});
+	}
+
+	private renderDiffToolbar(): void {
+		if (this.diffToolbarEl) {
+			this.diffToolbarEl.remove();
+			this.diffToolbarEl = null;
+		}
+		if (!this.editor || !this.editorEl || !this.file) return;
+
+		const toolbar = createDiv({
+			cls: "vault-code-diff-toolbar",
+		});
+		this.diffToolbarEl = toolbar;
+
+		// Insert toolbar between header and editor wrapper
+		this.editorEl.parentElement?.insertBefore(toolbar, this.editorEl);
+
+		// Left controls: navigation
+		const leftEl = toolbar.createDiv({ cls: "vault-code-diff-toolbar-left" });
+		const navGroup = leftEl.createDiv({ cls: "vault-code-diff-nav-group" });
+
+		const prevBtn = navGroup.createEl("button", {
+			cls: "clickable-icon vault-code-diff-nav-btn",
+			attr: { "aria-label": t("gitPreviousChange") },
+		});
+		setIcon(prevBtn, "chevron-up");
+		prevBtn.addEventListener("click", () => {
+			if (this.editor) goToPreviousChunk(this.editor);
+		});
+
+		const nextBtn = navGroup.createEl("button", {
+			cls: "clickable-icon vault-code-diff-nav-btn",
+			attr: { "aria-label": t("gitNextChange") },
+		});
+		setIcon(nextBtn, "chevron-down");
+		nextBtn.addEventListener("click", () => {
+			if (this.editor) goToNextChunk(this.editor);
+		});
+
+		// Right controls: Revert (two-step inline confirmation), Commit, Done
+		const rightEl = toolbar.createDiv({ cls: "vault-code-diff-toolbar-right" });
+
+		let isConfirmingRevert = false;
+		let revertTimeoutId: number | null = null;
+
+		const resetRevertButton = () => {
+			if (!isConfirmingRevert) return;
+			isConfirmingRevert = false;
+			if (revertTimeoutId !== null) {
+				window.clearTimeout(revertTimeoutId);
+				revertTimeoutId = null;
+			}
+			revertBtn.removeClass("is-confirming");
+			revertIcon.empty();
+			setIcon(revertIcon, "undo");
+			revertText.setText(t("gitModalRevertConfirm"));
+		};
+
+		const revertBtn = rightEl.createEl("button", {
+			cls: "vault-code-diff-action-btn mod-revert",
+			attr: {
+				type: "button",
+				"aria-label": t("gitRevertChanges"),
+			},
+		});
+		const revertIcon = revertBtn.createSpan({ cls: "vault-code-btn-icon" });
+		setIcon(revertIcon, "undo");
+		const revertText = revertBtn.createSpan({
+			cls: "vault-code-btn-text",
+			text: t("gitModalRevertConfirm"),
+		});
+
+		void this.plugin.gitService.getFileDiffStats(this.file.path).then((stats) => {
+			if (stats?.isUntracked) {
+				revertBtn.hide();
+			}
+		});
+
+		revertBtn.addEventListener("click", (e: MouseEvent) => {
+			e.preventDefault();
+			e.stopPropagation();
+
+			if (!isConfirmingRevert) {
+				isConfirmingRevert = true;
+				revertBtn.addClass("is-confirming");
+				revertIcon.empty();
+				setIcon(revertIcon, "alert-circle");
+				revertText.setText(t("gitConfirmRevert"));
+
+				revertTimeoutId = window.setTimeout(() => {
+					resetRevertButton();
+				}, 4000);
+				return;
+			}
+
+			if (revertTimeoutId !== null) {
+				window.clearTimeout(revertTimeoutId);
+				revertTimeoutId = null;
+			}
+			isConfirmingRevert = false;
+
+			void (async () => {
+				if (!this.file) return;
+				const ok = await this.plugin.gitService.discardFileChanges(this.file.path);
+				if (ok) {
+					const restored = await this.app.vault.adapter.read(this.file.path);
+					await this.revertToContent(restored);
+					void this.plugin.updateStatusBarGit();
+					new Notice(t("gitNoticeReverted", this.file.name));
+					await this.setDiffMode(false);
+				} else {
+					new Notice(t("gitNoticeRevertFailed", "Error discarding changes"));
+					resetRevertButton();
+				}
+			})();
+		});
+
+		const commitBtn = rightEl.createEl("button", {
+			cls: "vault-code-diff-action-btn mod-commit",
+			attr: { "aria-label": t("gitCommitFile") },
+		});
+		const commitIcon = commitBtn.createSpan({ cls: "vault-code-btn-icon" });
+		setIcon(commitIcon, "git-commit");
+		commitBtn.createSpan({
+			cls: "vault-code-btn-text",
+			text: t("gitModalCommitConfirm"),
+		});
+		commitBtn.addEventListener("click", () => {
+			if (!this.file) return;
+			void (async () => {
+				if (!this.file) return;
+				const stats = await this.plugin.gitService.getFileDiffStats(this.file.path);
+				if (!stats || !stats.isModified) {
+					new Notice(t("gitNoChanges"));
+					return;
+				}
+				new CommitFileModal(this.app, this.file.name, async (msg) => {
+					if (!this.file) return;
+					await this.saveExplicitly();
+					const res = await this.plugin.gitService.commitFile(this.file.path, msg);
+					if (res.success) {
+						new Notice(t("gitNoticeCommitted", this.file.name));
+						await this.setDiffMode(false);
+						void this.plugin.updateStatusBarGit();
+					} else {
+						new Notice(t("gitNoticeCommitFailed", res.error ?? "Git commit error"));
+					}
+				}).open();
+			})();
+		});
+
+		const doneBtn = rightEl.createEl("button", {
+			cls: "clickable-icon vault-code-diff-done-btn",
+			attr: { "aria-label": t("gitHideChanges") },
+		});
+		setIcon(doneBtn, "x");
+		doneBtn.addEventListener("click", () => {
+			void this.setDiffMode(false);
+		});
+	}
 }
 
 /* ── Plugin ────────────────────────────────────────────────── */
 
 export default class VaultCodePlugin extends Plugin {
 	settings!: VaultCodeSettings;
+	public gitService = new GitService(this.app);
+	public cachedModifiedFiles: Set<string> = new Set();
+	private statusBarGitEl: HTMLElement | null = null;
+	private gitStatusDebounceTimer: number | null = null;
 	private previousShowUnsupportedFiles = false;
 	private originalReconcileDeletion:
 		| PrivateAdapter["reconcileDeletion"]
@@ -3749,6 +4342,12 @@ export default class VaultCodePlugin extends Plugin {
 
 		await this.loadSettings();
 
+		if (Platform.isDesktop) {
+			this.statusBarGitEl = this.addStatusBarItem();
+			this.statusBarGitEl.addClass("vault-code-status-git");
+			this.statusBarGitEl.hide();
+		}
+
 		// Auto-create .obsidianignore if enabled and missing on startup
 		if (this.settings.useObsidianIgnore) {
 			try {
@@ -3778,26 +4377,30 @@ export default class VaultCodePlugin extends Plugin {
 
 		this.registerDomEvent(window, "input", this.onInputCapture, true);
 
-		// Watch for ignore file changes at vault root
+		// Watch for ignore file changes at vault root and git status updates
 		this.registerEvent(
 			this.app.vault.on("create", (file) => {
 				void this.handleIgnoreFileEvent(file.path);
+				this.debouncedUpdateGitStatus();
 			}),
 		);
 		this.registerEvent(
 			this.app.vault.on("modify", (file) => {
 				void this.handleIgnoreFileEvent(file.path);
+				this.debouncedUpdateGitStatus();
 			}),
 		);
 		this.registerEvent(
 			this.app.vault.on("delete", (file) => {
 				void this.handleIgnoreFileEvent(file.path);
+				this.debouncedUpdateGitStatus();
 			}),
 		);
 		this.registerEvent(
 			this.app.vault.on("rename", (file, oldPath) => {
 				void this.handleIgnoreFileEvent(file.path);
 				void this.handleIgnoreFileEvent(oldPath);
+				this.debouncedUpdateGitStatus();
 			}),
 		);
 
@@ -3810,6 +4413,13 @@ export default class VaultCodePlugin extends Plugin {
 				await this.rescanVault();
 			}
 
+			if (Platform.isDesktop) {
+				void this.gitService.getRepoRoot().then(() => {
+					this.updateAllLeafHeaderActions();
+					void this.updateStatusBarGit();
+				});
+			}
+
 			// Seamlessly restore code editor leaves on launch or after plugin update/reload
 			await this.reloadCodeEditorLeaves();
 			this.updateAllLeafHeaderActions();
@@ -3817,6 +4427,12 @@ export default class VaultCodePlugin extends Plugin {
 
 		if (this.app.workspace.layoutReady) {
 			void this.reloadCodeEditorLeaves();
+			if (Platform.isDesktop) {
+				void this.gitService.getRepoRoot().then(() => {
+					this.updateAllLeafHeaderActions();
+					void this.updateStatusBarGit();
+				});
+			}
 		}
 
 		this.registerEvent(
@@ -3959,6 +4575,22 @@ export default class VaultCodePlugin extends Plugin {
 
 									await this.toggleCodeEditorForLeaf(targetLeaf, file);
 								});
+							});
+						}
+
+						if (
+							this.isGitAvailable() &&
+							(this.gitService.isCachedGitRepo() ||
+								!this.gitService.hasCheckedRepo())
+						) {
+							menu.addItem((item) => {
+								item
+									.setTitle(t("gitViewChanges"))
+									.setIcon("git-compare")
+									.setSection("action")
+									.onClick(() => {
+										void this.openFileInDiffView(file);
+									});
 							});
 						}
 					}
@@ -4173,6 +4805,107 @@ export default class VaultCodePlugin extends Plugin {
 				return false;
 			},
 		});
+
+		this.addCommand({
+			id: "git-view-changes",
+			name: t("commandGitViewChanges"),
+			checkCallback: (checking: boolean) => {
+				if (!this.isGitAvailable()) return false;
+				const activeFile = this.app.workspace.getActiveFile();
+				if (!activeFile) return false;
+				if (!checking) {
+					const activeView =
+						this.app.workspace.getActiveViewOfType(DotfileView);
+					if (activeView && activeView.file?.path === activeFile.path) {
+						void activeView.toggleDiffMode();
+					} else {
+						void this.openFileInDiffView(activeFile);
+					}
+				}
+				return true;
+			},
+		});
+
+		this.addCommand({
+			id: "git-revert-changes",
+			name: t("commandGitRevertChanges"),
+			checkCallback: (checking: boolean) => {
+				if (!this.isGitAvailable()) return false;
+				const activeView =
+					this.app.workspace.getActiveViewOfType(DotfileView);
+				if (!activeView || !activeView.file) return false;
+				if (!checking) {
+					new ConfirmRevertModal(
+						this.app,
+						activeView.file.name,
+						async () => {
+							if (!activeView.file) return;
+							const ok = await this.gitService.discardFileChanges(
+								activeView.file.path,
+							);
+							if (ok) {
+								const restored = await this.app.vault.adapter.read(
+									activeView.file.path,
+								);
+								await activeView.revertToContent(restored);
+								void this.updateStatusBarGit();
+								new Notice(
+									t("gitNoticeReverted", activeView.file.name),
+								);
+							} else {
+								new Notice(
+									t(
+										"gitNoticeRevertFailed",
+										"Error discarding changes",
+									),
+								);
+							}
+						},
+					).open();
+				}
+				return true;
+			},
+		});
+
+		this.addCommand({
+			id: "git-commit-file",
+			name: t("commandGitCommitFile"),
+			checkCallback: (checking: boolean) => {
+				if (!this.isGitAvailable()) return false;
+				const activeView =
+					this.app.workspace.getActiveViewOfType(DotfileView);
+				if (!activeView || !activeView.file) return false;
+				if (!checking) {
+					new CommitFileModal(
+						this.app,
+						activeView.file.name,
+						async (msg) => {
+							if (!activeView.file) return;
+							await activeView.saveExplicitly();
+							const res = await this.gitService.commitFile(
+								activeView.file.path,
+								msg,
+							);
+							if (res.success) {
+								new Notice(
+									t("gitNoticeCommitted", activeView.file.name),
+								);
+								await activeView.setDiffMode(false);
+								void this.updateStatusBarGit();
+							} else {
+								new Notice(
+									t(
+										"gitNoticeCommitFailed",
+										res.error ?? "Git commit error",
+									),
+								);
+							}
+						},
+					).open();
+				}
+				return true;
+			},
+		});
 	}
 
 	private async reloadCodeEditorLeaves(): Promise<void> {
@@ -4220,6 +4953,11 @@ export default class VaultCodePlugin extends Plugin {
 	}
 
 	onunload() {
+		if (this.gitStatusDebounceTimer !== null) {
+			window.clearTimeout(this.gitStatusDebounceTimer);
+			this.gitStatusDebounceTimer = null;
+		}
+
 		// Save any dirty code editor views before unloading to prevent data loss
 		this.app.workspace.iterateAllLeaves((leaf) => {
 			if (leaf.view instanceof DotfileView && leaf.view.isDirty()) {
@@ -4254,6 +4992,176 @@ export default class VaultCodePlugin extends Plugin {
 		DotfileView.clearCssCache();
 	}
 
+	/* ── Git integration ───────────────────────────────────────── */
+
+	public isGitAvailable(): boolean {
+		return Boolean(
+			this.settings.enableGitIntegration && this.gitService.isAvailable(),
+		);
+	}
+
+	public async openFileInDiffView(file: TFile): Promise<void> {
+		if (!this.isFileSupportedForGitDiff(file)) {
+			new Notice(t("gitBinaryDiffUnsupported"));
+			const leaf = this.app.workspace.getLeaf(false);
+			await leaf.openFile(file);
+			return;
+		}
+		const stats = await this.gitService.getFileDiffStats(file.path);
+		if (!stats || !stats.isModified) {
+			new Notice(t("gitNoChanges"));
+			const leaf = this.app.workspace.getLeaf(false);
+			await leaf.openFile(file);
+			return;
+		}
+
+		let targetLeaf: WorkspaceLeaf | null = null;
+		this.app.workspace.iterateAllLeaves((leaf) => {
+			const view = leaf.view;
+			const viewFile = (view as { file?: TFile }).file;
+			if (viewFile && viewFile.path === file.path) {
+				targetLeaf = leaf;
+			}
+		});
+
+		if (!targetLeaf) {
+			targetLeaf = this.app.workspace.getLeaf(false);
+		}
+
+		await targetLeaf.setViewState({
+			type: VIEW_TYPE_DOTFILE,
+			active: true,
+			state: { file: file.path, diff: true },
+		});
+	}
+
+	public debouncedUpdateGitStatus(): void {
+		if (!this.isGitAvailable()) return;
+		if (this.gitStatusDebounceTimer !== null) {
+			window.clearTimeout(this.gitStatusDebounceTimer);
+		}
+		this.gitStatusDebounceTimer = window.setTimeout(() => {
+			this.gitStatusDebounceTimer = null;
+			void this.updateStatusBarGit();
+		}, 1500);
+	}
+
+	public async updateStatusBarGit(): Promise<void> {
+		if (!this.statusBarGitEl) return;
+		if (!this.isGitAvailable()) {
+			this.statusBarGitEl.empty();
+			this.statusBarGitEl.hide();
+			return;
+		}
+
+		const isRepo = await this.gitService.isGitRepo();
+		if (!isRepo) {
+			this.statusBarGitEl.empty();
+			this.statusBarGitEl.hide();
+			return;
+		}
+
+		const branch = await this.gitService.getCurrentBranch();
+		if (!branch) {
+			this.statusBarGitEl.empty();
+			this.statusBarGitEl.hide();
+			return;
+		}
+
+		const modifiedFiles = await this.gitService.getModifiedVaultFiles();
+		this.cachedModifiedFiles = modifiedFiles;
+		this.updateAllLeafHeaderActions();
+		const count = modifiedFiles.size;
+
+		this.statusBarGitEl.empty();
+		this.statusBarGitEl.show();
+
+		const iconSpan = this.statusBarGitEl.createSpan({
+			cls: "vault-code-status-git-icon",
+		});
+		setIcon(iconSpan, "git-branch");
+
+		this.statusBarGitEl.createSpan({
+			cls: "vault-code-status-git-branch",
+			text: branch,
+		});
+
+		if (count > 0) {
+			this.statusBarGitEl.createSpan({
+				cls: "vault-code-status-git-dot",
+				text: "●",
+			});
+			this.statusBarGitEl.createSpan({
+				cls: "vault-code-status-git-count",
+				text: String(count),
+			});
+		}
+
+		const tooltip =
+			count > 0
+				? `${t("gitBranchStatus", branch)} (${t("gitChangedFilesCount", count)})`
+				: t("gitBranchStatus", branch);
+		this.statusBarGitEl.setAttribute("aria-label", tooltip);
+
+		this.statusBarGitEl.onclick = (e: MouseEvent) => {
+			e.preventDefault();
+			e.stopPropagation();
+			const menu = new Menu();
+
+			menu.addItem((item) => {
+				item
+					.setTitle(`${t("gitBranchStatus", branch)}`)
+					.setIcon("git-branch")
+					.setDisabled(true);
+			});
+
+			menu.addSeparator();
+
+			if (count > 0) {
+				menu.addItem((item) => {
+					item
+						.setTitle(t("gitChangedFilesCount", count))
+						.setIcon("files")
+						.setDisabled(true);
+				});
+
+				let added = 0;
+				for (const filePath of modifiedFiles) {
+					if (added >= 10) break;
+					menu.addItem((item) => {
+						const fName = filePath.split("/").pop() ?? filePath;
+						item
+							.setTitle(fName)
+							.setIcon("file-code")
+							.onClick(() => {
+								const tfile =
+									this.app.vault.getAbstractFileByPath(
+										filePath,
+									);
+								if (tfile instanceof TFile) {
+									void this.openFileInDiffView(tfile);
+								}
+							});
+					});
+					added++;
+				}
+
+				menu.addSeparator();
+			}
+
+			menu.addItem((item) => {
+				item
+					.setTitle(t("gitRefreshStatus"))
+					.setIcon("refresh-cw")
+					.onClick(() => {
+						void this.updateStatusBarGit();
+					});
+			});
+
+			menu.showAtMouseEvent(e);
+		};
+	}
+
 	/* ── editability & extension handling ──────────────────── */
 
 	getCustomExtensionsSet(): Set<string> {
@@ -4274,6 +5182,20 @@ export default class VaultCodePlugin extends Plugin {
 		}
 		const ext = file.extension ? file.extension.toLowerCase() : "";
 		return ext === "md" || ext === "markdown";
+	}
+
+	public isFileSupportedForGitDiff(file: TFile | null): boolean {
+		if (!file || !(file instanceof TFile)) {
+			return false;
+		}
+		const ext = file.extension ? file.extension.toLowerCase() : "";
+		if (BINARY_EXTENSIONS.has(ext)) {
+			return false;
+		}
+		if (ext === "canvas") {
+			return false;
+		}
+		return this.isViewableInCodeEditor(file);
 	}
 
 	isViewableInCodeEditor(file: TFile): boolean {
@@ -4344,16 +5266,13 @@ export default class VaultCodePlugin extends Plugin {
 			".vault-code-header-toggle-btn",
 		);
 
+		const isCodeEditor = view instanceof DotfileView;
+
 		if (!isMarkdown) {
 			if (existingBtn) {
 				existingBtn.remove();
 			}
-			return;
-		}
-
-		const isCodeEditor = view instanceof DotfileView;
-
-		if (existingBtn) {
+		} else if (existingBtn) {
 			existingBtn.toggleClass("is-active", isCodeEditor);
 			existingBtn.setAttribute(
 				"aria-label",
@@ -4361,38 +5280,103 @@ export default class VaultCodePlugin extends Plugin {
 					? t("viewToggleTooltip")
 					: t("contextEditInCodeEditor"),
 			);
-			return;
+		} else {
+			const btn = createEl("button", {
+				cls: `clickable-icon view-action vault-code-header-toggle-btn${
+					isCodeEditor ? " is-active" : ""
+				}`,
+				attr: {
+					"aria-label": isCodeEditor
+						? t("viewToggleTooltip")
+						: t("contextEditInCodeEditor"),
+				},
+			});
+			setCodeIcon(btn);
+
+			btn.addEventListener("click", (evt: MouseEvent) => {
+				evt.preventDefault();
+				evt.stopPropagation();
+				void this.toggleCodeEditorForLeaf(leaf);
+			});
+
+			const moreBtn =
+				(view as unknown as { moreOptionsButtonEl?: HTMLElement })
+					.moreOptionsButtonEl ??
+				actionsEl.querySelector(
+					".clickable-icon[aria-label*='options' i], .clickable-icon:last-child",
+				);
+
+			if (moreBtn && moreBtn.parentElement === actionsEl) {
+				actionsEl.insertBefore(btn, moreBtn);
+			} else {
+				actionsEl.appendChild(btn);
+			}
 		}
 
-		const btn = createEl("button", {
-			cls: `clickable-icon view-action vault-code-header-toggle-btn${
-				isCodeEditor ? " is-active" : ""
-			}`,
-			attr: {
-				"aria-label": isCodeEditor
-					? t("viewToggleTooltip")
-					: t("contextEditInCodeEditor"),
-			},
-		});
-		setCodeIcon(btn);
+		// Git diff button in leaf header:
+		// DotfileView already has the inline stats button in its custom toolbar.
+		// For other views (e.g. Markdown view), we only show git-compare if the file has uncommitted changes and is supported.
+		const existingDiffBtn = actionsEl.querySelector<HTMLElement>(
+			".vault-code-header-diff-btn",
+		);
 
-		btn.addEventListener("click", (evt: MouseEvent) => {
-			evt.preventDefault();
-			evt.stopPropagation();
-			void this.toggleCodeEditorForLeaf(leaf);
-		});
+		const isGitAvailable = Boolean(file && this.isGitAvailable());
+		const isGitRepoKnown = this.gitService.isCachedGitRepo();
+		const isRepoChecked = this.gitService.hasCheckedRepo();
 
-		const moreBtn =
-			(view as unknown as { moreOptionsButtonEl?: HTMLElement })
-				.moreOptionsButtonEl ??
-			actionsEl.querySelector(
-				".clickable-icon[aria-label*='options' i], .clickable-icon:last-child",
-			);
+		if (isGitAvailable && !isRepoChecked) {
+			void this.gitService.isGitRepo().then((isRepo) => {
+				if (isRepo) {
+					this.updateLeafHeaderActions(leaf);
+				}
+			});
+		}
 
-		if (moreBtn && moreBtn.parentElement === actionsEl) {
-			actionsEl.insertBefore(btn, moreBtn);
-		} else {
-			actionsEl.appendChild(btn);
+		const isGitReady = isGitAvailable && (isGitRepoKnown || !isRepoChecked);
+		const isSupportedForDiff = file
+			? this.isFileSupportedForGitDiff(file)
+			: false;
+		const hasChanges = Boolean(
+			file && this.cachedModifiedFiles.has(file.path),
+		);
+		const shouldShowHeaderDiffBtn =
+			!(view instanceof DotfileView) &&
+			isGitReady &&
+			isSupportedForDiff &&
+			hasChanges;
+
+		if (shouldShowHeaderDiffBtn) {
+			if (!existingDiffBtn) {
+				const diffBtn = createEl("button", {
+					cls: "clickable-icon view-action vault-code-header-diff-btn",
+					attr: {
+						"aria-label": t("gitViewChanges"),
+					},
+				});
+				setIcon(diffBtn, "git-compare");
+				diffBtn.addEventListener("click", (evt: MouseEvent) => {
+					evt.preventDefault();
+					evt.stopPropagation();
+					if (file) {
+						void this.openFileInDiffView(file);
+					}
+				});
+
+				const moreBtn =
+					(view as unknown as { moreOptionsButtonEl?: HTMLElement })
+						.moreOptionsButtonEl ??
+					actionsEl.querySelector(
+						".clickable-icon[aria-label*='options' i], .clickable-icon:last-child",
+					);
+
+				if (moreBtn && moreBtn.parentElement === actionsEl) {
+					actionsEl.insertBefore(diffBtn, moreBtn);
+				} else {
+					actionsEl.appendChild(diffBtn);
+				}
+			}
+		} else if (existingDiffBtn) {
+			existingDiffBtn.remove();
 		}
 	}
 
@@ -6464,6 +7448,19 @@ class VaultCodeSettingTab extends PluginSettingTab {
 					);
 				}),
 		);
+
+		new Setting(containerEl)
+			.setName(t("settingsGitName"))
+			.setDesc(t("settingsGitDesc"))
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.enableGitIntegration ?? true)
+					.onChange(async (value) => {
+						this.plugin.settings.enableGitIntegration = value;
+						await this.plugin.saveSettings();
+						void this.plugin.updateStatusBarGit();
+					}),
+			);
 
 		new Setting(containerEl)
 			.setClass("vault-code-reset-setting")
