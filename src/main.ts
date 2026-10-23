@@ -1134,9 +1134,15 @@ class ChangedFilesModal extends FuzzySuggestModal<TFile> {
 	}
 
 	renderSuggestion(match: FuzzyMatch<TFile>, el: HTMLElement): void {
-		super.renderSuggestion(match, el);
+		el.addClass("mod-complex");
+		const iconContainer = el.createDiv({ cls: "suggestion-icon" });
+		const iconEl = iconContainer.createSpan({ cls: "suggestion-flair" });
+		setIcon(iconEl, "git-compare");
+		const contentEl = el.createDiv({ cls: "suggestion-content" });
+		const titleEl = contentEl.createDiv({ cls: "suggestion-title" });
+		super.renderSuggestion(match, titleEl);
 		if (match.item.parent && !match.item.parent.isRoot()) {
-			el.createSpan({
+			titleEl.createSpan({
 				cls: "vault-code-branch-current-tag",
 				text: ` (${match.item.parent.path})`,
 			});
