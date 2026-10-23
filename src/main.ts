@@ -23,6 +23,7 @@ import {
 	ViewStateResult,
 	requestUrl,
 	Menu,
+	View,
 } from "obsidian";
 import {
 	EditorView,
@@ -5564,12 +5565,98 @@ export default class VaultCodePlugin extends Plugin {
 		);
 	}
 
+	public getActiveWorkspaceLeaf(): WorkspaceLeaf | null {
+		const activeView =
+			this.app.workspace.getActiveViewOfType(DotfileView) ??
+			this.app.workspace.getActiveViewOfType(TextFileView) ??
+			this.app.workspace.getActiveViewOfType(View);
+		if (activeView && activeView.leaf) {
+			return activeView.leaf;
+		}
+		const mostRecent = (
+			this.app.workspace as unknown as {
+				getMostRecentLeaf?: () => WorkspaceLeaf | null;
+			}
+		).getMostRecentLeaf?.();
+		if (mostRecent) {
+			return mostRecent;
+		}
+		return this.app.workspace.getLeaf(false);
+	}
+
+	public getLeafFilePath(
+		leaf: WorkspaceLeaf | null | undefined,
+	): string | null {
+		if (!leaf || !leaf.view) return null;
+		const view = leaf.view as unknown as {
+			file?: TFile;
+			filePath?: string;
+		};
+		if (view.file && typeof view.file.path === "string") {
+			return view.file.path;
+		}
+		if (typeof view.filePath === "string") {
+			return view.filePath;
+		}
+		return null;
+	}
+
+	public isLeafDirty(leaf: WorkspaceLeaf | null | undefined): boolean {
+		if (!leaf || !leaf.view) return false;
+		const view = leaf.view;
+		if (view instanceof DotfileView) {
+			return view.isDirty();
+		}
+		const anyView = view as unknown as {
+			isDirty?: () => boolean;
+			isModified?: boolean;
+		};
+		if (typeof anyView.isDirty === "function") {
+			try {
+				return Boolean(anyView.isDirty());
+			} catch {
+				// ignore
+			}
+		}
+		if (typeof anyView.isModified === "boolean") {
+			return anyView.isModified;
+		}
+		return false;
+	}
+
+	public async saveLeafViewIfDirty(
+		leaf: WorkspaceLeaf | null | undefined,
+	): Promise<void> {
+		if (!leaf || !leaf.view) return;
+		const view = leaf.view;
+		if (view instanceof DotfileView) {
+			if (view.isDirty()) {
+				await view.saveExplicitly();
+			}
+			return;
+		}
+		const anyView = view as unknown as {
+			save?: () => Promise<void>;
+		};
+		if (typeof anyView.save === "function") {
+			try {
+				await anyView.save();
+			} catch {
+				// ignore
+			}
+		}
+	}
+
 	public async openFileInDiffView(file: TFile): Promise<void> {
 		if (!this.isGitAvailable()) return;
 		if (!this.isFileSupportedForGitDiff(file)) {
 			new Notice(t("gitBinaryDiffUnsupported"));
-			const leaf = this.app.workspace.getLeaf(false);
-			await leaf.openFile(file);
+			const activeLeaf = this.getActiveWorkspaceLeaf();
+			const isDirty = this.isLeafDirty(activeLeaf);
+			const targetLeaf = isDirty
+				? this.app.workspace.getLeaf(true)
+				: (activeLeaf ?? this.app.workspace.getLeaf(false));
+			await targetLeaf.openFile(file);
 			return;
 		}
 		const stats = await this.gitService.getFileDiffStats(file.path);
@@ -5578,56 +5665,72 @@ export default class VaultCodePlugin extends Plugin {
 			return;
 		}
 
-		let targetLeaf: WorkspaceLeaf | null = null;
-		const activeView =
-			this.app.workspace.getActiveViewOfType(TextFileView) ??
-			this.app.workspace.getActiveViewOfType(DotfileView);
-		if (activeView && activeView.file?.path === file.path) {
-			targetLeaf = activeView.leaf;
-		}
-
-		if (!targetLeaf) {
+		// 1. Check if the target file is already open in any existing leaf
+		let existingLeaf: WorkspaceLeaf | null = null;
+		const activeLeaf = this.getActiveWorkspaceLeaf();
+		if (activeLeaf && this.getLeafFilePath(activeLeaf) === file.path) {
+			existingLeaf = activeLeaf;
+		} else {
 			this.app.workspace.iterateAllLeaves((leaf) => {
-				const view = leaf.view;
-				const viewFile = (view as { file?: TFile }).file;
-				if (viewFile && viewFile.path === file.path) {
-					targetLeaf = leaf;
+				if (!existingLeaf && this.getLeafFilePath(leaf) === file.path) {
+					existingLeaf = leaf;
 				}
 			});
 		}
 
-		if (!targetLeaf) {
-			targetLeaf = this.app.workspace.getLeaf(false);
-		}
+		if (existingLeaf) {
+			this.app.workspace.setActiveLeaf(existingLeaf, { focus: true });
+			if (existingLeaf.view instanceof DotfileView) {
+				await existingLeaf.view.setDiffMode(true);
+				this.updateAllLeafHeaderActions();
+				return;
+			}
 
-		if (targetLeaf.view instanceof DotfileView) {
-			this.app.workspace.setActiveLeaf(targetLeaf, { focus: true });
-			await targetLeaf.view.setDiffMode(true);
+			await this.saveLeafViewIfDirty(existingLeaf);
+			await existingLeaf.setViewState({
+				type: VIEW_TYPE_DOTFILE,
+				active: true,
+			});
+			await existingLeaf.openFile(file, {
+				active: true,
+				state: { diff: true },
+			});
+			if (existingLeaf.view instanceof DotfileView) {
+				await existingLeaf.view.setDiffMode(true);
+			}
 			this.updateAllLeafHeaderActions();
 			return;
 		}
 
-		const currentView = targetLeaf.view as unknown as {
-			save?: () => Promise<void>;
-		};
-		if (typeof currentView?.save === "function") {
-			try {
-				await currentView.save();
-			} catch {
-				// Ignore save error
-			}
+		// 2. Target file is not open in any existing leaf.
+		// If the active tab has unsaved changes, preserve it and open in a new tab.
+		// Otherwise, open on that existing tab.
+		const isCurrentDirty = this.isLeafDirty(activeLeaf);
+		let targetLeaf: WorkspaceLeaf;
+		if (isCurrentDirty) {
+			targetLeaf = this.app.workspace.getLeaf(true);
+		} else {
+			targetLeaf = activeLeaf ?? this.app.workspace.getLeaf(false);
+			await this.saveLeafViewIfDirty(targetLeaf);
 		}
 
-		await targetLeaf.setViewState({
-			type: VIEW_TYPE_DOTFILE,
+		this.app.workspace.setActiveLeaf(targetLeaf, { focus: true });
+
+		if (!(targetLeaf.view instanceof DotfileView)) {
+			await targetLeaf.setViewState({
+				type: VIEW_TYPE_DOTFILE,
+				active: true,
+			});
+		}
+
+		await targetLeaf.openFile(file, {
 			active: true,
-			state: { file: file.path, diff: true },
+			state: { diff: true },
 		});
 
 		if (targetLeaf.view instanceof DotfileView) {
 			await targetLeaf.view.setDiffMode(true);
 		}
-
 		this.updateAllLeafHeaderActions();
 	}
 
@@ -6367,14 +6470,9 @@ export default class VaultCodePlugin extends Plugin {
 					return;
 				}
 
-				// If this active leaf is a dirty code file and auto-save is disabled,
-				// do NOT replace it! Open the clicked file in a new tab instead.
-				if (
-					plugin.settings.disableAutoSave &&
-					this.view instanceof DotfileView &&
-					this.view.isDirty()
-				) {
-					const newLeaf = plugin.app.workspace.getLeaf("tab");
+				// If this active leaf has unsaved changes, do NOT replace it! Open the clicked file in a new tab instead.
+				if (plugin.isLeafDirty(this)) {
+					const newLeaf = plugin.app.workspace.getLeaf(true);
 					return newLeaf.openFile(file, openState);
 				}
 
@@ -6393,29 +6491,36 @@ export default class VaultCodePlugin extends Plugin {
 							? Boolean(stateObj.active)
 							: true;
 
-					await this.setViewState({
-						type: VIEW_TYPE_DOTFILE,
-						state: innerState,
-						active: active,
-						group: stateObj.group as WorkspaceLeaf | undefined,
-					});
-					return;
+					if (!(this.view instanceof DotfileView)) {
+						await this.setViewState({
+							type: VIEW_TYPE_DOTFILE,
+							state: innerState,
+							active: active,
+							group: stateObj.group as WorkspaceLeaf | undefined,
+						});
+					}
+					return origOpenFile.call(this, file, openState);
 				}
 
+				const stateObj =
+					openState && typeof openState === "object"
+						? (openState as Record<string, unknown>)
+						: {};
+				const innerState =
+					stateObj.state && typeof stateObj.state === "object"
+						? (stateObj.state as Record<string, unknown>)
+						: {};
+				const isDiffRequested = Boolean(
+					stateObj.diff || innerState.diff,
+				);
+
 				if (
+					!isDiffRequested &&
 					this.view instanceof DotfileView &&
 					file instanceof TFile &&
 					plugin.isMarkdownFile(file) &&
 					!plugin.isFileEditable(file)
 				) {
-					const stateObj =
-						openState && typeof openState === "object"
-							? (openState as Record<string, unknown>)
-							: {};
-					const innerState =
-						stateObj.state && typeof stateObj.state === "object"
-							? { ...(stateObj.state as Record<string, unknown>) }
-							: {};
 					innerState.file = file.path;
 					const active =
 						stateObj.active !== undefined
@@ -6428,7 +6533,7 @@ export default class VaultCodePlugin extends Plugin {
 						active: active,
 						group: stateObj.group as WorkspaceLeaf | undefined,
 					});
-					return;
+					return origOpenFile.call(this, file, openState);
 				}
 				return origOpenFile.call(this, file, openState);
 			};
