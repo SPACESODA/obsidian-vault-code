@@ -6520,27 +6520,40 @@ export default class VaultCodePlugin extends Plugin {
 			let cleanName = newName.replace(/[\x00-\x1F]/g, " ").trim();
 			if (!cleanName) return "";
 
-			// Check if cleanName has an explicit valid extension or is a dotfile
-			const lastDot = cleanName.lastIndexOf(".");
-			const isDotfile = cleanName.startsWith(".");
-			let hasExtension = false;
+			const isMarkdown =
+				this.extension === "md" || this.extension === "markdown";
 
-			if (lastDot > 0 && lastDot < cleanName.length - 1) {
-				const candidate = cleanName.slice(lastDot + 1);
+			if (isMarkdown) {
+				// For Markdown notes, the title in Obsidian note view is purely the note title.
+				// Regardless of dots, spaces, or words in the title (e.g. "1. How it works", "app.txt details", "App.v1"),
+				// a Markdown note must ALWAYS retain its .md extension unless .md was already explicitly typed.
 				if (
-					(this.extension &&
-						candidate.toLowerCase() ===
-							this.extension.toLowerCase()) ||
-					plugin.isKnownExtension(candidate)
+					!cleanName.toLowerCase().endsWith(".md") &&
+					!cleanName.toLowerCase().endsWith(".markdown")
 				) {
-					hasExtension = true;
+					cleanName = `${cleanName}.${this.extension || "md"}`;
 				}
-			}
+			} else {
+				// For non-markdown files (code files, dotfiles, data files)
+				const isDotfile = cleanName.startsWith(".");
+				const lastDot = cleanName.lastIndexOf(".");
+				let hasExplicitValidExt = false;
 
-			// If it does not have an explicit valid extension and is not a dotfile,
-			// preserve the file's current extension (e.g. .md, .canvas, .json)
-			if (!hasExtension && !isDotfile && this.extension) {
-				cleanName = `${cleanName}.${this.extension}`;
+				if (lastDot > 0 && lastDot < cleanName.length - 1) {
+					const candidate = cleanName.slice(lastDot + 1);
+					if (
+						(this.extension &&
+							candidate.toLowerCase() ===
+								this.extension.toLowerCase()) ||
+						plugin.isKnownExtension(candidate)
+					) {
+						hasExplicitValidExt = true;
+					}
+				}
+
+				if (!hasExplicitValidExt && !isDotfile && this.extension) {
+					cleanName = `${cleanName}.${this.extension}`;
+				}
 			}
 
 			const parentPath =
@@ -6964,11 +6977,18 @@ export default class VaultCodePlugin extends Plugin {
 							this.view?.app?.vault?.getConfig("spellcheck");
 						this.innerEl.setAttribute("spellcheck", String(spellcheck));
 
-						// Display the full filename in innerEl
-						this.innerEl.setText(file.name);
+						const isMarkdown =
+							file.extension === "md" ||
+							file.extension === "markdown";
+						const displayName = isMarkdown
+							? file.basename
+							: file.name;
+
+						// Display displayName in innerEl
+						this.innerEl.setText(displayName);
 
 						// Pre-select only the basename if the file has an extension
-						const dotIndex = file.name.lastIndexOf(".");
+						const dotIndex = displayName.lastIndexOf(".");
 						const textNode = this.innerEl.firstChild;
 						if (
 							textNode &&
@@ -6977,7 +6997,9 @@ export default class VaultCodePlugin extends Plugin {
 						) {
 							const len = textNode.textContent.length;
 							const selectEnd =
-								dotIndex > 0 ? Math.min(dotIndex, len) : len;
+								!isMarkdown && dotIndex > 0
+									? Math.min(dotIndex, len)
+									: len;
 							const win =
 								(this.innerEl as unknown as { win?: Window }).win ??
 								window;
