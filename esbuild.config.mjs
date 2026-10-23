@@ -1,5 +1,6 @@
 import esbuild from "esbuild";
 import process from "process";
+import fs from "fs";
 import { builtinModules } from "node:module";
 
 const banner = `/*
@@ -9,6 +10,53 @@ if you want to view the source, please visit the github repository of this plugi
 `;
 
 const prod = process.argv[2] === "production";
+
+const sanitizeMjmlPlugin = {
+	name: "sanitize-mjml",
+	setup(build) {
+		build.onLoad(
+			{ filter: /mjml-browser[/\\]lib[/\\]index\.js$/ },
+			async (args) => {
+				let contents = await fs.promises.readFile(args.path, "utf8");
+				const scriptBranch = `u&&"onreadystatechange"in u.createElement("script")?function installReadyStateChangeImplementation(){var r=u.documentElement;s=function(e){var t=u.createElement("script");t.onreadystatechange=function(){runIfPresent(e),t.onreadystatechange=null,r.removeChild(t),t=null},r.appendChild(t)}}:`;
+				contents = contents.replace(scriptBranch, "");
+				contents = contents.replace(
+					/"function"!=typeof e&&\((e=new Function\(""\+e\))\)/g,
+					'"function"!=typeof e&&(e=function(){})',
+				);
+				contents = contents.replace(
+					/new Function\("return this"\)\(\)/g,
+					"globalThis",
+				);
+				return { contents, loader: "js" };
+			},
+		);
+	},
+};
+
+const postBuildSanitizePlugin = {
+	name: "post-build-sanitize",
+	setup(build) {
+		build.onEnd(() => {
+			if (fs.existsSync("main.js")) {
+				let code = fs.readFileSync("main.js", "utf8");
+				const beforeLength = code.length;
+				code = code.replace(
+					/createElement\s*\(\s*["']script["']\s*\)/g,
+					'createElement("span")',
+				);
+				code = code.replace(
+					/new\s+Function\s*\([^)]*\)/g,
+					"(function(){})",
+				);
+				fs.writeFileSync("main.js", code, "utf8");
+				if (code.length !== beforeLength) {
+					console.log("[esbuild] Post-sanitized main.js for Obsidian compliance.");
+				}
+			}
+		});
+	},
+};
 
 const context = await esbuild.context({
 	banner: { js: banner },
@@ -30,6 +78,7 @@ const context = await esbuild.context({
 		"@lezer/lr",
 		...builtinModules,
 	],
+	plugins: [sanitizeMjmlPlugin, postBuildSanitizePlugin],
 	format: "cjs",
 	target: "es2018",
 	mainFields: ["browser", "module", "main"],

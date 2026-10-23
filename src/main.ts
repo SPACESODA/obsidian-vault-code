@@ -676,6 +676,7 @@ class ConfirmCloseModal extends Modal {
 	}
 
 	onOpen(): void {
+		this.containerEl.addClass("hidden-files-modal-container");
 		this.modalEl.addClass("hidden-files-modal-window");
 		const { contentEl } = this;
 		contentEl.empty();
@@ -748,6 +749,7 @@ class ConfirmReplaceAllModal extends Modal {
 	}
 
 	onOpen(): void {
+		this.containerEl.addClass("hidden-files-modal-container");
 		this.modalEl.addClass("hidden-files-modal-window");
 		const { contentEl } = this;
 		contentEl.empty();
@@ -815,6 +817,7 @@ class CreateFileModal extends Modal {
 	}
 
 	onOpen(): void {
+		this.containerEl.addClass("hidden-files-modal-container");
 		this.modalEl.addClass("hidden-files-modal-window");
 		const { contentEl } = this;
 		contentEl.empty();
@@ -993,6 +996,7 @@ class RenameModal extends Modal {
 	}
 
 	onOpen(): void {
+		this.containerEl.addClass("hidden-files-modal-container");
 		this.modalEl.addClass("hidden-files-modal-window");
 		const { contentEl } = this;
 		contentEl.empty();

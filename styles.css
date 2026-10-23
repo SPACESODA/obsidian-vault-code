@@ -635,27 +635,93 @@ input.hidden-files-search-input,
 	box-sizing: border-box;
 }
 
+/* Phone layout for search & replace panel across portrait and landscape */
+body.is-phone .hidden-files-search-panel {
+	padding: 4px 8px;
+	gap: 4px;
+}
+
+body.is-phone .hidden-files-search-row,
+body.is-phone .hidden-files-replace-row {
+	gap: 4px;
+	flex-wrap: nowrap;
+}
+
+body.is-phone .hidden-files-search-chevron-btn {
+	width: 22px;
+	height: 22px;
+	min-width: 22px;
+	min-height: 22px;
+	margin-top: 2px;
+}
+
+body.is-phone .hidden-files-search-chevron-btn svg {
+	width: 13px;
+	height: 13px;
+}
+
+body.is-phone .hidden-files-replace-row {
+	padding-left: 26px;
+}
+
+body.is-phone .hidden-files-search-input-wrapper,
+body.is-phone .hidden-files-replace-input-wrapper {
+	min-width: 60px;
+	min-height: 26px;
+	padding: 2px 4px 2px 6px;
+}
+
+body.is-phone .hidden-files-search-input-wrapper textarea.hidden-files-search-input,
+body.is-phone .hidden-files-replace-input-wrapper textarea.hidden-files-search-input {
+	font-size: 11px;
+	min-height: 20px;
+}
+
+body.is-phone .hidden-files-search-toggles {
+	gap: 1px;
+}
+
+body.is-phone .hidden-files-search-toggle-btn {
+	font-size: 10px;
+	padding: 0 3px;
+	height: 18px;
+	min-width: 18px;
+}
+
+body.is-phone .hidden-files-search-actions,
+body.is-phone .hidden-files-replace-actions {
+	gap: 2px;
+	width: 76px;
+	min-width: 76px;
+}
+
+body.is-phone .hidden-files-search-actions .clickable-icon,
+body.is-phone .hidden-files-replace-actions .clickable-icon,
+body.is-phone .hidden-files-search-action-icon {
+	width: 24px;
+	height: 24px;
+	min-width: 24px;
+	min-height: 24px;
+}
+
+body.is-phone .hidden-files-search-actions .clickable-icon svg,
+body.is-phone .hidden-files-replace-actions .clickable-icon svg,
+body.is-phone .hidden-files-search-action-icon svg {
+	width: 14px;
+	height: 14px;
+}
+
 /* Mobile responsive layout for search & replace panel */
-body.is-phone .hidden-files-search-panel,
 @media (max-width: 600px) {
 	.hidden-files-search-panel {
 		padding: 4px 8px;
 		gap: 4px;
 	}
-}
-
-body.is-phone .hidden-files-search-row,
-body.is-phone .hidden-files-replace-row,
-@media (max-width: 600px) {
 	.hidden-files-search-row,
 	.hidden-files-replace-row {
 		gap: 4px;
 		flex-wrap: nowrap;
 	}
-}
-
-body.is-phone .hidden-files-search-chevron-btn,
-@media (max-width: 600px) {
 	.hidden-files-search-chevron-btn {
 		width: 22px;
 		height: 22px;
@@ -663,76 +729,39 @@ body.is-phone .hidden-files-search-chevron-btn,
 		min-height: 22px;
 		margin-top: 2px;
 	}
-}
-
-body.is-phone .hidden-files-search-chevron-btn svg,
-@media (max-width: 600px) {
 	.hidden-files-search-chevron-btn svg {
 		width: 13px;
 		height: 13px;
 	}
-}
-
-body.is-phone .hidden-files-replace-row,
-@media (max-width: 600px) {
 	.hidden-files-replace-row {
 		padding-left: 26px;
 	}
-}
-
-body.is-phone .hidden-files-search-input-wrapper,
-body.is-phone .hidden-files-replace-input-wrapper,
-@media (max-width: 600px) {
 	.hidden-files-search-input-wrapper,
 	.hidden-files-replace-input-wrapper {
 		min-width: 60px;
 		min-height: 26px;
 		padding: 2px 4px 2px 6px;
 	}
-}
-
-body.is-phone .hidden-files-search-input-wrapper textarea.hidden-files-search-input,
-body.is-phone .hidden-files-replace-input-wrapper textarea.hidden-files-search-input,
-@media (max-width: 600px) {
 	.hidden-files-search-input-wrapper textarea.hidden-files-search-input,
 	.hidden-files-replace-input-wrapper textarea.hidden-files-search-input {
 		font-size: 11px;
 		min-height: 20px;
 	}
-}
-
-body.is-phone .hidden-files-search-toggles,
-@media (max-width: 600px) {
 	.hidden-files-search-toggles {
 		gap: 1px;
 	}
-}
-
-body.is-phone .hidden-files-search-toggle-btn,
-@media (max-width: 600px) {
 	.hidden-files-search-toggle-btn {
 		font-size: 10px;
 		padding: 0 3px;
 		height: 18px;
 		min-width: 18px;
 	}
-}
-
-body.is-phone .hidden-files-search-actions,
-body.is-phone .hidden-files-replace-actions,
-@media (max-width: 600px) {
 	.hidden-files-search-actions,
 	.hidden-files-replace-actions {
 		gap: 2px;
 		width: 76px;
 		min-width: 76px;
 	}
-}
-
-body.is-phone .hidden-files-search-actions .clickable-icon,
-body.is-phone .hidden-files-replace-actions .clickable-icon,
-body.is-phone .hidden-files-search-action-icon,
-@media (max-width: 600px) {
 	.hidden-files-search-actions .clickable-icon,
 	.hidden-files-replace-actions .clickable-icon,
 	.hidden-files-search-action-icon {
@@ -741,12 +770,6 @@ body.is-phone .hidden-files-search-action-icon,
 		min-width: 24px;
 		min-height: 24px;
 	}
-}
-
-body.is-phone .hidden-files-search-actions .clickable-icon svg,
-body.is-phone .hidden-files-replace-actions .clickable-icon svg,
-body.is-phone .hidden-files-search-action-icon svg,
-@media (max-width: 600px) {
 	.hidden-files-search-actions .clickable-icon svg,
 	.hidden-files-replace-actions .clickable-icon svg,
 	.hidden-files-search-action-icon svg {
@@ -1238,40 +1261,30 @@ body .hidden-files-editor-wrapper .cm-searchMatch-selected {
 }
 
 /* Mobile device phone modal positioning (ensures keyboard does not overlay modal) */
-body.is-phone .modal-container:has(.hidden-files-modal-window),
-body.is-phone .modal-container:has(.hidden-files-form-modal),
-body.is-phone .modal-container:has(.hidden-files-confirm-modal) {
+body.is-phone .modal-container.hidden-files-modal-container {
 	align-items: flex-start;
 	padding-top: calc(env(safe-area-inset-top, 20px) + 20px);
 }
 
-body.is-phone .modal.hidden-files-modal-window,
-body.is-phone .modal:has(.hidden-files-form-modal),
-body.is-phone .modal:has(.hidden-files-confirm-modal) {
+body.is-phone .modal.hidden-files-modal-window {
 	align-self: flex-start;
 	margin-top: calc(env(safe-area-inset-top, 20px) + 20px);
 	margin-bottom: auto;
-	max-height: calc(100vh - 120px);
 	max-height: calc(100dvh - 120px);
 	overflow-y: auto;
 }
 
 @media (max-width: 540px) {
 	/* Position modal comfortably above on-screen virtual keyboard */
-	.modal-container:has(.hidden-files-modal-window),
-	.modal-container:has(.hidden-files-form-modal),
-	.modal-container:has(.hidden-files-confirm-modal) {
+	.modal-container.hidden-files-modal-container {
 		align-items: flex-start;
 		padding-top: calc(env(safe-area-inset-top, 20px) + 20px);
 	}
 
-	.modal.hidden-files-modal-window,
-	.modal:has(.hidden-files-form-modal),
-	.modal:has(.hidden-files-confirm-modal) {
+	.modal.hidden-files-modal-window {
 		align-self: flex-start;
 		margin-top: calc(env(safe-area-inset-top, 20px) + 20px);
 		margin-bottom: auto;
-		max-height: calc(100vh - 120px);
 		max-height: calc(100dvh - 120px);
 		overflow-y: auto;
 	}
