@@ -17,4 +17,6 @@ Thumbs.db
 npm-debug.log
 
 # Obsidian
+.obsidian/plugins/
+.obsidian/workspace.json
 data.json
