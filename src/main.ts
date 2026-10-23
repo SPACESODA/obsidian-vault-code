@@ -1111,6 +1111,42 @@ class BranchSwitcherModal extends FuzzySuggestModal<string> {
 	}
 }
 
+/* ── Changed Files Modal ───────────────────────────────────── */
+
+class ChangedFilesModal extends FuzzySuggestModal<TFile> {
+	private plugin: VaultCodePlugin;
+	private files: TFile[];
+
+	constructor(app: App, plugin: VaultCodePlugin, files: TFile[]) {
+		super(app);
+		this.plugin = plugin;
+		this.files = files;
+		this.setPlaceholder(t("gitChangedFilesModalPlaceholder"));
+	}
+
+	getItems(): TFile[] {
+		return this.files;
+	}
+
+	getItemText(item: TFile): string {
+		return item.path;
+	}
+
+	renderSuggestion(match: FuzzyMatch<TFile>, el: HTMLElement): void {
+		super.renderSuggestion(match, el);
+		if (match.item.parent && !match.item.parent.isRoot()) {
+			el.createSpan({
+				cls: "vault-code-branch-current-tag",
+				text: ` (${match.item.parent.path})`,
+			});
+		}
+	}
+
+	onChooseItem(item: TFile): void {
+		void this.plugin.openFileInDiffView(item);
+	}
+}
+
 /* ── Create Branch Modal ───────────────────────────────────── */
 
 class CreateBranchModal extends Modal {
@@ -5713,6 +5749,8 @@ export default class VaultCodePlugin extends Plugin {
 				}
 			}
 
+			supportedFiles.sort((a, b) => b.stat.mtime - a.stat.mtime);
+
 			if (supportedFiles.length > 0 || unsupportedOrIgnoredCount > 0) {
 				if (supportedFiles.length > 0) {
 					menu.addItem((item) => {
@@ -5740,7 +5778,18 @@ export default class VaultCodePlugin extends Plugin {
 						menu.addItem((item) => {
 							item
 								.setTitle(t("gitMoreFilesCount", remaining))
-								.setDisabled(true);
+								.setIcon(
+									getIcon("list-filter")
+										? "list-filter"
+										: "search",
+								)
+								.onClick(() => {
+									new ChangedFilesModal(
+										this.app,
+										this,
+										supportedFiles,
+									).open();
+								});
 						});
 					}
 				}

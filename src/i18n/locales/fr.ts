@@ -205,5 +205,6 @@ export const fr: TranslationSchema = {
 	commandGitCreateBranch: "Créer une branche Git",
 	settingsGitWorkflowNote: "Ce plugin fournit un flux de travail essentiel et intuitif pour les diffs Git de base et la gestion des branches. Pour des fonctionnalités complètes, veuillez utiliser {0} ou vous tourner vers {1}.",
 	gitUnsupportedOrIgnoredCount: "Fichiers non pris en charge ou ignorés ({0})",
-	gitMoreFilesCount: "Et {0} autres fichiers",
+	gitMoreFilesCount: "Et {0} autres fichiers...",
+	gitChangedFilesModalPlaceholder: "Saisir le nom du fichier pour afficher les modifications...",
 };

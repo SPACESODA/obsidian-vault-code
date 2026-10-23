@@ -205,5 +205,6 @@ export const ja: TranslationSchema = {
 	commandGitCreateBranch: "Git ブランチを作成",
 	settingsGitWorkflowNote: "本プラグインは、基本的な Git 差分表示とブランチ管理のためのシンプルで使いやすいワークフローを提供します。包括的な機能が必要な場合は、{0} を使用するか、{1} をご利用ください。",
 	gitUnsupportedOrIgnoredCount: "サポート外または無視されたファイル ({0})",
-	gitMoreFilesCount: "他 {0} 件のファイル",
+	gitMoreFilesCount: "他 {0} 件のファイル...",
+	gitChangedFilesModalPlaceholder: "ファイル名を入力して差分を表示...",
 };

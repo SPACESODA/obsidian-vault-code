@@ -205,5 +205,6 @@ export const es: TranslationSchema = {
 	commandGitCreateBranch: "Crear rama de Git",
 	settingsGitWorkflowNote: "Este plugin ofrece un flujo de trabajo esencial y sencillo para diferencias básicas de Git y gestión de ramas. Si necesita funciones completas, utilice {0} o confíe en {1}.",
 	gitUnsupportedOrIgnoredCount: "Archivos no admitidos o ignorados ({0})",
-	gitMoreFilesCount: "Y {0} archivos más",
+	gitMoreFilesCount: "Y {0} archivos más...",
+	gitChangedFilesModalPlaceholder: "Escribe el nombre del archivo para ver cambios...",
 };
