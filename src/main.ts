@@ -7551,10 +7551,20 @@ class VaultCodeSettingTab extends PluginSettingTab {
 					});
 			});
 
+		const createSectionHeading = (title: string): Setting => {
+			const heading = new Setting(containerEl)
+				.setName(title)
+				.setHeading();
+			heading.settingEl.tabIndex = -1;
+			heading.settingEl.removeAttribute("tabindex");
+			heading.settingEl.addEventListener("focus", () => {
+				heading.settingEl.blur();
+			});
+			return heading;
+		};
+
 		// Group 1: File explorer
-		new Setting(containerEl)
-			.setName(t("settingsGroupFileExplorer"))
-			.setHeading();
+		createSectionHeading(t("settingsGroupFileExplorer"));
 
 		new Setting(containerEl)
 			.setName(t("settingsShowHiddenDotfilesName"))
@@ -7742,9 +7752,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 			);
 
 		// Group 2: Code editor
-		new Setting(containerEl)
-			.setName(t("settingsGroupCodeEditor"))
-			.setHeading();
+		createSectionHeading(t("settingsGroupCodeEditor"));
 
 		const callout = containerEl.createDiv({
 			cls: "callout hidden-files-security-callout",
@@ -7904,9 +7912,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 		);
 
 		// Group 3: Git
-		new Setting(containerEl)
-			.setName(t("settingsGroupGit"))
-			.setHeading();
+		createSectionHeading(t("settingsGroupGit"));
 
 		new Setting(containerEl)
 			.setName(t("settingsGitName"))

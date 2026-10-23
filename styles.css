@@ -824,7 +824,12 @@ body .hidden-files-editor-wrapper .cm-searchMatch-selected {
 
 /* Settings tab grouping & headings */
 .hidden-files-settings .setting-item-heading {
-	border-top: 1px solid var(--background-modifier-border);
+	border: none;
+	border-top: none;
+	outline: none;
+	box-shadow: none;
+	user-select: none;
+	cursor: default;
 	padding-top: 28px;
 	padding-bottom: 8px;
 	margin-top: 18px;
@@ -832,6 +837,32 @@ body .hidden-files-editor-wrapper .cm-searchMatch-selected {
 
 .hidden-files-settings .setting-item-heading:first-of-type {
 	margin-top: 8px;
+	padding-top: 20px;
+}
+
+.hidden-files-settings .setting-item-heading:focus,
+.hidden-files-settings .setting-item-heading:focus-visible,
+.hidden-files-settings .setting-item-heading:focus-within,
+.hidden-files-settings .setting-item-heading *:focus,
+.hidden-files-settings .setting-item-heading *:focus-visible {
+	border: none;
+	outline: none;
+	box-shadow: none;
+}
+
+.hidden-files-settings .setting-item-heading:before,
+.hidden-files-settings .setting-item-heading:after,
+.hidden-files-settings .setting-item-heading:focus:before,
+.hidden-files-settings .setting-item-heading:focus:after,
+.hidden-files-settings .setting-item-heading:focus-visible:before,
+.hidden-files-settings .setting-item-heading:focus-visible:after,
+.hidden-files-settings .setting-item-heading:focus-within:before,
+.hidden-files-settings .setting-item-heading:focus-within:after {
+	display: none;
+	content: none;
+	box-shadow: none;
+	border: none;
+	outline: none;
 }
 
 /* Warning box when auto-save is enabled (switch is off) */
@@ -870,9 +901,21 @@ body .hidden-files-editor-wrapper .cm-searchMatch-selected {
 /* Reset all settings block spacing */
 .hidden-files-settings .vault-code-reset-setting,
 .vault-code-reset-setting {
-	border-top: 1px solid var(--background-modifier-border);
+	border: none;
+	border-top: none;
 	margin-top: 36px;
-	padding-top: 24px;
+	padding-top: 12px;
+}
+
+.hidden-files-settings .vault-code-reset-setting:before,
+.hidden-files-settings .vault-code-reset-setting:after,
+.vault-code-reset-setting:before,
+.vault-code-reset-setting:after {
+	display: none;
+	content: none;
+	box-shadow: none;
+	border: none;
+	outline: none;
 }
 
 /* Settings tab footer */
