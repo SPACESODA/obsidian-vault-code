@@ -3181,7 +3181,7 @@ export class DotfileView extends TextFileView {
 			desc = null;
 		} else {
 			desc =
-				LanguageDescription.matchFilename(languages, filename) ||
+				LanguageDescription.matchFilename(languages, filename.toLowerCase()) ||
 				(name === ".gitignore" ||
 				name === ".gitattributes" ||
 				name === ".dockerignore"
@@ -5818,7 +5818,9 @@ export default class VaultCodePlugin extends Plugin {
 			if (plugin.isExtensionEditable(ext)) {
 				return VIEW_TYPE_DOTFILE;
 			}
-			const origType = origGetType ? origGetType(extension) : undefined;
+			const origType = origGetType
+				? (origGetType(extension) ?? origGetType(ext))
+				: undefined;
 			if (origType === VIEW_TYPE_DOTFILE) {
 				return undefined;
 			}
@@ -5837,8 +5839,15 @@ export default class VaultCodePlugin extends Plugin {
 				if (plugin.isExtensionEditable(ext)) {
 					return true;
 				}
-				const origRegistered = origIsRegistered(extension);
-				if (origRegistered && origGetType && origGetType(extension) === VIEW_TYPE_DOTFILE) {
+				const origRegistered = Boolean(
+					origIsRegistered(extension) || origIsRegistered(ext),
+				);
+				if (
+					origRegistered &&
+					origGetType &&
+					(origGetType(extension) === VIEW_TYPE_DOTFILE ||
+						origGetType(ext) === VIEW_TYPE_DOTFILE)
+				) {
 					return false;
 				}
 				return origRegistered;
@@ -6783,8 +6792,7 @@ export default class VaultCodePlugin extends Plugin {
 			let cleanName = newName.replace(/[\x00-\x1F]/g, " ").trim();
 			if (!cleanName) return "";
 
-			const isMarkdown =
-				this.extension === "md" || this.extension === "markdown";
+			const isMarkdown = plugin.isMarkdownFile(this);
 
 			if (isMarkdown) {
 				// For Markdown notes, the title in Obsidian note view is purely the note title.
@@ -7240,9 +7248,9 @@ export default class VaultCodePlugin extends Plugin {
 							this.view?.app?.vault?.getConfig("spellcheck");
 						this.innerEl.setAttribute("spellcheck", String(spellcheck));
 
+						const ext = file.extension ? file.extension.toLowerCase() : "";
 						const isMarkdown =
-							file.extension === "md" ||
-							file.extension === "markdown";
+							ext === "md" || ext === "markdown";
 						const displayName = isMarkdown
 							? file.basename
 							: file.name;
