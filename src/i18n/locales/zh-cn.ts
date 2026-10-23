@@ -117,7 +117,8 @@ export const zhCn: TranslationSchema = {
 	settingsLineWrappingName: "自动换行",
 	settingsLineWrappingDesc: "长行自动折行以适应编辑器窗口。",
 	settingsDisableAutoSaveName: "禁用自动保存",
-	settingsDisableAutoSaveDesc: "在将更改保存到磁盘之前，必须先按下保存快捷键或点击保存按钮。限制：如果退出 Obsidian 应用程序，未保存的编辑将自动保存。",
+	settingsDisableAutoSaveDesc: "在将更改保存到磁盘之前，必须先按下保存快捷键或点击保存按钮。",
+	settingsDisableAutoSaveLimitation: "限制：如果退出 Obsidian 应用程序，未保存的编辑将自动保存。",
 	settingsAutoSaveWarning: "警告：允许自动保存会立即将更改写入磁盘，这可能会增加意外损坏敏感代码文件的风险。",
 	settingsResetAllName: "重置所有设置",
 	settingsResetAllDesc: "将所有插件设置与文件扩展名恢复为默认值。",
@@ -202,4 +203,5 @@ export const zhCn: TranslationSchema = {
 	gitNoBranchesFound: "未找到本地 Git 分支",
 	commandGitSwitchBranch: "切换 Git 分支",
 	commandGitCreateBranch: "创建 Git 分支",
+	settingsGitWorkflowNote: "本插件为基本 Git 差异对比与分支管理提供简洁易用的工作流程。如需完整功能，请使用 {0} 或使用 {1}。",
 };

@@ -117,7 +117,8 @@ export const fr: TranslationSchema = {
 	settingsLineWrappingName: "Retour à la ligne",
 	settingsLineWrappingDesc: "Ajuster les longues lignes à la largeur de l'éditeur.",
 	settingsDisableAutoSaveName: "Désactiver l'enregistrement automatique",
-	settingsDisableAutoSaveDesc: "Nécessite d'appuyer sur le raccourci d'enregistrement ou de cliquer sur le bouton avant d'écrire les modifications sur le disque. Remarque : à la fermeture d'Obsidian, les modifications non enregistrées sont automatiquement sauvegardées.",
+	settingsDisableAutoSaveDesc: "Nécessite d'appuyer sur le raccourci d'enregistrement ou de cliquer sur le bouton avant d'écrire les modifications sur le disque.",
+	settingsDisableAutoSaveLimitation: "Remarque : à la fermeture d'Obsidian, les modifications non enregistrées sont automatiquement sauvegardées.",
 	settingsAutoSaveWarning: "Avertissement : l'enregistrement automatique écrit immédiatement les modifications sur le disque, ce qui peut augmenter le risque d'endommager accidentellement des fichiers de code sensibles.",
 	settingsResetAllName: "Réinitialiser tous les paramètres",
 	settingsResetAllDesc: "Restaurer tous les paramètres du plugin et extensions à leurs valeurs par défaut.",
@@ -202,4 +203,5 @@ export const fr: TranslationSchema = {
 	gitNoBranchesFound: "Aucune branche Git locale trouvée",
 	commandGitSwitchBranch: "Changer de branche Git",
 	commandGitCreateBranch: "Créer une branche Git",
+	settingsGitWorkflowNote: "Ce plugin fournit un flux de travail essentiel et intuitif pour les diffs Git de base et la gestion des branches. Pour des fonctionnalités complètes, veuillez utiliser {0} ou vous tourner vers {1}.",
 };

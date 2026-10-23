@@ -8003,31 +8003,28 @@ class VaultCodeSettingTab extends PluginSettingTab {
 		// Group 2: Code editor
 		createSectionHeading(t("settingsGroupCodeEditor"));
 
-		const callout = containerEl.createDiv({
-			cls: "callout hidden-files-security-callout",
+		const allowEditSetting = new Setting(containerEl)
+			.setName(t("settingsAllowEditDotfilesName"));
+		allowEditSetting.descEl.createDiv({
+			text: t("settingsAllowEditDotfilesDesc"),
 		});
-		callout.setAttribute("data-callout", "warning");
-		const calloutContent = callout.createDiv({ cls: "callout-content" });
-		calloutContent.createEl("p", {
+		allowEditSetting.descEl.createDiv({
+			cls: "vault-code-setting-accent-note",
 			text: t("settingsSecurityWarning"),
 		});
-
-		new Setting(containerEl)
-			.setName(t("settingsAllowEditDotfilesName"))
-			.setDesc(t("settingsAllowEditDotfilesDesc"))
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.allowEditDotfiles)
-					.onChange(async (value) => {
-						this.plugin.settings.allowEditDotfiles = value;
-						await this.plugin.saveSettings();
-						new Notice(
-							value
-								? t("noticeDotfileEditingEnabled")
-								: t("noticeDotfileEditingDisabled"),
-						);
-					}),
-			);
+		allowEditSetting.addToggle((toggle) =>
+			toggle
+				.setValue(this.plugin.settings.allowEditDotfiles)
+				.onChange(async (value) => {
+					this.plugin.settings.allowEditDotfiles = value;
+					await this.plugin.saveSettings();
+					new Notice(
+						value
+							? t("noticeDotfileEditingEnabled")
+							: t("noticeDotfileEditingDisabled"),
+					);
+				}),
+		);
 
 		new Setting(containerEl)
 			.setName(t("settingsAllowEditCodeFilesName"))
@@ -8132,8 +8129,14 @@ class VaultCodeSettingTab extends PluginSettingTab {
 			);
 
 		const autoSaveSetting = new Setting(containerEl)
-			.setName(t("settingsDisableAutoSaveName"))
-			.setDesc(t("settingsDisableAutoSaveDesc"));
+			.setName(t("settingsDisableAutoSaveName"));
+		autoSaveSetting.descEl.createSpan({
+			text: `${t("settingsDisableAutoSaveDesc")} `,
+		});
+		autoSaveSetting.descEl.createSpan({
+			cls: "vault-code-setting-accent-text",
+			text: t("settingsDisableAutoSaveLimitation"),
+		});
 
 		const warningEl = autoSaveSetting.descEl.createDiv({
 			cls: "hidden-files-auto-save-warning",
@@ -8164,16 +8167,35 @@ class VaultCodeSettingTab extends PluginSettingTab {
 		if (Platform.isDesktop) {
 			createSectionHeading(t("settingsGroupGit"));
 
-			new Setting(containerEl)
-				.setName(t("settingsGitName"))
-				.setDesc(t("settingsGitDesc"))
-				.addToggle((toggle) =>
-					toggle
-						.setValue(this.plugin.settings.enableGitIntegration ?? true)
-						.onChange(async (value) => {
-							await this.plugin.applyGitIntegrationToggle(value);
-						}),
-				);
+			const gitSetting = new Setting(containerEl)
+				.setName(t("settingsGitName"));
+			gitSetting.descEl.createDiv({
+				text: t("settingsGitDesc"),
+			});
+			const gitNoteEl = gitSetting.descEl.createDiv({
+				cls: "vault-code-setting-accent-note",
+			});
+			this.renderTextWithLinks(
+				gitNoteEl,
+				t("settingsGitWorkflowNote"),
+				[
+					{
+						text: "Obsidian Git",
+						url: "https://community.obsidian.md/plugins/obsidian-git",
+					},
+					{
+						text: "GitHub Desktop",
+						url: "https://github.com/apps/desktop",
+					},
+				],
+			);
+			gitSetting.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.enableGitIntegration ?? true)
+					.onChange(async (value) => {
+						await this.plugin.applyGitIntegrationToggle(value);
+					}),
+			);
 		}
 
 		new Setting(containerEl)
@@ -8239,5 +8261,34 @@ class VaultCodeSettingTab extends PluginSettingTab {
 		};
 		starLink.addEventListener("click", handleStarClick);
 		starLink.addEventListener("auxclick", handleStarClick);
+	}
+
+	private renderTextWithLinks(
+		container: HTMLElement,
+		template: string,
+		links: { text: string; url: string }[],
+	): void {
+		const parts = template.split(/\{(\d+)\}/);
+		for (const part of parts) {
+			const idx = parseInt(part, 10);
+			if (!isNaN(idx) && links[idx]) {
+				const linkInfo = links[idx];
+				const a = container.createEl("a", {
+					text: linkInfo.text,
+					href: linkInfo.url,
+					attr: {
+						target: "_blank",
+						rel: "noopener noreferrer",
+					},
+				});
+				a.addEventListener("click", (e: MouseEvent) => {
+					e.preventDefault();
+					e.stopPropagation();
+					openInDefaultBrowser(linkInfo.url);
+				});
+			} else if (part) {
+				container.createSpan({ text: part });
+			}
+		}
 	}
 }

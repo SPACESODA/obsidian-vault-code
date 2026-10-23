@@ -115,7 +115,8 @@ export const en = {
 	settingsLineWrappingName: "Line wrapping",
 	settingsLineWrappingDesc: "Wrap long lines to fit the editor window.",
 	settingsDisableAutoSaveName: "Disable auto-save",
-	settingsDisableAutoSaveDesc: "Require pressing the save shortcut or tapping the save button before changes are saved to disk. Limitation: if you quit the Obsidian app, unsaved edits will be saved automatically.",
+	settingsDisableAutoSaveDesc: "Require pressing the save shortcut or tapping the save button before changes are saved to disk.",
+	settingsDisableAutoSaveLimitation: "Limitation: if you quit the Obsidian app, unsaved edits will be saved automatically.",
 	settingsAutoSaveWarning: "Warning: Allowing auto-save immediately writes changes to disk, which may increase the risk of unintentionally damaging sensitive code files.",
 	settingsResetAllName: "Reset all settings",
 	settingsResetAllDesc: "Restore all plugin settings and file extensions back to their default values.",
@@ -200,6 +201,7 @@ export const en = {
 	gitNoBranchesFound: "No local Git branches found",
 	commandGitSwitchBranch: "Switch Git branch",
 	commandGitCreateBranch: "Create Git branch",
+	settingsGitWorkflowNote: "This plugin provides an essential, user-friendly workflow for basic Git diffs and branch management. If you need comprehensive features, please use {0} or rely on {1}.",
 };
 
 export type TranslationSchema = typeof en;

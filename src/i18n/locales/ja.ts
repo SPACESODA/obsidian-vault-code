@@ -117,7 +117,8 @@ export const ja: TranslationSchema = {
 	settingsLineWrappingName: "行の折り返し",
 	settingsLineWrappingDesc: "エディタの幅に合わせて長い行を折り返します。",
 	settingsDisableAutoSaveName: "自動保存を無効化",
-	settingsDisableAutoSaveDesc: "変更をディスクに保存する前に、保存ショートカットキーを押すか保存ボタンをタップすることを必須にします。注意: Obsidian アプリを終了すると、未保存の編集は自動的に保存されます。",
+	settingsDisableAutoSaveDesc: "変更をディスクに保存する前に、保存ショートカットキーを押すか保存ボタンをタップすることを必須にします。",
+	settingsDisableAutoSaveLimitation: "注意: Obsidian アプリを終了すると、未保存の編集は自動的に保存されます。",
 	settingsAutoSaveWarning: "警告: 自動保存を有効にすると変更が即座に書き込まれるため、機密コードファイルを誤って破損するリスクが高まる可能性があります。",
 	settingsResetAllName: "すべての設定を初期化",
 	settingsResetAllDesc: "すべてのプラグイン設定と拡張子リストをデフォルト値に戻します。",
@@ -202,4 +203,5 @@ export const ja: TranslationSchema = {
 	gitNoBranchesFound: "ローカル Git ブランチが見つかりません",
 	commandGitSwitchBranch: "Git ブランチを切り替え",
 	commandGitCreateBranch: "Git ブランチを作成",
+	settingsGitWorkflowNote: "本プラグインは、基本的な Git 差分表示とブランチ管理のためのシンプルで使いやすいワークフローを提供します。包括的な機能が必要な場合は、{0} を使用するか、{1} をご利用ください。",
 };

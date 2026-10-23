@@ -117,7 +117,8 @@ export const ko: TranslationSchema = {
 	settingsLineWrappingName: "자동 줄 바꿈",
 	settingsLineWrappingDesc: "편집기 창 너비에 맞춰 긴 줄을 자동 줄 바꿈합니다.",
 	settingsDisableAutoSaveName: "자동 저장 비활성화",
-	settingsDisableAutoSaveDesc: "변경 사항을 디스크에 기록하기 전에 저장 단축키를 누르거나 저장 버튼을 클릭해야 합니다. 참고: Obsidian 앱을 종료할 때 저장되지 않은 편집 내용은 자동으로 저장됩니다.",
+	settingsDisableAutoSaveDesc: "변경 사항을 디스크에 기록하기 전에 저장 단축키를 누르거나 저장 버튼을 클릭해야 합니다.",
+	settingsDisableAutoSaveLimitation: "참고: Obsidian 앱을 종료할 때 저장되지 않은 편집 내용은 자동으로 저장됩니다.",
 	settingsAutoSaveWarning: "경고: 자동 저장을 허용하면 변경 사항이 즉시 디스크에 기록되므로 중요한 코드 파일이 실수로 손상될 위험이 높아질 수 있습니다.",
 	settingsResetAllName: "모든 설정 재설정",
 	settingsResetAllDesc: "모든 플러그인 설정 및 파일 확장자를 기본값으로 복원합니다.",
@@ -202,4 +203,5 @@ export const ko: TranslationSchema = {
 	gitNoBranchesFound: "로컬 Git 브랜치를 찾을 수 없습니다",
 	commandGitSwitchBranch: "Git 브랜치 전환",
 	commandGitCreateBranch: "Git 브랜치 생성",
+	settingsGitWorkflowNote: "이 플러그인은 기본적인 Git 변경 비교 및 브랜치 관리를 위한 직관적이고 필수적인 워크플로를 제공합니다. 고급 기능이 필요한 경우 {0}을(를) 사용하거나 {1}을(를) 활용하세요.",
 };

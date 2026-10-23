@@ -117,7 +117,8 @@ export const es: TranslationSchema = {
 	settingsLineWrappingName: "Ajuste de línea",
 	settingsLineWrappingDesc: "Ajustar líneas largas a la ventana del editor.",
 	settingsDisableAutoSaveName: "Desactivar guardado automático",
-	settingsDisableAutoSaveDesc: "Requiere pulsar el atajo de guardado o el botón de guardar antes de escribir cambios en el disco. Limitación: si cierra Obsidian, los cambios no guardados se guardarán automáticamente.",
+	settingsDisableAutoSaveDesc: "Requiere pulsar el atajo de guardado o el botón de guardar antes de escribir cambios en el disco.",
+	settingsDisableAutoSaveLimitation: "Limitación: si cierra Obsidian, los cambios no guardados se guardarán automáticamente.",
 	settingsAutoSaveWarning: "Advertencia: El guardado automático escribe inmediatamente los cambios en el disco, lo que puede aumentar el riesgo de dañar accidentalmente archivos de código sensibles.",
 	settingsResetAllName: "Restablecer todos los ajustes",
 	settingsResetAllDesc: "Restaurar todos los ajustes del plugin y extensiones a sus valores predeterminados.",
@@ -202,4 +203,5 @@ export const es: TranslationSchema = {
 	gitNoBranchesFound: "No se encontraron ramas locales de Git",
 	commandGitSwitchBranch: "Cambiar rama de Git",
 	commandGitCreateBranch: "Crear rama de Git",
+	settingsGitWorkflowNote: "Este plugin ofrece un flujo de trabajo esencial y sencillo para diferencias básicas de Git y gestión de ramas. Si necesita funciones completas, utilice {0} o confíe en {1}.",
 };

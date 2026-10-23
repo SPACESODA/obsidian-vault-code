@@ -117,7 +117,8 @@ export const de: TranslationSchema = {
 	settingsLineWrappingName: "Zeilenumbruch",
 	settingsLineWrappingDesc: "Lange Zeilen an das Editorfenster anpassen.",
 	settingsDisableAutoSaveName: "Automatisches Speichern deaktivieren",
-	settingsDisableAutoSaveDesc: "Erfordert das Drücken des Tastaturkürzels oder das Klicken auf die Schaltfläche vor dem Speichern auf Festplatte. Hinweis: Beim Schließen von Obsidian werden ungespeicherte Änderungen automatisch gespeichert.",
+	settingsDisableAutoSaveDesc: "Erfordert das Drücken des Tastaturkürzels oder das Klicken auf die Schaltfläche vor dem Speichern auf Festplatte.",
+	settingsDisableAutoSaveLimitation: "Hinweis: Beim Schließen von Obsidian werden ungespeicherte Änderungen automatisch gespeichert.",
 	settingsAutoSaveWarning: "Warnung: Durch das automatische Speichern werden Änderungen sofort geschrieben, was das Risiko einer versehentlichen Beschädigung sensibler Codedateien erhöhen kann.",
 	settingsResetAllName: "Alle Einstellungen zurücksetzen",
 	settingsResetAllDesc: "Alle Plugin-Einstellungen und Dateiendungen auf die Standardwerte zurücksetzen.",
@@ -202,4 +203,5 @@ export const de: TranslationSchema = {
 	gitNoBranchesFound: "Keine lokalen Git-Branches gefunden",
 	commandGitSwitchBranch: "Git-Branch wechseln",
 	commandGitCreateBranch: "Git-Branch erstellen",
+	settingsGitWorkflowNote: "Dieses Plugin bietet einen einfachen, benutzerfreundlichen Workflow für grundlegende Git-Diffs und die Branch-Verwaltung. Für umfassende Funktionen nutzen Sie bitte {0} oder {1}.",
 };

@@ -117,7 +117,8 @@ export const zhTw: TranslationSchema = {
 	settingsLineWrappingName: "自動換行",
 	settingsLineWrappingDesc: "將長行自動換行以符合編輯器視窗。",
 	settingsDisableAutoSaveName: "停用自動儲存",
-	settingsDisableAutoSaveDesc: "在將變更儲存到磁碟之前，必須先按下儲存快捷鍵或點選儲存按鈕。限制：若退出 Obsidian 應用程式，未儲存的編輯將會自動儲存。",
+	settingsDisableAutoSaveDesc: "在將變更儲存到磁碟之前，必須先按下儲存快捷鍵或點選儲存按鈕。",
+	settingsDisableAutoSaveLimitation: "限制：若退出 Obsidian 應用程式，未儲存的編輯將會自動儲存。",
 	settingsAutoSaveWarning: "警告：允許自動儲存會立即將變更寫入磁碟，這可能會增加意外損壞機密程式碼檔案的風險。",
 	settingsResetAllName: "重設所有設定",
 	settingsResetAllDesc: "將所有外掛程式設定與副檔名還原為預設值。",
@@ -202,4 +203,5 @@ export const zhTw: TranslationSchema = {
 	gitNoBranchesFound: "未找到本地 Git 分支",
 	commandGitSwitchBranch: "切換 Git 分支",
 	commandGitCreateBranch: "建立 Git 分支",
+	settingsGitWorkflowNote: "本外掛為基本 Git 差異比對與分支管理提供簡潔易用的工作流程。若需要完整功能，請使用 {0} 或使用 {1}。",
 };

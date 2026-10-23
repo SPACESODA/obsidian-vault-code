@@ -890,6 +890,29 @@ body .hidden-files-editor-wrapper .cm-searchMatch-selected {
 	border-color: rgba(239, 68, 68, 0.3);
 }
 
+/* Setting description theme accent elements */
+.vault-code-setting-accent-text {
+	color: var(--text-accent);
+	font-weight: 400;
+}
+
+.vault-code-setting-accent-note {
+	margin-top: 6px;
+	color: var(--text-accent);
+	font-weight: 400;
+	font-size: var(--font-ui-smaller, 12px);
+	line-height: var(--line-height-normal, 1.4);
+}
+
+.vault-code-setting-accent-note a {
+	color: var(--text-accent);
+	text-decoration: underline;
+}
+
+.vault-code-setting-accent-note a:hover {
+	opacity: 0.85;
+}
+
 /* Security callout spacing and corner radius in settings */
 .callout.hidden-files-security-callout {
 	margin-top: 10px;

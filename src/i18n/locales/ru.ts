@@ -117,7 +117,8 @@ export const ru: TranslationSchema = {
 	settingsLineWrappingName: "Перенос строк",
 	settingsLineWrappingDesc: "Переносить длинные строки по ширине окна редактора.",
 	settingsDisableAutoSaveName: "Отключить автосохранение",
-	settingsDisableAutoSaveDesc: "Требуется нажать сочетание клавиш или кнопку сохранения перед записью изменений на диск. Примечание: при закрытии Obsidian несохраненные изменения сохранятся автоматически.",
+	settingsDisableAutoSaveDesc: "Требуется нажать сочетание клавиш или кнопку сохранения перед записью изменений на диск.",
+	settingsDisableAutoSaveLimitation: "Примечание: при закрытии Obsidian несохраненные изменения сохранятся автоматически.",
 	settingsAutoSaveWarning: "Предупреждение: автосохранение мгновенно записывает изменения на диск, что может увеличить риск случайного повреждения важных файлов кода.",
 	settingsResetAllName: "Сбросить все настройки",
 	settingsResetAllDesc: "Восстановить все настройки плагина и расширения файлов до значений по умолчанию.",
@@ -202,4 +203,5 @@ export const ru: TranslationSchema = {
 	gitNoBranchesFound: "Локальные ветки Git не найдены",
 	commandGitSwitchBranch: "Переключить ветку Git",
 	commandGitCreateBranch: "Создать ветку Git",
+	settingsGitWorkflowNote: "Этот плагин предоставляет удобный базовый рабочий процесс для просмотра различий Git и управления ветками. Если вам требуется расширенный функционал, используйте {0} или {1}.",
 };

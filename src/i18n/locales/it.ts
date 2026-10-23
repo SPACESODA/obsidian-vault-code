@@ -117,7 +117,8 @@ export const it: TranslationSchema = {
 	settingsLineWrappingName: "A capo automatico",
 	settingsLineWrappingDesc: "Manda a capo le righe lunghe per adattarle alla finestra.",
 	settingsDisableAutoSaveName: "Disattiva salvataggio automatico",
-	settingsDisableAutoSaveDesc: "Richiede di premere la scorciatoia di salvataggio o il pulsante di salvataggio prima di scrivere le modifiche su disco. Nota: all'uscita da Obsidian le modifiche non salvate verranno salvate automaticamente.",
+	settingsDisableAutoSaveDesc: "Richiede di premere la scorciatoia di salvataggio o il pulsante di salvataggio prima di scrivere le modifiche su disco.",
+	settingsDisableAutoSaveLimitation: "Nota: all'uscita da Obsidian le modifiche non salvate verranno salvate automaticamente.",
 	settingsAutoSaveWarning: "Attenzione: il salvataggio automatico scrive immediatamente le modifiche su disco, aumentando il rischio di danneggiare accidentalmente file di codice importanti.",
 	settingsResetAllName: "Ripristina tutte le impostazioni",
 	settingsResetAllDesc: "Ripristina tutte le impostazioni del plugin e le estensioni ai valori predefiniti.",
@@ -202,4 +203,5 @@ export const it: TranslationSchema = {
 	gitNoBranchesFound: "Nessun branch Git locale trovato",
 	commandGitSwitchBranch: "Cambia branch Git",
 	commandGitCreateBranch: "Crea branch Git",
+	settingsGitWorkflowNote: "Questo plugin offre un flusso di lavoro essenziale e intuitivo per visualizzare differenze Git e gestire branch. Se hai bisogno di funzionalità complete, usa {0} o affidati a {1}.",
 };
