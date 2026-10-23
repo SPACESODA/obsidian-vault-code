@@ -6467,6 +6467,36 @@ export default class VaultCodePlugin extends Plugin {
 		}
 	}
 
+	public isKnownExtension(ext: string): boolean {
+		if (!ext || ext.length === 0 || ext.length > 20) return false;
+		if (/[\s/\\:*?"<>|]/.test(ext)) return false;
+		const lower = ext.toLowerCase();
+		if (
+			lower === "md" ||
+			lower === "markdown" ||
+			lower === "canvas"
+		) {
+			return true;
+		}
+		if (SUPPORTED_EXTENSIONS.has(lower)) return true;
+		if (BINARY_EXTENSIONS.has(lower)) return true;
+		if (this.getCustomExtensionsSet().has(lower)) return true;
+		const viewRegistry = (
+			this.app as unknown as {
+				viewRegistry?: {
+					getTypeByExtension?: (e: string) => string | undefined;
+				};
+			}
+		).viewRegistry;
+		if (
+			typeof viewRegistry?.getTypeByExtension === "function" &&
+			Boolean(viewRegistry.getTypeByExtension(lower))
+		) {
+			return true;
+		}
+		return false;
+	}
+
 	/* ── inline rename & path resolution patches ────────── */
 
 	private patchTFileGetNewPath(): void {
@@ -6479,6 +6509,9 @@ export default class VaultCodePlugin extends Plugin {
 
 		this.originalTFileGetNewPath = proto.getNewPathAfterRename;
 
+		// eslint-disable-next-line @typescript-eslint/no-this-alias -- Needed to access plugin instance inside patched method
+		const plugin = this;
+
 		proto.getNewPathAfterRename = function (
 			this: TFile,
 			newName: string,
@@ -6487,12 +6520,24 @@ export default class VaultCodePlugin extends Plugin {
 			let cleanName = newName.replace(/[\x00-\x1F]/g, " ").trim();
 			if (!cleanName) return "";
 
-			// Check if cleanName has an explicit extension or is a dotfile
+			// Check if cleanName has an explicit valid extension or is a dotfile
 			const lastDot = cleanName.lastIndexOf(".");
-			const hasExtension = lastDot > 0 && lastDot < cleanName.length - 1;
 			const isDotfile = cleanName.startsWith(".");
+			let hasExtension = false;
 
-			// If it does not have an explicit extension and is not a dotfile,
+			if (lastDot > 0 && lastDot < cleanName.length - 1) {
+				const candidate = cleanName.slice(lastDot + 1);
+				if (
+					(this.extension &&
+						candidate.toLowerCase() ===
+							this.extension.toLowerCase()) ||
+					plugin.isKnownExtension(candidate)
+				) {
+					hasExtension = true;
+				}
+			}
+
+			// If it does not have an explicit valid extension and is not a dotfile,
 			// preserve the file's current extension (e.g. .md, .canvas, .json)
 			if (!hasExtension && !isDotfile && this.extension) {
 				cleanName = `${cleanName}.${this.extension}`;
