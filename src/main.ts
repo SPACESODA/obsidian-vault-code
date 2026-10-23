@@ -250,6 +250,7 @@ export const SUPPORTED_EXTENSIONS = new Set([
 	"liquid",
 	"lisp",
 	"log",
+	"lot",
 	"lsp",
 	"lua",
 	"m",
@@ -333,10 +334,10 @@ export const BINARY_EXTENSIONS = new Set([
 	// Documents & presentations
 	"pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "odt", "ods", "odp",
 	"pages", "numbers", "keynote", "rtf",
-	// Archives & compressed
-	"zip", "tar", "gz", "tgz", "bz2", "7z", "rar", "xz", "zst", "iso", "dmg", "pkg",
+	// Archives & compressed (including dotLottie zip packages)
+	"zip", "tar", "gz", "tgz", "bz2", "7z", "rar", "xz", "zst", "iso", "dmg", "pkg", "lottie",
 	// Images (except SVG which is text/XML)
-	"png", "jpg", "jpeg", "gif", "webp", "bmp", "ico", "tiff", "tif", "heic", "heif", "avif", "psd", "ai",
+	"png", "jpg", "jpeg", "gif", "webp", "bmp", "ico", "tiff", "tif", "heic", "heif", "avif", "apng", "psd", "ai",
 	// Audio & video
 	"mp3", "wav", "m4a", "flac", "aac", "ogg", "wma",
 	"mp4", "mkv", "avi", "mov", "wmv", "flv", "webm", "m4v",
@@ -617,7 +618,7 @@ interface VaultCodeSettings {
 }
 
 const DEFAULT_EXTENSIONS =
-	"asm, astro, bash, bat, bib, c, c3, cc, cjs, cl, clj, cljc, cljs, cls, cmake, cmd, comp, cpp, cs, css, csv, cts, cu, cuh, cxx, dart, diff, dpk, dpr, edn, el, elm, email, eml, erl, ex, exs, f, f03, f08, f77, f90, f95, fish, for, frag, fs, fsi, fsx, fx, fxh, gd, gdshader, gdshaderinc, geom, gleam, glsl, go, gql, gradle, graphql, groovy, gsh, gvy, gy, h, handlebars, hbs, hcl, hh, hlsl, hpp, hrl, hs, htm, html, hxx, ini, java, jl, js, json, json5, jsonc, jsonl, jsx, kt, kts, less, lhs, liquid, lisp, log, lsp, lua, m, make, mdx, mjml, mjs, mk, ml, mli, mm, mts, ndjson, nim, nimble, nims, nix, odin, pas, patch, php, phtml, pine, pl, pm, pp, prisma, proto, ps1, psd1, psm1, py, pyi, pyw, r, rake, rb, rs, s, sass, sbt, sc, scala, scm, scss, sh, sol, sql, ss, sty, svelte, svg, swift, tex, text, tf, tfvars, toml, tres, ts, tscn, tsrx, tsv, tsx, txt, vert, vue, wat, wgsl, xml, xsd, yaml, yml, zig, zon, zsh";
+	"asm, astro, bash, bat, bib, c, c3, cc, cjs, cl, clj, cljc, cljs, cls, cmake, cmd, comp, cpp, cs, css, csv, cts, cu, cuh, cxx, dart, diff, dpk, dpr, edn, el, elm, email, eml, erl, ex, exs, f, f03, f08, f77, f90, f95, fish, for, frag, fs, fsi, fsx, fx, fxh, gd, gdshader, gdshaderinc, geom, gleam, glsl, go, gql, gradle, graphql, groovy, gsh, gvy, gy, h, handlebars, hbs, hcl, hh, hlsl, hpp, hrl, hs, htm, html, hxx, ini, java, jl, js, json, json5, jsonc, jsonl, jsx, kt, kts, less, lhs, liquid, lisp, log, lot, lsp, lua, m, make, mdx, mjml, mjs, mk, ml, mli, mm, mts, ndjson, nim, nimble, nims, nix, odin, pas, patch, php, phtml, pine, pl, pm, pp, prisma, proto, ps1, psd1, psm1, py, pyi, pyw, r, rake, rb, rs, s, sass, sbt, sc, scala, scm, scss, sh, sol, sql, ss, sty, svelte, svg, swift, tex, text, tf, tfvars, toml, tres, ts, tscn, tsrx, tsv, tsx, txt, vert, vue, wat, wgsl, xml, xsd, yaml, yml, zig, zon, zsh";
 
 export const DEFAULT_OBSIDIANIGNORE_CONTENT = `# Obsidian & Git
 .obsidian/
@@ -3173,118 +3174,122 @@ export class DotfileView extends TextFileView {
 		const ext = this.file.extension?.toLowerCase() ?? "";
 		const name = filename.toLowerCase();
 
-		const desc =
-			LanguageDescription.matchFilename(languages, filename) ||
-			(name === ".gitignore" ||
-			name === ".gitattributes" ||
-			name === ".dockerignore"
-				? LanguageDescription.matchFilename(languages, "file.sh")
-				: null) ||
-			(name.startsWith(".env")
-				? LanguageDescription.matchFilename(languages, "file.properties")
-				: null) ||
-			(name === ".editorconfig" || name === ".npmrc"
-				? LanguageDescription.matchFilename(languages, "file.ini")
-				: null) ||
-			(ext === "mdx"
-				? LanguageDescription.matchFilename(languages, "file.md")
-				: null) ||
-			(ext === "mjml"
-				? LanguageDescription.matchFilename(languages, "file.html")
-				: null) ||
-			(ext === "email" || ext === "eml"
-				? LanguageDescription.matchFilename(languages, "file.html")
-				: null) ||
-			(ext === "astro"
-				? LanguageDescription.matchFilename(languages, "file.tsx")
-				: null) ||
-			(ext === "svelte"
-				? LanguageDescription.matchFilename(languages, "file.html")
-				: null) ||
-			(ext === "svg"
-				? LanguageDescription.matchFilename(languages, "file.xml")
-				: null) ||
-			(ext === "pine"
-				? LanguageDescription.matchFilename(languages, "file.py")
-				: null) ||
-			(ext === "json5" || ext === "jsonc" || ext === "jsonl" || ext === "ndjson"
-				? LanguageDescription.matchFilename(languages, "file.json")
-				: null) ||
-			(ext === "bash" || ext === "zsh" || ext === "fish"
-				? LanguageDescription.matchFilename(languages, "file.sh")
-				: null) ||
-			(ext === "patch"
-				? LanguageDescription.matchFilename(languages, "file.diff")
-				: null) ||
-			(ext === "bib" || ext === "cls" || ext === "sty"
-				? LanguageDescription.matchFilename(languages, "file.tex")
-				: null) ||
-			(ext === "gql"
-				? LanguageDescription.matchFilename(languages, "file.graphql")
-				: null) ||
-			(ext === "cmd" || ext === "bat"
-				? LanguageDescription.matchFilename(languages, "file.cmd")
-				: null) ||
-			(ext === "cu" || ext === "cuh"
-				? LanguageDescription.matchFilename(languages, "file.cpp")
-				: null) ||
-			(ext === "comp" || ext === "frag" || ext === "vert" || ext === "geom" || ext === "glsl" || ext === "hlsl" || ext === "fx" || ext === "fxh" || ext === "wgsl"
-				? LanguageDescription.matchFilename(languages, "file.c")
-				: null) ||
-			(ext === "ex" || ext === "exs" || ext === "hrl"
-				? LanguageDescription.matchFilename(languages, "file.erl")
-				: null) ||
-			(ext === "f03" || ext === "f08"
-				? LanguageDescription.matchFilename(languages, "file.f90")
-				: null) ||
-			(ext === "fsi" || ext === "fsx"
-				? LanguageDescription.matchFilename(languages, "file.fs")
-				: null) ||
-			(ext === "gsh" || ext === "gvy" || ext === "gy"
-				? LanguageDescription.matchFilename(languages, "file.groovy")
-				: null) ||
-			(ext === "lhs"
-				? LanguageDescription.matchFilename(languages, "file.hs")
-				: null) ||
-			(ext === "lsp"
-				? LanguageDescription.matchFilename(languages, "file.lisp")
-				: null) ||
-			(ext === "make" || ext === "mk"
-				? LanguageDescription.matchFilename(languages, "Makefile")
-				: null) ||
-			(ext === "pyi" || ext === "pyw"
-				? LanguageDescription.matchFilename(languages, "file.py")
-				: null) ||
-			(ext === "rake"
-				? LanguageDescription.matchFilename(languages, "file.rb")
-				: null) ||
-			(ext === "sbt" || ext === "sc"
-				? LanguageDescription.matchFilename(languages, "file.scala")
-				: null) ||
-			(ext === "tf" || ext === "tfvars" || ext === "hcl"
-				? LanguageDescription.matchFilename(languages, "file.yaml")
-				: null) ||
-			(ext === "tres" || ext === "tscn" || ext === "gd" || ext === "gdshader" || ext === "gdshaderinc"
-				? LanguageDescription.matchFilename(languages, "file.ini")
-				: null) ||
-			(ext === "dpk" || ext === "dpr"
-				? LanguageDescription.matchFilename(languages, "file.pas")
-				: null) ||
-			(ext === "asm"
-				? LanguageDescription.matchFilename(languages, "file.s")
-				: null) ||
-			(ext === "zig" || ext === "zon"
-				? LanguageDescription.matchFilename(languages, "file.rs")
-				: null) ||
-			(ext === "sol" || ext === "tsrx"
-				? LanguageDescription.matchFilename(languages, "file.js")
-				: null) ||
-			(ext === "odin" || ext === "c3" || ext === "gleam" || ext === "nim" || ext === "nimble" || ext === "nims" || ext === "nix"
-				? LanguageDescription.matchFilename(languages, "file.rs")
-				: null) ||
-			(ext
-				? LanguageDescription.matchFilename(languages, `file.${ext}`)
-				: null);
+		let desc: LanguageDescription | null = null;
+
+		// Plain text and tabular data formats should never be parsed as programming languages
+		if (ext === "txt" || ext === "text" || ext === "csv" || ext === "tsv" || ext === "log") {
+			desc = null;
+		} else {
+			desc =
+				LanguageDescription.matchFilename(languages, filename) ||
+				(name === ".gitignore" ||
+				name === ".gitattributes" ||
+				name === ".dockerignore"
+					? LanguageDescription.matchFilename(languages, "file.sh")
+					: null) ||
+				(name.startsWith(".env")
+					? LanguageDescription.matchFilename(languages, "file.properties")
+					: null) ||
+				(name === ".editorconfig" || name === ".npmrc"
+					? LanguageDescription.matchFilename(languages, "file.ini")
+					: null) ||
+				(ext === "mdx"
+					? LanguageDescription.matchFilename(languages, "file.md")
+					: null) ||
+				(ext === "mjml"
+					? LanguageDescription.matchFilename(languages, "file.html")
+					: null) ||
+				(ext === "email" || ext === "eml"
+					? LanguageDescription.matchFilename(languages, "file.html")
+					: null) ||
+				(ext === "astro"
+					? LanguageDescription.matchFilename(languages, "file.tsx")
+					: null) ||
+				(ext === "svelte"
+					? LanguageDescription.matchFilename(languages, "file.html")
+					: null) ||
+				(ext === "svg"
+					? LanguageDescription.matchFilename(languages, "file.xml")
+					: null) ||
+				(ext === "pine" || ext === "tsrx"
+					? LanguageDescription.matchFilename(languages, "file.py")
+					: null) ||
+				(ext === "gd" || ext === "nim" || ext === "nimble" || ext === "nims"
+					? LanguageDescription.matchFilename(languages, "file.py")
+					: null) ||
+				(ext === "json5" || ext === "jsonc" || ext === "jsonl" || ext === "ndjson" || ext === "lot"
+					? LanguageDescription.matchFilename(languages, "file.json")
+					: null) ||
+				(ext === "bash" || ext === "zsh" || ext === "fish" || ext === "make" || ext === "mk"
+					? LanguageDescription.matchFilename(languages, "file.sh")
+					: null) ||
+				(ext === "cmd" || ext === "bat"
+					? LanguageDescription.matchFilename(languages, "file.ps1")
+					: null) ||
+				(ext === "gql" || ext === "graphql" || ext === "sol"
+					? LanguageDescription.matchFilename(languages, "file.js")
+					: null) ||
+				(ext === "prisma"
+					? LanguageDescription.matchFilename(languages, "file.rs")
+					: null) ||
+				(ext === "patch"
+					? LanguageDescription.matchFilename(languages, "file.diff")
+					: null) ||
+				(ext === "bib" || ext === "cls" || ext === "sty"
+					? LanguageDescription.matchFilename(languages, "file.tex")
+					: null) ||
+				(ext === "cu" || ext === "cuh"
+					? LanguageDescription.matchFilename(languages, "file.cpp")
+					: null) ||
+				(ext === "comp" || ext === "frag" || ext === "vert" || ext === "geom" || ext === "glsl" || ext === "hlsl" || ext === "fx" || ext === "fxh" || ext === "wgsl" || ext === "gdshader" || ext === "gdshaderinc"
+					? LanguageDescription.matchFilename(languages, "file.c")
+					: null) ||
+				(ext === "ex" || ext === "exs" || ext === "hrl"
+					? LanguageDescription.matchFilename(languages, "file.erl")
+					: null) ||
+				(ext === "f03" || ext === "f08"
+					? LanguageDescription.matchFilename(languages, "file.f90")
+					: null) ||
+				(ext === "fsi" || ext === "fsx"
+					? LanguageDescription.matchFilename(languages, "file.fs")
+					: null) ||
+				(ext === "gsh" || ext === "gvy" || ext === "gy"
+					? LanguageDescription.matchFilename(languages, "file.groovy")
+					: null) ||
+				(ext === "lhs"
+					? LanguageDescription.matchFilename(languages, "file.hs")
+					: null) ||
+				(ext === "lsp"
+					? LanguageDescription.matchFilename(languages, "file.lisp")
+					: null) ||
+				(ext === "pyi" || ext === "pyw"
+					? LanguageDescription.matchFilename(languages, "file.py")
+					: null) ||
+				(ext === "rake"
+					? LanguageDescription.matchFilename(languages, "file.rb")
+					: null) ||
+				(ext === "sbt" || ext === "sc"
+					? LanguageDescription.matchFilename(languages, "file.scala")
+					: null) ||
+				(ext === "tf" || ext === "tfvars" || ext === "hcl"
+					? LanguageDescription.matchFilename(languages, "file.yaml")
+					: null) ||
+				(ext === "tres" || ext === "tscn"
+					? LanguageDescription.matchFilename(languages, "file.ini")
+					: null) ||
+				(ext === "dpk" || ext === "dpr"
+					? LanguageDescription.matchFilename(languages, "file.pas")
+					: null) ||
+				(ext === "asm"
+					? LanguageDescription.matchFilename(languages, "file.s")
+					: null) ||
+				(ext === "zig" || ext === "zon" || ext === "odin" || ext === "c3" || ext === "gleam" || ext === "nix"
+					? LanguageDescription.matchFilename(languages, "file.rs")
+					: null) ||
+				(ext
+					? LanguageDescription.matchFilename(languages, `file.${ext}`)
+					: null);
+		}
 
 		if (desc) {
 			void desc.load().then((langSupport: LanguageSupport) => {
@@ -3325,31 +3330,83 @@ export class DotfileView extends TextFileView {
 		if (name === "cname") return "CNAME";
 
 		const labels: Record<string, string> = {
+			asm: "Assembly",
 			astro: "Astro",
 			bash: "Bash",
 			bat: "Batch",
 			bib: "BibTeX",
 			c: "C",
+			c3: "C3",
+			cc: "C++",
 			cjs: "JavaScript",
+			cl: "Common Lisp",
+			clj: "Clojure",
+			cljc: "Clojure",
+			cljs: "ClojureScript",
+			cls: "LaTeX Class",
+			cmake: "CMake",
 			cmd: "Command Script",
+			comp: "GLSL Compute",
 			cpp: "C++",
 			cs: "C#",
 			css: "CSS",
 			csv: "CSV",
+			cts: "TypeScript",
+			cu: "CUDA C++",
+			cuh: "CUDA Header",
+			cxx: "C++",
 			dart: "Dart",
 			diff: "Diff",
+			dpk: "Delphi Package",
+			dpr: "Delphi Project",
+			edn: "EDN",
+			el: "Emacs Lisp",
+			elm: "Elm",
 			email: "Email",
 			eml: "Email (EML)",
+			erl: "Erlang",
+			ex: "Elixir",
+			exs: "Elixir Script",
+			f: "Fortran",
+			f03: "Fortran 2003",
+			f08: "Fortran 2008",
+			f77: "Fortran 77",
+			f90: "Fortran 90",
+			f95: "Fortran 95",
 			fish: "Fish",
+			for: "Fortran",
+			frag: "GLSL Fragment",
+			fs: "F#",
+			fsi: "F# Signature",
+			fsx: "F# Script",
+			fx: "HLSL Effect",
+			fxh: "HLSL Header",
+			gd: "GDScript",
+			gdshader: "Godot Shader",
+			gdshaderinc: "Godot Shader Inc",
+			geom: "GLSL Geometry",
+			gleam: "Gleam",
+			glsl: "GLSL Shader",
 			go: "Go",
 			gql: "GraphQL",
+			gradle: "Gradle",
 			graphql: "GraphQL",
+			groovy: "Groovy",
+			gsh: "Groovy Shell",
+			gvy: "Groovy",
+			gy: "Groovy",
 			h: "C Header",
 			handlebars: "Handlebars",
 			hbs: "Handlebars",
+			hcl: "HCL",
+			hh: "C++ Header",
+			hlsl: "HLSL Shader",
 			hpp: "C++ Header",
+			hrl: "Erlang Header",
+			hs: "Haskell",
 			htm: "HTML",
 			html: "HTML",
+			hxx: "C++ Header",
 			ini: "INI",
 			java: "Java",
 			jl: "Julia",
@@ -3357,44 +3414,93 @@ export class DotfileView extends TextFileView {
 			json: "JSON",
 			json5: "JSON5",
 			jsonc: "JSONC",
+			jsonl: "JSON Lines",
 			jsx: "JSX (React)",
 			kt: "Kotlin",
+			kts: "Kotlin Script",
 			less: "Less",
+			lhs: "Literate Haskell",
 			liquid: "Liquid",
+			lisp: "Lisp",
 			log: "Log",
+			lot: "Lottie JSON",
+			lsp: "Lisp",
 			lua: "Lua",
+			m: "Objective-C",
+			make: "Makefile",
 			markdown: "Markdown",
 			md: "Markdown",
 			mdx: "MDX",
 			mjml: "MJML",
 			mjs: "JavaScript",
+			mk: "Makefile",
+			ml: "OCaml",
+			mli: "OCaml Interface",
+			mm: "Objective-C++",
+			mts: "TypeScript",
+			ndjson: "NDJSON",
+			nim: "Nim",
+			nimble: "Nimble",
+			nims: "Nim Script",
+			nix: "Nix",
+			odin: "Odin",
+			pas: "Pascal",
 			patch: "Patch",
 			php: "PHP",
+			phtml: "PHP HTML",
 			pine: "Pine Script",
+			pl: "Perl",
+			pm: "Perl Module",
+			pp: "Puppet",
 			prisma: "Prisma",
+			proto: "Protobuf",
 			ps1: "PowerShell",
+			psd1: "PowerShell Data",
+			psm1: "PowerShell Module",
 			py: "Python",
+			pyi: "Python Stub",
+			pyw: "Python GUI",
 			r: "R",
+			rake: "Rakefile",
 			rb: "Ruby",
 			rs: "Rust",
+			s: "Assembly",
 			sass: "Sass",
+			sbt: "SBT",
+			sc: "Scala Script",
+			scala: "Scala",
+			scm: "Scheme",
 			scss: "SCSS",
 			sh: "Shell",
+			sol: "Solidity",
 			sql: "SQL",
+			ss: "Scheme",
+			sty: "LaTeX Style",
 			svelte: "Svelte",
 			svg: "SVG",
 			swift: "Swift",
 			tex: "LaTeX",
+			text: "Plain Text",
+			tf: "Terraform",
+			tfvars: "Terraform Vars",
 			toml: "TOML",
+			tres: "Godot Resource",
 			ts: "TypeScript",
-			tsx: "TSX (React)",
+			tscn: "Godot Scene",
+			tsrx: "TradingView Script",
 			tsv: "TSV",
+			tsx: "TSX (React)",
 			txt: "Plain Text",
+			vert: "GLSL Vertex",
 			vue: "Vue",
+			wat: "WebAssembly Text",
+			wgsl: "WGSL Shader",
 			xml: "XML",
+			xsd: "XML Schema",
 			yaml: "YAML",
 			yml: "YAML",
 			zig: "Zig",
+			zon: "ZON (Zig)",
 			zsh: "Zsh",
 		};
 
