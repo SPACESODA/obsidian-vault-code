@@ -85,7 +85,7 @@ export const ja: TranslationSchema = {
 	settingsPreventAutoOpenName: "未サポートファイルの自動起動を防止",
 	settingsPreventAutoOpenDesc: "ファイルエクスプローラーで未サポートのバイナリやドキュメントファイル（.zip、.exe、.docx、.dmg など）をシングルクリックした際に選択のみ行い、誤った解凍や外部アプリの起動を防ぎます。",
 	settingsOpenOnDoubleClickName: "ダブルクリックで未サポートファイルを開く",
-	settingsOpenOnDoubleClickDesc: "ダブルクリック時にシステムの標準アプリケーションでファイルを開くことを許可します。無効の場合、右クリックメニューからのみ外部起動できます。",
+	settingsOpenOnDoubleClickDesc: "Obsidian で表示できないファイル（.zip、.docx、.pdf など）をダブルクリックしたときに、システムの既定アプリで開きます。右クリックメニューからいつでも開くこともできます。",
 	settingsObsidianIgnoreName: "{0} でファイルとフォルダーを除外",
 	settingsObsidianIgnoreDesc: "保管庫ルートの .obsidianignore に定義されたルールを適用します。標準の .gitignore 構文に対応（ワイルドカード、スラッシュ、否定 ! をサポート）。",
 	settingsButtonCreateDefault: "デフォルトを追加",

@@ -85,7 +85,7 @@ export const it: TranslationSchema = {
 	settingsPreventAutoOpenName: "Impedisci l'apertura automatica dei file non supportati",
 	settingsPreventAutoOpenDesc: "Facendo un singolo clic su file binari o documenti non supportati (.zip, .exe, .docx, .dmg), questi vengono solo selezionati, evitando estrazioni o avvii accidentali di app esterne.",
 	settingsOpenOnDoubleClickName: "Apri file non supportati con doppio clic",
-	settingsOpenOnDoubleClickDesc: "Consenti l'apertura dei file non supportati con l'applicazione di sistema predefinita tramite doppio clic. Se disattivato, possono essere aperti solo dal menu contestuale.",
+	settingsOpenOnDoubleClickDesc: "Apri i file che Obsidian non può visualizzare (come .zip, .docx o .pdf) nell'applicazione predefinita del sistema con un doppio clic. Puoi sempre aprirli tramite il menu contestuale con il tasto destro.",
 	settingsObsidianIgnoreName: "Ignora file e cartelle con {0}",
 	settingsObsidianIgnoreDesc: "Applica le regole di .obsidianignore nella radice del vault, usando la sintassi standard di .gitignore (supporta caratteri jolly, barre per cartelle e negazioni !).",
 	settingsButtonCreateDefault: "Aggiungi predefinito",

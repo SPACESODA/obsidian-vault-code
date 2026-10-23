@@ -5970,27 +5970,25 @@ export default class VaultCodePlugin extends Plugin {
 				// Intercept unsupported files: prevent external app launch on single click,
 				// while allowing double-click to open in default app if enabled.
 				if (file instanceof TFile && plugin.isUnsupportedFile(file)) {
-					if (plugin.settings.preventAutoOpenUnsupported) {
-						const now = Date.now();
-						const isDoubleClick =
-							plugin.lastUnsupportedClickFile === file.path &&
-							now - plugin.lastUnsupportedClickTime < 500;
-						plugin.lastUnsupportedClickFile = file.path;
-						plugin.lastUnsupportedClickTime = isDoubleClick
-							? 0
-							: now;
+					const now = Date.now();
+					const isDoubleClick =
+						plugin.lastUnsupportedClickFile === file.path &&
+						now - plugin.lastUnsupportedClickTime < 500;
+					plugin.lastUnsupportedClickFile = file.path;
+					plugin.lastUnsupportedClickTime = isDoubleClick
+						? 0
+						: now;
 
-						if (
-							isDoubleClick &&
-							plugin.settings.openUnsupportedOnDoubleClick
-						) {
-							const appWithOpen = plugin.app as unknown as {
-								openWithDefaultApp?: (p: string) => void;
-							};
-							appWithOpen.openWithDefaultApp?.(file.path);
-						}
-						return;
+					if (
+						isDoubleClick &&
+						plugin.settings.openUnsupportedOnDoubleClick
+					) {
+						const appWithOpen = plugin.app as unknown as {
+							openWithDefaultApp?: (p: string) => void;
+						};
+						appWithOpen.openWithDefaultApp?.(file.path);
 					}
+					return;
 				}
 
 				// If this active leaf is a dirty code file and auto-save is disabled,
@@ -7598,34 +7596,19 @@ class VaultCodeSettingTab extends PluginSettingTab {
 			});
 
 		new Setting(containerEl)
-			.setName(t("settingsPreventAutoOpenName"))
-			.setDesc(t("settingsPreventAutoOpenDesc"))
+			.setName(t("settingsOpenOnDoubleClickName"))
+			.setDesc(t("settingsOpenOnDoubleClickDesc"))
 			.addToggle((toggle) =>
 				toggle
-					.setValue(this.plugin.settings.preventAutoOpenUnsupported)
+					.setValue(
+						this.plugin.settings.openUnsupportedOnDoubleClick,
+					)
 					.onChange(async (value) => {
-						this.plugin.settings.preventAutoOpenUnsupported = value;
+						this.plugin.settings.openUnsupportedOnDoubleClick =
+							value;
 						await this.plugin.saveSettings();
-						this.display();
 					}),
 			);
-
-		if (this.plugin.settings.preventAutoOpenUnsupported) {
-			new Setting(containerEl)
-				.setName(t("settingsOpenOnDoubleClickName"))
-				.setDesc(t("settingsOpenOnDoubleClickDesc"))
-				.addToggle((toggle) =>
-					toggle
-						.setValue(
-							this.plugin.settings.openUnsupportedOnDoubleClick,
-						)
-						.onChange(async (value) => {
-							this.plugin.settings.openUnsupportedOnDoubleClick =
-								value;
-							await this.plugin.saveSettings();
-						}),
-				);
-		}
 
 		let obsidianIgnoreButton: ButtonComponent | null = null;
 		let obsidianIgnoreButtonIconEl: HTMLElement | null = null;

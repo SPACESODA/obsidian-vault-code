@@ -85,7 +85,7 @@ export const zhCn: TranslationSchema = {
 	settingsPreventAutoOpenName: "阻止自动打开不支持的文件",
 	settingsPreventAutoOpenDesc: "在文件列表中单击不支持的二进制或文档文件（例如 .zip、.exe、.docx、.dmg）时仅选中该文件，防止意外解压或启动外部应用程序。",
 	settingsOpenOnDoubleClickName: "双击打开不支持的文件",
-	settingsOpenOnDoubleClickDesc: "允许双击使用系统默认应用程序打开不支持的文件。若禁用，则只能通过右键菜单手动打开。",
+	settingsOpenOnDoubleClickDesc: "双击无法在 Obsidian 中查看的文件（如 .zip、.docx 或 .pdf）时使用系统默认应用打开。你随时可以通过右键菜单打开它们。",
 	settingsObsidianIgnoreName: "使用 {0} 忽略文件和文件夹",
 	settingsObsidianIgnoreDesc: "遵循仓库根目录 .obsidianignore 中的规则，采用标准 .gitignore 语法（支持通配符、文件夹斜杠与反向排除 !）。",
 	settingsButtonCreateDefault: "添加默认",

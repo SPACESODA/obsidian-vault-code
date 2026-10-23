@@ -85,7 +85,7 @@ export const de: TranslationSchema = {
 	settingsPreventAutoOpenName: "Automatisches Öffnen nicht unterstützter Dateien verhindern",
 	settingsPreventAutoOpenDesc: "Ein einfacher Klick auf nicht unterstützte Binär- oder Dokumentdateien (.zip, .exe, .docx, .dmg) wählt diese nur aus, um ein versehentliches Entpacken oder Starten externer Programme zu verhindern.",
 	settingsOpenOnDoubleClickName: "Nicht unterstützte Dateien per Doppelklick öffnen",
-	settingsOpenOnDoubleClickDesc: "Erlaubt das Öffnen nicht unterstützter Dateien mit der Standardanwendung des Systems per Doppelklick. Wenn deaktiviert, können sie nur über das Kontextmenü geöffnet werden.",
+	settingsOpenOnDoubleClickDesc: "Dateien, die Obsidian nicht anzeigen kann (wie .zip, .docx oder .pdf), per Doppelklick in der Standard-App des Systems öffnen. Über das Kontextmenü per Rechtsklick können sie jederzeit geöffnet werden.",
 	settingsObsidianIgnoreName: "Dateien und Ordner mit {0} ignorieren",
 	settingsObsidianIgnoreDesc: "Regeln aus .obsidianignore im Vault-Stammverzeichnis anwenden (verwendet Standard-.gitignore-Syntax mit Platzhaltern, Ordner-Schrägstrichen und Negationen !).",
 	settingsButtonCreateDefault: "Standard hinzufügen",
