@@ -2680,8 +2680,18 @@ export class DotfileView extends TextFileView {
 		if (s && typeof s.preview === "boolean") {
 			this.isPreviewMode = s.preview;
 		}
-		if (s && typeof s.diff === "boolean" && s.diff) {
-			this.initialDiffRequested = true;
+		if (s && typeof s.diff === "boolean") {
+			if (s.diff) {
+				this.initialDiffRequested = true;
+				if (this.editor && this.file) {
+					void this.setDiffMode(true);
+				}
+			} else {
+				this.initialDiffRequested = false;
+				if (this.editor && this.file) {
+					void this.setDiffMode(false);
+				}
+			}
 		}
 		await super.setState(state, result);
 	}
@@ -2712,6 +2722,9 @@ export class DotfileView extends TextFileView {
 		}
 		if (this.isDirty()) {
 			return false;
+		}
+		if (ext === "md") {
+			return true;
 		}
 		return this.plugin.isExtensionEditable(ext);
 	}
@@ -5526,22 +5539,47 @@ export default class VaultCodePlugin extends Plugin {
 		const stats = await this.gitService.getFileDiffStats(file.path);
 		if (!stats || !stats.isModified) {
 			new Notice(t("gitNoChanges"));
-			const leaf = this.app.workspace.getLeaf(false);
-			await leaf.openFile(file);
 			return;
 		}
 
 		let targetLeaf: WorkspaceLeaf | null = null;
-		this.app.workspace.iterateAllLeaves((leaf) => {
-			const view = leaf.view;
-			const viewFile = (view as { file?: TFile }).file;
-			if (viewFile && viewFile.path === file.path) {
-				targetLeaf = leaf;
-			}
-		});
+		const activeView =
+			this.app.workspace.getActiveViewOfType(TextFileView) ??
+			this.app.workspace.getActiveViewOfType(DotfileView);
+		if (activeView && activeView.file?.path === file.path) {
+			targetLeaf = activeView.leaf;
+		}
+
+		if (!targetLeaf) {
+			this.app.workspace.iterateAllLeaves((leaf) => {
+				const view = leaf.view;
+				const viewFile = (view as { file?: TFile }).file;
+				if (viewFile && viewFile.path === file.path) {
+					targetLeaf = leaf;
+				}
+			});
+		}
 
 		if (!targetLeaf) {
 			targetLeaf = this.app.workspace.getLeaf(false);
+		}
+
+		if (targetLeaf.view instanceof DotfileView) {
+			this.app.workspace.setActiveLeaf(targetLeaf, { focus: true });
+			await targetLeaf.view.setDiffMode(true);
+			this.updateAllLeafHeaderActions();
+			return;
+		}
+
+		const currentView = targetLeaf.view as unknown as {
+			save?: () => Promise<void>;
+		};
+		if (typeof currentView?.save === "function") {
+			try {
+				await currentView.save();
+			} catch {
+				// Ignore save error
+			}
 		}
 
 		await targetLeaf.setViewState({
@@ -5549,6 +5587,12 @@ export default class VaultCodePlugin extends Plugin {
 			active: true,
 			state: { file: file.path, diff: true },
 		});
+
+		if (targetLeaf.view instanceof DotfileView) {
+			await targetLeaf.view.setDiffMode(true);
+		}
+
+		this.updateAllLeafHeaderActions();
 	}
 
 	public debouncedUpdateGitStatus(): void {
@@ -5962,8 +6006,10 @@ export default class VaultCodePlugin extends Plugin {
 				diffBtn.addEventListener("click", (evt: MouseEvent) => {
 					evt.preventDefault();
 					evt.stopPropagation();
-					if (file) {
-						void this.openFileInDiffView(file);
+					const currentFile =
+						(leaf.view as { file?: TFile }).file ?? file;
+					if (currentFile) {
+						void this.openFileInDiffView(currentFile);
 					}
 				});
 
