@@ -6170,7 +6170,7 @@ export default class VaultCodePlugin extends Plugin {
 		);
 	}
 
-	/* ── show hidden files — adapter monkey-patch ──────────── */
+	/* -- show hidden files: adapter monkey-patch ------------ */
 
 	private adapter(): PrivateAdapter {
 		return this.app.vault.adapter as unknown as PrivateAdapter;
@@ -6334,7 +6334,7 @@ export default class VaultCodePlugin extends Plugin {
 				}
 
 				if (isDotPath(path)) {
-					// File exists on disk — re-register it instead of deleting
+					// File exists on disk: re-register it instead of deleting
 					const fullPath = adapter.getFullPath ? adapter.getFullPath(path) : path;
 					if (adapter._exists && (await adapter._exists(fullPath, path))) {
 						this.hiddenPaths.add(path);
@@ -6802,14 +6802,14 @@ export default class VaultCodePlugin extends Plugin {
 		}
 	}
 
-	/** Enable hidden files — patch + rescan. */
+	/** Enable hidden files: patch + rescan. */
 	async enableHiddenFiles(): Promise<void> {
 		this.patchAdapter();
 		this.suppressDotfileWarning();
 		await this.rescanVault();
 	}
 
-	/** Disable hidden files — hide all revealed files + restore. */
+	/** Disable hidden files: hide all revealed files + restore. */
 	async disableHiddenFiles(): Promise<void> {
 		// Hide all currently visible dotfiles before restoring
 		for (const path of this.hiddenPaths) {

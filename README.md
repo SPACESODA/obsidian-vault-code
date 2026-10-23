@@ -7,7 +7,7 @@ A file manager to display and manage all file types, including hidden files, plu
 
 Obsidian is where you think, write, and organize your knowledge. But when you need to tweak a script, check a `.env` file, or preview an HTML, you're usually forced to jump out to VS Code or another window.
 
-**Vault Code keeps you in flow.** It turns your vault into a fast, focused workspace where you can view hidden dotfiles, edit code across 70+ languages, and live-preview HTML, SVG, and MJML files, all while feeling completely native to your Obsidian experience.
+**Vault Code keeps you in flow.** It turns your vault into a fast, focused workspace where you can view hidden dotfiles, edit code across most programming languages, and live-preview HTML, SVG, and MJML files, all while feeling completely native to your Obsidian experience.
 
 Vault Code automatically adapts to your Obsidian display language: English, 繁體中文, 简体中文, 日本語, 한국어, Español, Français, Italiano, Deutsch, and Русский.
 
@@ -19,7 +19,7 @@ Vault Code automatically adapts to your Obsidian display language: English, 繁�
 * **Universal File Creator**: Create dotfiles, dotfolders, and any file extension.
 * **Edit File Name & Extension**: Rename files and change extensions freely with built-in safety.
 * **Manage Ignore Rules**: Filter files with `.obsidianignore` and `.gitignore` files.
-* **Beautiful Code Editor**: Fast syntax highlighting for over 70 languages.
+* **Beautiful Code Editor**: Fast syntax highlighting across most programming languages.
 * **Edit Notes as Source Code**: Toggle between native note view and code editor in one click.
 * **Find & Replace**: Multiline search, regex, case and word matching, and jump navigation.
 * **Live Preview**: Toggle live preview for HTML, SVG, and MJML email templates.
@@ -32,7 +32,7 @@ Vault Code automatically adapts to your Obsidian display language: English, 繁�
 
 ### ✏️ Edit code right where you write notes
 Open and edit scripts, data, and config files without leaving your vault. 
-* **70+ languages supported**: Python, JavaScript, TypeScript, Rust, Go, C++, SQL, HTML, CSS, JSON, YAML, Shell scripts, and more.
+* **Broad language support**: Python, JavaScript, TypeScript, Rust, Go, C++, SQL, HTML, CSS, JSON, YAML, Shell scripts, and almost any language in your stack.
 * **Edit Markdown in code view**: Need pure source editing for frontmatter, raw tables, or regex tweaks? Right-click any `.md` file to **Edit in code editor**, or click the code icon (`</>`) in the tab header to switch instantly.
 * **Feels like a proper code editor**: Line numbers, active line highlights, bracket matching, fold gutters, smooth scrolling, and VS Code-compatible muscle memory (moving lines, line duplication, commenting, and go-to-line).
 * **Zero bloat**: Built on Obsidian’s native editor engine, so it inherits your theme, dark/light mode, and font size instantly with zero extra lag.
