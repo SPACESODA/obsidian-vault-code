@@ -903,8 +903,7 @@ body .hidden-files-editor-wrapper .cm-searchMatch-selected {
 .vault-code-reset-setting {
 	border: none;
 	border-top: none;
-	margin-top: 36px;
-	padding-top: 12px;
+	margin-top: 56px;
 }
 
 .hidden-files-settings .vault-code-reset-setting:before,
