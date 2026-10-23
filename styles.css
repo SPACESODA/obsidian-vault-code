@@ -1607,12 +1607,14 @@ button.vault-code-ignore-btn:hover {
 .cm-editor .cm-changeGutter {
 	width: 3px;
 	padding: 0;
+	margin: 0;
 }
 
 .cm-editor .cm-changedLineGutter,
 .cm-editor .cm-deletedLineGutter,
 .cm-editor .cm-inlineChangedLineGutter {
 	width: 3px;
+	margin: 0;
 }
 
 .cm-editor .cm-changedLineGutter {
@@ -1624,17 +1626,20 @@ button.vault-code-ignore-btn:hover {
 }
 
 .cm-editor .cm-collapsedLines {
-	display: block;
+	display: flex;
+	align-items: center;
 	width: 100%;
-	margin: 2px 0;
-	padding: 3px 16px;
+	margin: 0;
+	padding: 0 16px;
+	height: calc(var(--code-size, 13px) * 1.55);
+	line-height: calc(var(--code-size, 13px) * 1.55);
 	box-sizing: border-box;
 	background: transparent;
 	border: none;
 	color: var(--interactive-accent);
 	opacity: 0.75;
 	font-size: var(--font-ui-smaller, 11px);
-	font-family: var(--font-ui);
+	font-family: var(--font-monospace, monospace);
 	cursor: pointer;
 	user-select: none;
 	transition: opacity 0.15s ease, color 0.15s ease;

@@ -4279,6 +4279,7 @@ export class DotfileView extends TextFileView {
 			});
 
 			this.renderDiffToolbar();
+			this.editor.requestMeasure();
 		} else {
 			this.isDiffMode = false;
 			if (this.gitDiffStatsBtnEl) {
@@ -4310,6 +4311,10 @@ export class DotfileView extends TextFileView {
 
 			eq(other: ChunkActionBarWidget): boolean {
 				return this.chunkPos === other.chunkPos;
+			}
+
+			override get estimatedHeight(): number {
+				return 32;
 			}
 
 			toDOM(editorView: EditorView): HTMLElement {
