@@ -2647,6 +2647,7 @@ export class DotfileView extends TextFileView {
 	public isDiffMode = false;
 	private diffToolbarEl: HTMLElement | null = null;
 	private initialDiffRequested = false;
+	private isDiffModePending = false;
 
 	constructor(leaf: WorkspaceLeaf, plugin: VaultCodePlugin) {
 		super(leaf);
@@ -2735,19 +2736,21 @@ export class DotfileView extends TextFileView {
 			this.isPreviewMode = s.preview;
 		}
 		if (s && typeof s.diff === "boolean") {
-			if (s.diff) {
-				this.initialDiffRequested = true;
-				if (this.editor && this.file) {
-					void this.setDiffMode(true);
-				}
-			} else {
-				this.initialDiffRequested = false;
-				if (this.editor && this.file) {
-					void this.setDiffMode(false);
-				}
-			}
+			this.initialDiffRequested = s.diff;
 		}
 		await super.setState(state, result);
+
+		if (
+			this.initialDiffRequested &&
+			this.editor &&
+			this.file &&
+			this.plugin.isGitAvailable()
+		) {
+			this.initialDiffRequested = false;
+			await this.setDiffMode(true);
+		} else if (!this.initialDiffRequested && this.isDiffMode) {
+			await this.setDiffMode(false);
+		}
 	}
 
 	override async onLoadFile(file: TFile): Promise<void> {
@@ -2761,12 +2764,6 @@ export class DotfileView extends TextFileView {
 		this.updateDirtyUI();
 		this.updateViewModeUI();
 		void this.updateGitStatus();
-		if (this.initialDiffRequested) {
-			this.initialDiffRequested = false;
-			if (this.plugin.isGitAvailable()) {
-				void this.setDiffMode(true);
-			}
-		}
 	}
 
 	canAcceptExtension(extension: string): boolean {
@@ -4476,62 +4473,70 @@ export class DotfileView extends TextFileView {
 	public async setDiffMode(enable: boolean): Promise<void> {
 		if (!this.editor || !this.file) return;
 		if (this.isDiffMode === enable) return;
+		if (this.isDiffModePending) return;
 
-		if (enable) {
-			const stats = await this.plugin.gitService.getFileDiffStats(this.file.path);
-			if (!stats || !stats.isModified) {
-				new Notice(t("gitNoChanges"));
-				return;
+		this.isDiffModePending = true;
+		try {
+			if (enable) {
+				const stats = await this.plugin.gitService.getFileDiffStats(this.file.path);
+				if (!stats || !stats.isModified) {
+					new Notice(t("gitNoChanges"));
+					return;
+				}
+
+				if (this.isPreviewMode) {
+					this.toggleViewMode();
+				}
+
+				const headContent = await this.plugin.gitService.getHeadContent(this.file.path);
+				if (!this.editor || !this.file) return;
+
+				this.isDiffMode = true;
+
+				if (this.gitDiffStatsBtnEl) {
+					this.gitDiffStatsBtnEl.addClass("is-active");
+					this.gitDiffStatsBtnEl.setAttribute("aria-label", t("gitHideChanges"));
+				}
+
+				this.editor.dispatch({
+					effects: this.diffCompartment.reconfigure([
+						unifiedMergeView({
+							original: headContent,
+							highlightChanges: true,
+							gutter: true,
+							allowInlineDiffs: true,
+							mergeControls: false,
+							collapseUnchanged: {
+								margin: 3,
+								minSize: 4,
+							},
+						}),
+						this.createChunkActionBarsExtension(),
+					]),
+				});
+
+				this.renderDiffToolbar();
+				this.editor.requestMeasure();
+			} else {
+				this.isDiffMode = false;
+				if (this.gitDiffStatsBtnEl) {
+					this.gitDiffStatsBtnEl.removeClass("is-active");
+					this.gitDiffStatsBtnEl.setAttribute("aria-label", t("gitViewChanges"));
+				}
+
+				this.editor.dispatch({
+					effects: this.diffCompartment.reconfigure([]),
+				});
+
+				if (this.diffToolbarEl) {
+					this.diffToolbarEl.remove();
+					this.diffToolbarEl = null;
+				}
+
+				void this.updateGitStatus();
 			}
-
-			if (this.isPreviewMode) {
-				this.toggleViewMode();
-			}
-
-			const headContent = await this.plugin.gitService.getHeadContent(this.file.path);
-			this.isDiffMode = true;
-
-			if (this.gitDiffStatsBtnEl) {
-				this.gitDiffStatsBtnEl.addClass("is-active");
-				this.gitDiffStatsBtnEl.setAttribute("aria-label", t("gitHideChanges"));
-			}
-
-			this.editor.dispatch({
-				effects: this.diffCompartment.reconfigure([
-					unifiedMergeView({
-						original: headContent,
-						highlightChanges: true,
-						gutter: true,
-						allowInlineDiffs: true,
-						mergeControls: false,
-						collapseUnchanged: {
-							margin: 3,
-							minSize: 4,
-						},
-					}),
-					this.createChunkActionBarsExtension(),
-				]),
-			});
-
-			this.renderDiffToolbar();
-			this.editor.requestMeasure();
-		} else {
-			this.isDiffMode = false;
-			if (this.gitDiffStatsBtnEl) {
-				this.gitDiffStatsBtnEl.removeClass("is-active");
-				this.gitDiffStatsBtnEl.setAttribute("aria-label", t("gitViewChanges"));
-			}
-
-			this.editor.dispatch({
-				effects: this.diffCompartment.reconfigure([]),
-			});
-
-			if (this.diffToolbarEl) {
-				this.diffToolbarEl.remove();
-				this.diffToolbarEl = null;
-			}
-
-			void this.updateGitStatus();
+		} finally {
+			this.isDiffModePending = false;
 		}
 	}
 
@@ -4615,12 +4620,21 @@ export class DotfileView extends TextFileView {
 				targetSide: number;
 				chunk: (typeof chunks)[number];
 			}> = [];
+			const docLength = state.doc.length;
 
 			for (const chunk of chunks) {
 				const isPureDeletion = chunk.toB <= chunk.fromB;
-				const targetPos = isPureDeletion
-					? chunk.fromB
-					: state.doc.lineAt(chunk.toB - 1).to;
+				let targetPos: number;
+				if (isPureDeletion) {
+					targetPos = Math.min(Math.max(0, chunk.fromB), docLength);
+				} else {
+					const linePos = Math.min(Math.max(0, chunk.toB - 1), docLength);
+					try {
+						targetPos = state.doc.lineAt(linePos).to;
+					} catch {
+						targetPos = Math.min(chunk.toB, docLength);
+					}
+				}
 				const targetSide = isPureDeletion ? -0.5 : 1;
 				items.push({ targetPos, targetSide, chunk });
 			}
@@ -4631,7 +4645,10 @@ export class DotfileView extends TextFileView {
 			);
 
 			const builder = new RangeSetBuilder<Decoration>();
+			let lastPos = -1;
 			for (const item of items) {
+				if (item.targetPos < lastPos) continue;
+				lastPos = item.targetPos;
 				builder.add(
 					item.targetPos,
 					item.targetPos,
@@ -5580,20 +5597,27 @@ export default class VaultCodePlugin extends Plugin {
 	}
 
 	public getActiveWorkspaceLeaf(): WorkspaceLeaf | null {
+		const mostRecent = (
+			this.app.workspace as unknown as {
+				getMostRecentLeaf?: (root?: unknown) => WorkspaceLeaf | null;
+			}
+		).getMostRecentLeaf?.(this.app.workspace.rootSplit);
+		if (
+			mostRecent &&
+			mostRecent.getRoot() === this.app.workspace.rootSplit
+		) {
+			return mostRecent;
+		}
 		const activeView =
 			this.app.workspace.getActiveViewOfType(DotfileView) ??
 			this.app.workspace.getActiveViewOfType(TextFileView) ??
 			this.app.workspace.getActiveViewOfType(View);
-		if (activeView && activeView.leaf) {
+		if (
+			activeView &&
+			activeView.leaf &&
+			activeView.leaf.getRoot() === this.app.workspace.rootSplit
+		) {
 			return activeView.leaf;
-		}
-		const mostRecent = (
-			this.app.workspace as unknown as {
-				getMostRecentLeaf?: () => WorkspaceLeaf | null;
-			}
-		).getMostRecentLeaf?.();
-		if (mostRecent) {
-			return mostRecent;
 		}
 		return this.app.workspace.getLeaf(false);
 	}
@@ -5602,6 +5626,9 @@ export default class VaultCodePlugin extends Plugin {
 		leaf: WorkspaceLeaf | null | undefined,
 	): string | null {
 		if (!leaf || !leaf.view) return null;
+		if (leaf.getRoot() !== this.app.workspace.rootSplit) {
+			return null;
+		}
 		const view = leaf.view as unknown as {
 			file?: TFile;
 			filePath?: string;
@@ -5649,80 +5676,99 @@ export default class VaultCodePlugin extends Plugin {
 
 	public async openFileInDiffView(file: TFile): Promise<void> {
 		if (!this.isGitAvailable()) return;
-		if (!this.isFileSupportedForGitDiff(file)) {
-			new Notice(t("gitBinaryDiffUnsupported"));
+		try {
+			if (!this.isFileSupportedForGitDiff(file)) {
+				new Notice(t("gitBinaryDiffUnsupported"));
+				const activeLeaf = this.getActiveWorkspaceLeaf();
+				const isDirty = this.isLeafDirty(activeLeaf);
+				const targetLeaf = isDirty
+					? this.app.workspace.getLeaf("tab")
+					: (activeLeaf ?? this.app.workspace.getLeaf(false));
+				await targetLeaf.openFile(file);
+				return;
+			}
+			const stats = await this.gitService.getFileDiffStats(file.path);
+			if (!stats || !stats.isModified) {
+				new Notice(t("gitNoChanges"));
+				return;
+			}
+
+			// 1. Check if the target file is already open in any existing leaf in the main editor area
+			let existingLeaf: WorkspaceLeaf | null = null;
 			const activeLeaf = this.getActiveWorkspaceLeaf();
-			const isDirty = this.isLeafDirty(activeLeaf);
-			const targetLeaf = isDirty
-				? this.app.workspace.getLeaf(true)
-				: (activeLeaf ?? this.app.workspace.getLeaf(false));
-			await targetLeaf.openFile(file);
-			return;
-		}
-		const stats = await this.gitService.getFileDiffStats(file.path);
-		if (!stats || !stats.isModified) {
-			new Notice(t("gitNoChanges"));
-			return;
-		}
+			if (
+				activeLeaf &&
+				activeLeaf.getRoot() === this.app.workspace.rootSplit &&
+				this.getLeafFilePath(activeLeaf) === file.path
+			) {
+				existingLeaf = activeLeaf;
+			} else {
+				this.app.workspace.iterateRootLeaves((leaf) => {
+					if (!existingLeaf && this.getLeafFilePath(leaf) === file.path) {
+						existingLeaf = leaf;
+					}
+				});
+			}
 
-		// 1. Check if the target file is already open in any existing leaf
-		let existingLeaf: WorkspaceLeaf | null = null;
-		const activeLeaf = this.getActiveWorkspaceLeaf();
-		if (activeLeaf && this.getLeafFilePath(activeLeaf) === file.path) {
-			existingLeaf = activeLeaf;
-		} else {
-			this.app.workspace.iterateAllLeaves((leaf) => {
-				if (!existingLeaf && this.getLeafFilePath(leaf) === file.path) {
-					existingLeaf = leaf;
+			if (existingLeaf) {
+				this.app.workspace.setActiveLeaf(existingLeaf, { focus: true });
+				if (existingLeaf.view instanceof DotfileView) {
+					if (!existingLeaf.view.isDiffMode) {
+						await existingLeaf.view.setDiffMode(true);
+					}
+					this.updateAllLeafHeaderActions();
+					return;
 				}
-			});
-		}
 
-		if (existingLeaf) {
-			this.app.workspace.setActiveLeaf(existingLeaf, { focus: true });
-			if (existingLeaf.view instanceof DotfileView) {
-				await existingLeaf.view.setDiffMode(true);
+				await this.saveLeafViewIfDirty(existingLeaf);
+				await existingLeaf.setViewState({
+					type: VIEW_TYPE_DOTFILE,
+					active: true,
+					state: { file: file.path, diff: true },
+				});
+				if (
+					existingLeaf.view instanceof DotfileView &&
+					!existingLeaf.view.isDiffMode
+				) {
+					await existingLeaf.view.setDiffMode(true);
+				}
 				this.updateAllLeafHeaderActions();
 				return;
 			}
 
-			await this.saveLeafViewIfDirty(existingLeaf);
-			await existingLeaf.setViewState({
+			// 2. Target file is not open in any main editor leaf.
+			// If the active tab has unsaved changes, preserve it and open in a new tab.
+			// Otherwise, open on that existing tab.
+			const isCurrentDirty = this.isLeafDirty(activeLeaf);
+			let targetLeaf: WorkspaceLeaf;
+			if (isCurrentDirty) {
+				targetLeaf = this.app.workspace.getLeaf("tab");
+			} else {
+				targetLeaf =
+					activeLeaf &&
+					activeLeaf.getRoot() === this.app.workspace.rootSplit
+						? activeLeaf
+						: this.app.workspace.getLeaf(false);
+				await this.saveLeafViewIfDirty(targetLeaf);
+			}
+
+			await targetLeaf.setViewState({
 				type: VIEW_TYPE_DOTFILE,
 				active: true,
 				state: { file: file.path, diff: true },
 			});
-			if (existingLeaf.view instanceof DotfileView) {
-				await existingLeaf.view.setDiffMode(true);
+			this.app.workspace.setActiveLeaf(targetLeaf, { focus: true });
+
+			if (
+				targetLeaf.view instanceof DotfileView &&
+				!targetLeaf.view.isDiffMode
+			) {
+				await targetLeaf.view.setDiffMode(true);
 			}
 			this.updateAllLeafHeaderActions();
-			return;
+		} catch (err) {
+			console.error("Failed to open file in diff view:", err);
 		}
-
-		// 2. Target file is not open in any existing leaf.
-		// If the active tab has unsaved changes, preserve it and open in a new tab.
-		// Otherwise, open on that existing tab.
-		const isCurrentDirty = this.isLeafDirty(activeLeaf);
-		let targetLeaf: WorkspaceLeaf;
-		if (isCurrentDirty) {
-			targetLeaf = this.app.workspace.getLeaf(true);
-		} else {
-			targetLeaf = activeLeaf ?? this.app.workspace.getLeaf(false);
-			await this.saveLeafViewIfDirty(targetLeaf);
-		}
-
-		this.app.workspace.setActiveLeaf(targetLeaf, { focus: true });
-
-		await targetLeaf.setViewState({
-			type: VIEW_TYPE_DOTFILE,
-			active: true,
-			state: { file: file.path, diff: true },
-		});
-
-		if (targetLeaf.view instanceof DotfileView) {
-			await targetLeaf.view.setDiffMode(true);
-		}
-		this.updateAllLeafHeaderActions();
 	}
 
 	public debouncedUpdateGitStatus(): void {
@@ -6463,7 +6509,7 @@ export default class VaultCodePlugin extends Plugin {
 
 				// If this active leaf has unsaved changes, do NOT replace it! Open the clicked file in a new tab instead.
 				if (plugin.isLeafDirty(this)) {
-					const newLeaf = plugin.app.workspace.getLeaf(true);
+					const newLeaf = plugin.app.workspace.getLeaf("tab");
 					return newLeaf.openFile(file, openState);
 				}
 
