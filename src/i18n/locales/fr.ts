@@ -85,7 +85,7 @@ export const fr: TranslationSchema = {
 	settingsPreventAutoOpenName: "Empêcher l'ouverture automatique des fichiers non pris en charge",
 	settingsPreventAutoOpenDesc: "Un simple clic sur des fichiers binaires ou documents non pris en charge (.zip, .exe, .docx, .dmg) les sélectionne uniquement, évitant ainsi toute décompression accidentelle ou lancement d'application externe.",
 	settingsOpenOnDoubleClickName: "Ouvrir les fichiers non pris en charge par double-clic",
-	settingsOpenOnDoubleClickDesc: "Ouvrir les fichiers qu'Obsidian ne peut pas afficher (comme .zip, .docx ou .pdf) dans l'application par défaut du système lors d'un double-clic. Vous pouvez toujours les ouvrir par un clic droit.",
+	settingsOpenOnDoubleClickDesc: "Ouvrir les fichiers non pris en charge (comme .zip, .docx ou .pdf) dans l'application par défaut du système lors d'un double-clic. Remarque : Vous pouvez toujours les ouvrir par un clic droit.",
 	settingsObsidianIgnoreName: "Ignorer les fichiers et dossiers avec {0}",
 	settingsObsidianIgnoreDesc: "Respecter les règles de .obsidianignore à la racine du coffre, selon la syntaxe standard .gitignore (jokers, barres obliques de dossier et négations !).",
 	settingsButtonCreateDefault: "Ajouter par défaut",

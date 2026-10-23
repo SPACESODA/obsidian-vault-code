@@ -85,7 +85,7 @@ export const ko: TranslationSchema = {
 	settingsPreventAutoOpenName: "지원되지 않는 파일의 자동 실행 방지",
 	settingsPreventAutoOpenDesc: "파일 탐색기에서 지원되지 않는 바이너리 또는 문서 파일(.zip, .exe, .docx, .dmg 등)을 한 번 클릭할 때 선택만 수행하여 원치 않는 압축 해제나 외부 프로그램 실행을 방지합니다.",
 	settingsOpenOnDoubleClickName: "더블 클릭으로 지원되지 않는 파일 열기",
-	settingsOpenOnDoubleClickDesc: "Obsidian에서 열 수 없는 파일(.zip, .docx, .pdf 등)을 더블클릭할 때 시스템 기본 앱으로 엽니다. 마우스 오른쪽 버튼 메뉴를 통해서도 언제든지 열 수 있습니다.",
+	settingsOpenOnDoubleClickDesc: "Obsidian에서 지원하지 않는 파일(.zip, .docx, .pdf 등)을 더블 클릭할 때 시스템 기본 앱으로 엽니다. 참고: 마우스 오른쪽 버튼 메뉴를 통해 언제든지 열 수 있습니다.",
 	settingsObsidianIgnoreName: "{0} 파일로 파일 및 폴더 제외",
 	settingsObsidianIgnoreDesc: "볼트 루트의 .obsidianignore 파일에 정의된 규칙을 적용합니다. 표준 .gitignore 구문 사용(와일드카드, 폴더 슬래시, 부정 ! 지원).",
 	settingsButtonCreateDefault: "기본값 추가",

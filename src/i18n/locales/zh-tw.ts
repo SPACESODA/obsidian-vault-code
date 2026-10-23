@@ -85,7 +85,7 @@ export const zhTw: TranslationSchema = {
 	settingsPreventAutoOpenName: "防止自動開啟不支援的檔案",
 	settingsPreventAutoOpenDesc: "在檔案總管中單擊不支援的二進位或文件檔案（例如 .zip、.exe、.docx、.dmg）時僅選取檔案，防止意外解壓縮或啟動外部應用程式。",
 	settingsOpenOnDoubleClickName: "按兩下開啟不支援的檔案",
-	settingsOpenOnDoubleClickDesc: "按兩下無法在 Obsidian 中檢視的檔案（如 .zip、.docx 或 .pdf）時使用系統預設應用程式開啟。你隨時可以透過右鍵選單開啟它們。",
+	settingsOpenOnDoubleClickDesc: "按兩下時，使用系統預設應用程式開啟 Obsidian 不支援的檔案（如 .zip、.docx 或 .pdf）。備註：你隨時可以透過右鍵選單開啟它們。",
 	settingsObsidianIgnoreName: "使用 {0} 忽略檔案與資料夾",
 	settingsObsidianIgnoreDesc: "遵循儲存庫根目錄 .obsidianignore 中的規則，採用標準 .gitignore 語法（支援萬用字元、資料夾斜線與反向排除 !）。",
 	settingsButtonCreateDefault: "新增預設",

@@ -85,7 +85,7 @@ export const ru: TranslationSchema = {
 	settingsPreventAutoOpenName: "Предотвращать автооткрытие неподдерживаемых файлов",
 	settingsPreventAutoOpenDesc: "Одиночный щелчок по неподдерживаемым двоичным файлам или документам (.zip, .exe, .docx, .dmg) только выбирает их, предотвращая случайную распаковку или запуск внешних приложений.",
 	settingsOpenOnDoubleClickName: "Открывать неподдерживаемые файлы двойным щелчком",
-	settingsOpenOnDoubleClickDesc: "Открывать файлы, которые нельзя просмотреть в Obsidian (например, .zip, .docx или .pdf), в приложении по умолчанию при двойном клике. Их всегда можно открыть через меню правой кнопки мыши.",
+	settingsOpenOnDoubleClickDesc: "Открывать неподдерживаемые файлы (например, .zip, .docx или .pdf) в приложении по умолчанию при двойном щелчке. Примечание: их всегда можно открыть через правый клик.",
 	settingsObsidianIgnoreName: "Игнорировать файлы и папки с помощью {0}",
 	settingsObsidianIgnoreDesc: "Применять правила из .obsidianignore в корне хранилища, используя стандартный синтаксис .gitignore (поддерживает маски, косые черты папок и исключения !).",
 	settingsButtonCreateDefault: "Добавить по умолчанию",

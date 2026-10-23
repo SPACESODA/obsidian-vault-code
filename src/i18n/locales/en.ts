@@ -83,7 +83,7 @@ export const en = {
 	settingsPreventAutoOpenName: "Prevent automatic opening of unsupported files",
 	settingsPreventAutoOpenDesc: "Single-clicking unsupported binary or document files (such as .zip, .exe, .docx, .dmg) in the file explorer only selects them, preventing accidental unzipping or application launching.",
 	settingsOpenOnDoubleClickName: "Open unsupported files on double-click",
-	settingsOpenOnDoubleClickDesc: "Open files that Obsidian cannot view (such as .zip, .docx, or .pdf) in your system's default app when double-clicked. You can always open them via right-click.",
+	settingsOpenOnDoubleClickDesc: "Open unsupported files (such as .zip, .docx, or .pdf) in your system's default app when double-clicked. Note: You can always open them by right-clicking.",
 	settingsObsidianIgnoreName: "Ignore files and folders with {0}",
 	settingsObsidianIgnoreDesc: "Respect rules defined in .obsidianignore at the vault root, using standard .gitignore syntax (supports wildcards, folder slashes, and negations).",
 	settingsButtonCreateDefault: "Add default",
