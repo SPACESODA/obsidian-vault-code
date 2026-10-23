@@ -4935,6 +4935,10 @@ export default class VaultCodePlugin extends Plugin {
 		}
 		await this.reloadAllIgnoreRules();
 
+		// Immediately patch file explorer and apply filtering as early as possible on startup
+		this.patchFileExplorer();
+		this.applyFileExplorerFiltering();
+
 		this.previousShowUnsupportedFiles =
 			(this.app.vault.getConfig("showUnsupportedFiles") as boolean) ??
 			false;
@@ -4971,6 +4975,7 @@ export default class VaultCodePlugin extends Plugin {
 			this.app.vault.on("rename", (file, oldPath) => {
 				void this.handleIgnoreFileEvent(file.path);
 				void this.handleIgnoreFileEvent(oldPath);
+				this.applyFileExplorerFiltering();
 				this.debouncedUpdateGitStatus();
 			}),
 		);
@@ -7589,8 +7594,29 @@ export default class VaultCodePlugin extends Plugin {
 					...args: unknown[]
 				) {
 					const res = origCreate?.apply(this, args);
-					patchItem(this);
-					plugin.applyFileExplorerFiltering();
+					if (!plugin.fileItemProtoPatched || !plugin.originalPOGetTitle) {
+						patchItem(this);
+					}
+
+					const item = res as
+						| { el?: HTMLElement; file?: TAbstractFile }
+						| undefined;
+					const file =
+						item?.file ??
+						(args[0] instanceof TAbstractFile ? args[0] : null);
+					const el = item?.el;
+
+					if (el) {
+						if (file) {
+							const isDir = file instanceof TFolder;
+							const isIgnored = plugin.isPathIgnored(file.path, isDir);
+							el.toggleClass("is-ignored-hidden", isIgnored);
+						} else if (typeof args[0] === "string") {
+							const isIgnored = plugin.isPathIgnored(args[0]);
+							el.toggleClass("is-ignored-hidden", isIgnored);
+						}
+					}
+
 					return res;
 				};
 			}
