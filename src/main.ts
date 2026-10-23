@@ -4087,15 +4087,38 @@ export class DotfileView extends TextFileView {
 		const buildDecorations = (state: EditorState): DecorationSet => {
 			const result = getChunks(state);
 			const chunks = result ? result.chunks : [];
-			const builder = new RangeSetBuilder<Decoration>();
+			const items: Array<{
+				targetPos: number;
+				targetSide: number;
+				chunk: (typeof chunks)[number];
+			}> = [];
+
 			for (const chunk of chunks) {
+				const isPureDeletion = chunk.toB <= chunk.fromB;
+				const targetPos = isPureDeletion
+					? chunk.fromB
+					: state.doc.lineAt(chunk.toB - 1).to;
+				const targetSide = isPureDeletion ? -0.5 : 1;
+				items.push({ targetPos, targetSide, chunk });
+			}
+
+			items.sort(
+				(a, b) =>
+					a.targetPos - b.targetPos || a.targetSide - b.targetSide,
+			);
+
+			const builder = new RangeSetBuilder<Decoration>();
+			for (const item of items) {
 				builder.add(
-					chunk.toB,
-					chunk.toB,
+					item.targetPos,
+					item.targetPos,
 					Decoration.widget({
-						widget: new ChunkActionBarWidget(chunk.fromB, this),
+						widget: new ChunkActionBarWidget(
+							item.chunk.fromB,
+							this,
+						),
 						block: true,
-						side: 1,
+						side: item.targetSide,
 					}),
 				);
 			}

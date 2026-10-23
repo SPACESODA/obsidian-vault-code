@@ -1582,25 +1582,27 @@ button.vault-code-ignore-btn:hover {
 	display: block;
 	width: 100%;
 	margin: 0;
-	padding: 4px 16px;
+	padding: 3px 16px;
 	box-sizing: border-box;
 	background: transparent;
 	border: none;
-	color: var(--text-muted);
+	color: var(--interactive-accent);
+	opacity: 0.5;
 	font-size: var(--font-ui-smaller, 11px);
 	font-family: var(--font-ui);
 	cursor: pointer;
 	user-select: none;
-	transition: color 0.15s ease;
+	transition: opacity 0.15s ease, color 0.15s ease;
 }
 
 .cm-editor .cm-collapsedLines:hover {
-	color: var(--text-normal);
+	opacity: 0.9;
+	color: var(--interactive-accent);
 }
 
 .cm-editor .cm-collapsedLines::before {
 	content: "↕  ";
-	opacity: 0.7;
+	opacity: 0.8;
 }
 
 .cm-editor .cm-collapsedLines::after {
@@ -1612,7 +1614,7 @@ button.vault-code-ignore-btn:hover {
 	justify-content: flex-end;
 	align-items: center;
 	margin: 0;
-	padding: 4px 16px 8px 0;
+	padding: 2px 16px 4px 0;
 	box-sizing: border-box;
 	background: transparent;
 	line-height: 1;
