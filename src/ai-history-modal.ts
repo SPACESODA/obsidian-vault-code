@@ -76,7 +76,7 @@ export class AIChatHistoryModal extends Modal {
 	}
 
 	private async loadFiles(): Promise<void> {
-		const folder = this.plugin.settings.aiChatFolder || "AI Chats";
+		const folder = this.plugin.settings.aiChatFolder || "Agent chats";
 		this.files = await this.plugin.aiStorage.listChatNotes(folder);
 		this.filterAndRender();
 	}
@@ -254,7 +254,7 @@ export class AIChatHistoryModal extends Modal {
 	}
 
 	private async executeBatchCleanup(rule: "7d" | "30d" | "90d" | "all"): Promise<void> {
-		const folder = this.plugin.settings.aiChatFolder || "AI Chats";
+		const folder = this.plugin.settings.aiChatFolder || "Agent chats";
 		try {
 			const count = await this.plugin.aiStorage.cleanupOldChats(folder, rule);
 			new Notice(t("aiChatNoticeCleanedCount").replace("{0}", String(count)));

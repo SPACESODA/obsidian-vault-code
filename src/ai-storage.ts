@@ -97,7 +97,7 @@ export class AIStorage {
 	public serializeChat(metadata: ChatMetadata, messages: ChatMessage[]): string {
 		const yamlLines = [
 			"---",
-			"type: AI Chat",
+			"type: Agent Chat",
 			`title: ${JSON.stringify(metadata.title)}`,
 			`created: ${JSON.stringify(metadata.created)}`,
 			`model: ${JSON.stringify(metadata.model)}`,
@@ -115,7 +115,7 @@ export class AIStorage {
 			if (msg.role === "user") {
 				yamlLines.push("### 👤 You", "", msg.content.trim(), "");
 			} else {
-				yamlLines.push(`### ✨ Assistant`, "", msg.content.trim(), "");
+				yamlLines.push("### ✦ Agent", "", msg.content.trim(), "");
 			}
 		}
 
@@ -167,7 +167,7 @@ export class AIStorage {
 
 		// Parse Turns
 		const messages: ChatMessage[] = [];
-		const turnSections = bodyContent.split(/\n(?=### (?:👤|✨))/g);
+		const turnSections = bodyContent.split(/\n(?=### (?:👤|✨|✦))/g);
 
 		for (let i = 0; i < turnSections.length; i++) {
 			const section = turnSections[i]?.trim();
@@ -183,8 +183,8 @@ export class AIStorage {
 						timestamp: Date.now(),
 					});
 				}
-			} else if (section.startsWith("### ✨")) {
-				const text = section.replace(/^### ✨[^\n]*\n+/g, "").trim();
+			} else if (section.startsWith("### ✨") || section.startsWith("### ✦")) {
+				const text = section.replace(/^### (?:✨|✦)[^\n]*\n+/g, "").trim();
 				if (text) {
 					messages.push({
 						id: `asst-${Date.now()}-${i}`,
@@ -252,9 +252,12 @@ export class AIStorage {
 				continue;
 			}
 
-			// Also match files anywhere that have frontmatter type: AI Chat
+			// Also match files anywhere that have frontmatter type: Agent Chat or AI Chat
 			const cache = this.app.metadataCache.getFileCache(file);
-			if (cache?.frontmatter && cache.frontmatter.type === "AI Chat") {
+			if (
+				cache?.frontmatter &&
+				(cache.frontmatter.type === "Agent Chat" || cache.frontmatter.type === "AI Chat")
+			) {
 				chatFiles.push(file);
 			}
 		}

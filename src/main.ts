@@ -668,7 +668,7 @@ const DEFAULT_SETTINGS: VaultCodeSettings = {
 	aiScope: "active-note",
 	aiMode: "safe",
 	aiCustomPath: "",
-	aiChatFolder: "AI Chats",
+	aiChatFolder: "Agent chats",
 	aiChatAutoClean: "never",
 };
 
@@ -8697,10 +8697,10 @@ class VaultCodeSettingTab extends PluginSettingTab {
 				.setDesc(t("settingsAIChatFolderDesc"))
 				.addText((text) =>
 					text
-						.setPlaceholder("AI chats")
+						.setPlaceholder("Agent chats")
 						.setValue(this.plugin.settings.aiChatFolder)
 						.onChange(async (value) => {
-							this.plugin.settings.aiChatFolder = value.trim() || "AI Chats";
+							this.plugin.settings.aiChatFolder = value.trim() || "Agent chats";
 							await this.plugin.saveSettings();
 						}),
 				);

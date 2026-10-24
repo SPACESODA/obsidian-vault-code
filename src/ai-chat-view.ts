@@ -37,18 +37,26 @@ export class AIChatView extends ItemView {
 	private currentChatFile: TFile | null = null;
 	private currentChatTitle = "Untitled Chat";
 
+	// Context pinning state
+	private pinnedContextFile: TFile | null = null;
+	private isContextPinned = false;
+	private contextExcluded = false;
+
 	// UI Elements
+	private headerTitleEl!: HTMLElement;
 	private messagesContainerEl!: HTMLElement;
 	private inputEl!: HTMLTextAreaElement;
 	private sendBtnEl!: HTMLElement;
 	private modelBtnEl!: HTMLElement;
 	private scopeBtnEl!: HTMLElement;
 	private modeBtnEl!: HTMLElement;
-	private contextBannerEl!: HTMLElement;
+	private contextChipEl!: HTMLElement;
+	private contextPinBtnEl!: HTMLElement;
 	private openNoteBtnEl!: HTMLElement;
 
 	// Streaming render queue
 	private currentStreamingMsgEl: HTMLElement | null = null;
+	private currentTypingIndicatorEl: HTMLElement | null = null;
 	private renderRafId: number | null = null;
 
 	constructor(leaf: WorkspaceLeaf, plugin: VaultCodePlugin) {
@@ -72,7 +80,7 @@ export class AIChatView extends ItemView {
 	}
 
 	async onOpen(): Promise<void> {
-		const container = this.containerEl.children[1] as HTMLElement;
+		const container = this.contentEl;
 		container.empty();
 		container.addClass("vault-code-ai-chat-view");
 
@@ -86,19 +94,19 @@ export class AIChatView extends ItemView {
 			this.updateModelBtnLabel();
 		});
 
-		// Listen to active note changes to update context banner
+		// Listen to active note changes to update context chip
 		this.registerEvent(
 			this.app.workspace.on("active-leaf-change", () => {
-				this.updateContextBanner();
+				this.updateContextChip();
 			}),
 		);
 		this.registerEvent(
 			this.app.workspace.on("file-open", () => {
-				this.updateContextBanner();
+				this.updateContextChip();
 			}),
 		);
 
-		this.updateContextBanner();
+		this.updateContextChip();
 	}
 
 	async onClose(): Promise<void> {
@@ -115,7 +123,7 @@ export class AIChatView extends ItemView {
 		const titleWrapper = headerEl.createDiv({ cls: "vault-code-chat-header-title" });
 		const iconEl = titleWrapper.createSpan({ cls: "vault-code-chat-header-icon" });
 		setIcon(iconEl, "sparkles");
-		titleWrapper.createSpan({ text: t("aiChatViewTitle") });
+		this.headerTitleEl = titleWrapper.createSpan({ text: t("aiChatViewTitle") });
 
 		const actionsEl = headerEl.createDiv({ cls: "vault-code-chat-header-actions" });
 
@@ -164,17 +172,17 @@ export class AIChatView extends ItemView {
 
 	private buildFooter(container: HTMLElement): void {
 		const footerEl = container.createDiv({ cls: "vault-code-chat-footer" });
+		const inputCard = footerEl.createDiv({ cls: "vault-code-chat-input-card" });
 
-		// Context banner (shows active note name)
-		this.contextBannerEl = footerEl.createDiv({ cls: "vault-code-chat-context-banner" });
+		// Context chip inside the card (top)
+		this.contextChipEl = inputCard.createDiv({ cls: "vault-code-chat-context-chip" });
 
-		// Input box container
-		const inputWrapper = footerEl.createDiv({ cls: "vault-code-chat-input-wrapper" });
-		this.inputEl = inputWrapper.createEl("textarea", {
+		// Textarea inside the card (middle)
+		this.inputEl = inputCard.createEl("textarea", {
 			cls: "vault-code-chat-input",
 			attr: {
 				placeholder: t("aiChatPlaceholder"),
-				rows: "2",
+				rows: "1",
 			},
 		});
 
@@ -189,12 +197,13 @@ export class AIChatView extends ItemView {
 			"input",
 			debounce(() => {
 				this.autoResizeTextarea();
+				this.updateSendButtonState();
 			}, 50, true),
 		);
 
-		// Controls row
-		const controlsRow = footerEl.createDiv({ cls: "vault-code-chat-controls-row" });
-		const pillsGroup = controlsRow.createDiv({ cls: "vault-code-chat-pills-group" });
+		// Bottom controls inside the card
+		const cardBottom = inputCard.createDiv({ cls: "vault-code-chat-card-bottom" });
+		const pillsGroup = cardBottom.createDiv({ cls: "vault-code-chat-pills-group" });
 
 		// 1. Model Button
 		this.modelBtnEl = pillsGroup.createEl("button", {
@@ -218,8 +227,8 @@ export class AIChatView extends ItemView {
 		this.modeBtnEl.addEventListener("click", (e) => this.showModeMenu(e));
 
 		// Send / Stop button
-		this.sendBtnEl = controlsRow.createEl("button", {
-			cls: "vault-code-chat-send-btn mod-cta",
+		this.sendBtnEl = cardBottom.createEl("button", {
+			cls: "vault-code-chat-send-btn",
 			attr: { "aria-label": t("aiChatSend") },
 		});
 		setIcon(this.sendBtnEl, "send");
@@ -234,11 +243,13 @@ export class AIChatView extends ItemView {
 		this.updateModelBtnLabel();
 		this.updateScopeBtnLabel();
 		this.updateModeBtnLabel();
+		this.updateContextChip();
 	}
 
 	private autoResizeTextarea(): void {
 		if (!this.inputEl) return;
-		const newHeight = Math.min(Math.max(this.inputEl.scrollHeight, 40), 160);
+		this.inputEl.setCssProps({ "--chat-input-height": "auto" });
+		const newHeight = Math.min(Math.max(this.inputEl.scrollHeight, 28), 160);
 		this.inputEl.setCssProps({ "--chat-input-height": `${newHeight}px` });
 	}
 
@@ -250,7 +261,10 @@ export class AIChatView extends ItemView {
 
 		const found = this.availableModels.find((m) => m.id === this.selectedModel);
 		const label = found ? found.displayName.replace(/\s*\(.*?\)/, "") : this.selectedModel;
-		this.modelBtnEl.createSpan({ text: label });
+		this.modelBtnEl.createSpan({ cls: "vault-code-pill-label", text: label });
+
+		const chevronSpan = this.modelBtnEl.createSpan({ cls: "vault-code-pill-chevron" });
+		setIcon(chevronSpan, "chevron-down");
 	}
 
 	private updateScopeBtnLabel(): void {
@@ -260,14 +274,18 @@ export class AIChatView extends ItemView {
 
 		if (this.chatScope === "active-note") {
 			setIcon(iconSpan, "file-text");
-			this.scopeBtnEl.createSpan({ text: t("aiChatScopeActiveNote") });
+			this.scopeBtnEl.createSpan({ cls: "vault-code-pill-label", text: t("aiChatScopeActiveNote") });
 			this.scopeBtnEl.removeClass("is-vault-scope");
 		} else {
 			setIcon(iconSpan, "folder");
-			this.scopeBtnEl.createSpan({ text: t("aiChatScopeVault") });
+			this.scopeBtnEl.createSpan({ cls: "vault-code-pill-label", text: t("aiChatScopeVault") });
 			this.scopeBtnEl.addClass("is-vault-scope");
 		}
-		this.updateContextBanner();
+
+		const chevronSpan = this.scopeBtnEl.createSpan({ cls: "vault-code-pill-chevron" });
+		setIcon(chevronSpan, "chevron-down");
+
+		this.updateContextChip();
 	}
 
 	private updateModeBtnLabel(): void {
@@ -277,44 +295,96 @@ export class AIChatView extends ItemView {
 
 		if (this.mode === "safe") {
 			setIcon(iconSpan, "shield");
-			this.modeBtnEl.createSpan({ text: t("aiChatModeSafe") });
+			this.modeBtnEl.createSpan({ cls: "vault-code-pill-label", text: t("aiChatModeSafe") });
 			this.modeBtnEl.removeClass("is-mode-edit");
 			this.modeBtnEl.addClass("is-mode-safe");
 		} else {
 			setIcon(iconSpan, "zap");
-			this.modeBtnEl.createSpan({ text: t("aiChatModeEdit") });
+			this.modeBtnEl.createSpan({ cls: "vault-code-pill-label", text: t("aiChatModeEdit") });
 			this.modeBtnEl.removeClass("is-mode-safe");
 			this.modeBtnEl.addClass("is-mode-edit");
 		}
+
+		const chevronSpan = this.modeBtnEl.createSpan({ cls: "vault-code-pill-chevron" });
+		setIcon(chevronSpan, "chevron-down");
 	}
 
-	private updateContextBanner(): void {
-		if (!this.contextBannerEl) return;
-		this.contextBannerEl.empty();
+	private updateContextChip(): void {
+		if (!this.contextChipEl) return;
+		this.contextChipEl.empty();
 
-		if (this.chatScope === "vault") {
-			this.contextBannerEl.hide();
+		if (this.chatScope === "vault" || this.contextExcluded) {
+			this.contextChipEl.hide();
 			return;
 		}
 
-		this.contextBannerEl.show();
-		const activeFile = this.app.workspace.getActiveFile();
-		const iconSpan = this.contextBannerEl.createSpan({ cls: "vault-code-context-icon" });
+		const activeFile = (this.isContextPinned && this.pinnedContextFile)
+			? this.pinnedContextFile
+			: this.app.workspace.getActiveFile();
 
-		if (activeFile) {
-			setIcon(iconSpan, "file-code");
-			const nameSpan = this.contextBannerEl.createSpan({
-				cls: "vault-code-context-text",
-				text: t("aiChatContextActiveNote").replace("{0}", activeFile.name),
-			});
-			nameSpan.title = activeFile.path;
-		} else {
-			setIcon(iconSpan, "file-question");
-			this.contextBannerEl.createSpan({
-				cls: "vault-code-context-text is-empty",
-				text: t("aiChatContextNoActiveNote"),
-			});
+		if (!activeFile) {
+			this.contextChipEl.hide();
+			return;
 		}
+
+		this.contextChipEl.show();
+
+		const iconSpan = this.contextChipEl.createSpan({ cls: "vault-code-context-chip-icon" });
+		setIcon(iconSpan, "file-code");
+
+		const nameSpan = this.contextChipEl.createSpan({
+			cls: "vault-code-context-chip-name",
+			text: activeFile.name,
+		});
+		nameSpan.title = activeFile.path;
+
+		// Pin button
+		this.contextPinBtnEl = this.contextChipEl.createEl("button", {
+			cls: `clickable-icon vault-code-context-chip-btn vault-code-context-pin-btn${this.isContextPinned ? " is-pinned" : ""}`,
+			attr: {
+				"aria-label": this.isContextPinned
+					? t("aiChatContextUnpin")
+					: t("aiChatContextPin"),
+			},
+		});
+		setIcon(this.contextPinBtnEl, "pin");
+		this.contextPinBtnEl.addEventListener("click", (e) => {
+			e.stopPropagation();
+			this.togglePinContext(activeFile);
+		});
+
+		// Remove button
+		const removeBtn = this.contextChipEl.createEl("button", {
+			cls: "clickable-icon vault-code-context-chip-btn vault-code-context-remove-btn",
+			attr: { "aria-label": t("aiChatContextRemove") },
+		});
+		setIcon(removeBtn, "x");
+		removeBtn.addEventListener("click", (e) => {
+			e.stopPropagation();
+			this.removeContext();
+		});
+	}
+
+	private togglePinContext(file: TFile): void {
+		this.isContextPinned = !this.isContextPinned;
+		if (this.isContextPinned) {
+			this.pinnedContextFile = file;
+			new Notice(t("aiChatContextPinnedNotice").replace("{0}", file.name));
+		} else {
+			this.pinnedContextFile = null;
+			new Notice(t("aiChatContextUnpinnedNotice"));
+		}
+		this.updateContextChip();
+	}
+
+	private removeContext(): void {
+		this.contextExcluded = true;
+		this.isContextPinned = false;
+		this.pinnedContextFile = null;
+		this.chatScope = "vault";
+		this.updateScopeBtnLabel();
+		this.updateContextChip();
+		new Notice(t("aiChatContextRemovedNotice"));
 	}
 
 	private showModelMenu(event: MouseEvent): void {
@@ -355,6 +425,7 @@ export class AIChatView extends ItemView {
 			item.setChecked(this.chatScope === "active-note");
 			item.onClick(() => {
 				this.chatScope = "active-note";
+				this.contextExcluded = false;
 				this.updateScopeBtnLabel();
 			});
 		});
@@ -424,9 +495,11 @@ export class AIChatView extends ItemView {
 			this.mode = parsed.metadata.mode;
 			this.messages = parsed.messages;
 
+			this.headerTitleEl?.setText(`Agent · ${this.formatHeaderTitle(this.currentChatTitle)}`);
 			this.updateModelBtnLabel();
 			this.updateScopeBtnLabel();
 			this.updateModeBtnLabel();
+			this.updateContextChip();
 			this.openNoteBtnEl?.show();
 
 			this.renderMessages();
@@ -435,6 +508,13 @@ export class AIChatView extends ItemView {
 			console.error("Vault Code: Failed to load chat note", e);
 			new Notice(t("aiChatNoticeDeleteFailed"));
 		}
+	}
+
+	private formatHeaderTitle(title: string): string {
+		if (title.length > 20) {
+			return `${title.slice(0, 19)}...`;
+		}
+		return title;
 	}
 
 	private async confirmDeleteActiveChat(): Promise<void> {
@@ -456,7 +536,12 @@ export class AIChatView extends ItemView {
 		this.currentChatTitle = "Untitled Chat";
 		this.conversationId = undefined;
 		this.messages = [];
+		this.isContextPinned = false;
+		this.pinnedContextFile = null;
+		this.contextExcluded = false;
+		this.headerTitleEl?.setText(t("aiChatViewTitle"));
 		this.openNoteBtnEl?.hide();
+		this.updateContextChip();
 		this.renderMessages();
 		this.inputEl.focus();
 	}
@@ -514,30 +599,29 @@ export class AIChatView extends ItemView {
 			roleWrapper.createSpan({ text: "You" });
 		} else {
 			setIcon(roleIcon, "sparkles");
-			const found = this.availableModels.find((m) => m.id === this.selectedModel);
-			const label = found ? found.displayName : "Antigravity CLI";
-			roleWrapper.createSpan({ text: label });
-
-			const copyBtn = headerEl.createEl("button", {
-				cls: "clickable-icon vault-code-chat-msg-copy-btn",
-				attr: { "aria-label": t("aiChatCopy") },
-			});
-			setIcon(copyBtn, "copy");
-			copyBtn.addEventListener("click", () => {
-				void navigator.clipboard.writeText(msg.content).then(() => {
-					setIcon(copyBtn, "check");
-					new Notice(t("aiChatCopied"));
-					window.setTimeout(() => {
-						setIcon(copyBtn, "copy");
-					}, 1500);
-				});
-			});
+			roleWrapper.createSpan({ text: "Agent" });
 		}
+
+		// Copy button on both user and assistant messages
+		const copyBtn = headerEl.createEl("button", {
+			cls: "clickable-icon vault-code-chat-msg-copy-btn",
+			attr: { "aria-label": t("aiChatCopy") },
+		});
+		setIcon(copyBtn, "copy");
+		copyBtn.addEventListener("click", () => {
+			void navigator.clipboard.writeText(msg.content).then(() => {
+				setIcon(copyBtn, "check");
+				new Notice(t("aiChatCopied"));
+				window.setTimeout(() => {
+					setIcon(copyBtn, "copy");
+				}, 1500);
+			});
+		});
 
 		const bodyEl = bubbleEl.createDiv({ cls: "vault-code-chat-msg-body" });
 		void MarkdownRenderer.render(
 			this.app,
-			msg.content || (this.isGenerating ? "..." : ""),
+			msg.content,
 			bodyEl,
 			"",
 			this,
@@ -575,6 +659,7 @@ export class AIChatView extends ItemView {
 
 		this.inputEl.value = "";
 		this.autoResizeTextarea();
+		this.updateSendButtonState();
 
 		// Add user message
 		const userMsg: ChatMessage = {
@@ -591,7 +676,7 @@ export class AIChatView extends ItemView {
 		}
 		this.renderMessageBubble(userMsg);
 
-		// Add placeholder assistant message
+		// Add assistant message with animated typing indicator
 		const assistantMsg: ChatMessage = {
 			id: `asst-${Date.now()}`,
 			role: "assistant",
@@ -599,8 +684,23 @@ export class AIChatView extends ItemView {
 			timestamp: Date.now(),
 		};
 		this.messages.push(assistantMsg);
-		const asstBubbleEl = this.renderMessageBubble(assistantMsg);
-		const asstBodyEl = asstBubbleEl.querySelector(".vault-code-chat-msg-body") as HTMLElement;
+
+		const asstBubbleEl = this.messagesContainerEl.createDiv({
+			cls: "vault-code-chat-msg is-assistant",
+			attr: { "data-msg-id": assistantMsg.id },
+		});
+		const asstHeaderEl = asstBubbleEl.createDiv({ cls: "vault-code-chat-msg-header" });
+		const roleWrapper = asstHeaderEl.createDiv({ cls: "vault-code-chat-msg-role" });
+		const roleIcon = roleWrapper.createSpan({ cls: "vault-code-chat-msg-role-icon" });
+		setIcon(roleIcon, "sparkles");
+		roleWrapper.createSpan({ text: "Agent" });
+
+		const asstBodyEl = asstBubbleEl.createDiv({ cls: "vault-code-chat-msg-body" });
+		this.currentTypingIndicatorEl = asstBodyEl.createDiv({ cls: "vault-code-typing-indicator" });
+		this.currentTypingIndicatorEl.createSpan({ cls: "vault-code-typing-dot" });
+		this.currentTypingIndicatorEl.createSpan({ cls: "vault-code-typing-dot" });
+		this.currentTypingIndicatorEl.createSpan({ cls: "vault-code-typing-dot" });
+
 		this.currentStreamingMsgEl = asstBubbleEl;
 
 		this.isGenerating = true;
@@ -612,8 +712,10 @@ export class AIChatView extends ItemView {
 		let activeContent = "";
 		let selectedText = "";
 
-		if (this.chatScope === "active-note") {
-			activeFile = this.app.workspace.getActiveFile();
+		if (this.chatScope === "active-note" && !this.contextExcluded) {
+			activeFile = (this.isContextPinned && this.pinnedContextFile)
+				? this.pinnedContextFile
+				: this.app.workspace.getActiveFile();
 			if (activeFile) {
 				try {
 					activeContent = await this.app.vault.read(activeFile);
@@ -621,7 +723,7 @@ export class AIChatView extends ItemView {
 					// ignore
 				}
 				const editor = this.app.workspace.activeEditor?.editor;
-				if (editor) {
+				if (editor && (!this.isContextPinned || this.app.workspace.getActiveFile()?.path === activeFile.path)) {
 					selectedText = editor.getSelection();
 				}
 			}
@@ -630,7 +732,7 @@ export class AIChatView extends ItemView {
 		// Auto-create chat note on first turn if not yet saved
 		if (!this.currentChatFile) {
 			this.currentChatTitle = text.slice(0, 50);
-			const folder = this.plugin.settings.aiChatFolder || "AI Chats";
+			const folder = this.plugin.settings.aiChatFolder || "Agent chats";
 			try {
 				this.currentChatFile = await this.plugin.aiStorage.createChatNote(
 					folder,
@@ -643,6 +745,7 @@ export class AIChatView extends ItemView {
 						conversationId: this.conversationId,
 					},
 				);
+				this.headerTitleEl?.setText(`Agent · ${this.formatHeaderTitle(this.currentChatTitle)}`);
 				this.openNoteBtnEl?.show();
 			} catch (e) {
 				console.error("Vault Code: Failed to create chat note", e);
@@ -662,12 +765,20 @@ export class AIChatView extends ItemView {
 				this.conversationId = convId;
 			},
 			onDelta: (delta: string) => {
+				if (this.currentTypingIndicatorEl) {
+					this.currentTypingIndicatorEl.remove();
+					this.currentTypingIndicatorEl = null;
+				}
 				assistantMsg.content += delta;
 				if (asstBodyEl) {
 					this.scheduleStreamingRender(assistantMsg, asstBodyEl);
 				}
 			},
 			onDone: (fullText: string) => {
+				if (this.currentTypingIndicatorEl) {
+					this.currentTypingIndicatorEl.remove();
+					this.currentTypingIndicatorEl = null;
+				}
 				assistantMsg.content = fullText;
 				if (asstBodyEl) {
 					asstBodyEl.empty();
@@ -679,6 +790,21 @@ export class AIChatView extends ItemView {
 						this,
 					);
 				}
+
+				// Add copy button to assistant message
+				const copyBtn = asstHeaderEl.createEl("button", {
+					cls: "clickable-icon vault-code-chat-msg-copy-btn",
+					attr: { "aria-label": t("aiChatCopy") },
+				});
+				setIcon(copyBtn, "copy");
+				copyBtn.addEventListener("click", () => {
+					void navigator.clipboard.writeText(assistantMsg.content).then(() => {
+						setIcon(copyBtn, "check");
+						new Notice(t("aiChatCopied"));
+						window.setTimeout(() => setIcon(copyBtn, "copy"), 1500);
+					});
+				});
+
 				this.finishGenerating();
 
 				// Persist updated transcript to the Markdown chat note
@@ -698,6 +824,10 @@ export class AIChatView extends ItemView {
 				}
 			},
 			onError: (err: Error) => {
+				if (this.currentTypingIndicatorEl) {
+					this.currentTypingIndicatorEl.remove();
+					this.currentTypingIndicatorEl = null;
+				}
 				assistantMsg.content = `> ⚠️ **Error**: ${err.message}`;
 				if (asstBodyEl) {
 					asstBodyEl.empty();
@@ -734,6 +864,10 @@ export class AIChatView extends ItemView {
 			this.activeProcessHandle.kill();
 			this.activeProcessHandle = null;
 		}
+		if (this.currentTypingIndicatorEl) {
+			this.currentTypingIndicatorEl.remove();
+			this.currentTypingIndicatorEl = null;
+		}
 		this.finishGenerating();
 	}
 
@@ -741,6 +875,7 @@ export class AIChatView extends ItemView {
 		this.isGenerating = false;
 		this.activeProcessHandle = null;
 		this.currentStreamingMsgEl = null;
+		this.currentTypingIndicatorEl = null;
 		this.updateSendButtonState();
 		this.scrollToBottom();
 	}
@@ -753,10 +888,17 @@ export class AIChatView extends ItemView {
 			setIcon(this.sendBtnEl, "square");
 			this.sendBtnEl.setAttribute("aria-label", t("aiChatStop"));
 			this.sendBtnEl.addClass("is-generating");
+			this.sendBtnEl.removeClass("has-input");
 		} else {
 			setIcon(this.sendBtnEl, "send");
 			this.sendBtnEl.setAttribute("aria-label", t("aiChatSend"));
 			this.sendBtnEl.removeClass("is-generating");
+			const hasText = (this.inputEl?.value || "").trim().length > 0;
+			if (hasText) {
+				this.sendBtnEl.addClass("has-input");
+			} else {
+				this.sendBtnEl.removeClass("has-input");
+			}
 		}
 	}
 }
