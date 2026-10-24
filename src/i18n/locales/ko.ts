@@ -276,4 +276,13 @@ export const ko: TranslationSchema = {
 	settingsAICleanupNowName: "지금 대화 기록 정리",
 	settingsAICleanupNowDesc: "보관함에서 오래된 대화 노트를 수동으로 정리합니다.",
 	settingsAICleanupNowBtn: "지금 정리...",
+	settingsAIProviderName: "AI 공급자",
+	settingsAIProviderDesc: "AI 에이전트 모델을 실행하는 데 사용되는 백엔드 CLI 엔진입니다.",
+	settingsAIProviderAntigravity: "Antigravity (agy)",
+	settingsAIProviderCodex: "Codex (codex)",
+	settingsAICodexCustomPathName: "Codex CLI 경로",
+	settingsAICodexCustomPathDesc: "codex 실행 파일 경로입니다. 자동 감지하려면 비워 두세요.",
+	aiChatProviderSelect: "AI 공급자 선택",
+	aiChatProviderAntigravity: "Antigravity",
+	aiChatProviderCodex: "Codex",
 };

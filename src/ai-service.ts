@@ -54,8 +54,11 @@ interface NodeChildProcess {
 	execFile: ExecFileFn;
 }
 
+export type AIProvider = "antigravity" | "codex";
+
 export interface SendMessageOptions {
 	prompt: string;
+	provider?: AIProvider;
 	model?: string;
 	scope: "active-note" | "vault";
 	mode: "safe" | "edit";
@@ -69,15 +72,19 @@ export interface SendMessageOptions {
 	onError?: (err: Error) => void;
 }
 
-export interface AgyProcessHandle {
+export interface AIProcessHandle {
 	kill: () => void;
 	conversationId?: string;
 }
+
+export type AgyProcessHandle = AIProcessHandle;
 
 export interface AgyModelInfo {
 	id: string;
 	displayName: string;
 }
+
+export type AIModelInfo = AgyModelInfo;
 
 export const DEFAULT_AGY_MODELS: AgyModelInfo[] = [
 	{ id: "gemini-3.8-flash-high", displayName: "Gemini 3.8 Flash (High)" },
@@ -88,11 +95,22 @@ export const DEFAULT_AGY_MODELS: AgyModelInfo[] = [
 	{ id: "gpt-oss-120b-medium", displayName: "GPT-OSS 120B (Medium)" },
 ];
 
+export const DEFAULT_CODEX_MODELS: AgyModelInfo[] = [
+	{ id: "gpt-6.1-sol", displayName: "GPT-6.1-Sol" },
+	{ id: "gpt-6-astra", displayName: "GPT-6-Astra" },
+	{ id: "gpt-6-sol", displayName: "GPT-6-Sol" },
+	{ id: "gpt-6-luna", displayName: "GPT-6-Luna" },
+	{ id: "gpt-5.6-sol", displayName: "GPT-5.6-Sol" },
+	{ id: "gpt-5.6-terra", displayName: "GPT-5.6-Terra" },
+	{ id: "gpt-5.6-luna", displayName: "GPT-5.6-Luna" },
+];
+
 export class AIService {
 	private app: App;
 	private plugin?: VaultCodePlugin;
 	private cachedCp: NodeChildProcess | null = null;
 	private cachedAgyPath: string | null = null;
+	private cachedCodexPath: string | null = null;
 
 	constructor(app: App, plugin?: VaultCodePlugin) {
 		this.app = app;
@@ -148,7 +166,9 @@ export class AIService {
 			window as unknown as { process?: { env?: Record<string, string> } }
 		).process;
 		const procEnv: Record<string, string> = proc?.env ?? {};
-		const customPath = [
+		const home = procEnv.HOME || (Platform.isMacOS ? `/Users/${procEnv.USER || ""}` : "");
+
+		const extraPaths: string[] = [
 			"/opt/homebrew/bin",
 			"/opt/homebrew/sbin",
 			"/usr/local/bin",
@@ -156,12 +176,25 @@ export class AIService {
 			"/bin",
 			"/usr/sbin",
 			"/sbin",
-			procEnv.PATH || "",
-		].join(":");
+		];
+
+		if (home) {
+			extraPaths.unshift(
+				`${home}/.nvm/versions/node/v24.13.0/bin`,
+				`${home}/.nvm/versions/node/v20.20.0/bin`,
+				`${home}/.cargo/bin`,
+				`${home}/.local/bin`,
+				`${home}/bin`,
+			);
+		}
+
+		if (procEnv.PATH) {
+			extraPaths.push(procEnv.PATH);
+		}
 
 		return {
 			...procEnv,
-			PATH: customPath,
+			PATH: extraPaths.join(":"),
 		};
 	}
 
@@ -184,8 +217,9 @@ export class AIService {
 	}
 
 	public async detectAgyPath(customOverride?: string): Promise<string | null> {
-		if (customOverride && customOverride.trim().length > 0) {
-			this.cachedAgyPath = customOverride.trim();
+		const override = customOverride || this.plugin?.settings.aiCustomPath;
+		if (override && override.trim().length > 0) {
+			this.cachedAgyPath = override.trim();
 			return this.cachedAgyPath;
 		}
 
@@ -222,6 +256,75 @@ export class AIService {
 		});
 
 		this.cachedAgyPath = detected;
+		return detected;
+	}
+
+	public async detectCodexPath(customOverride?: string): Promise<string | null> {
+		const override = customOverride || this.plugin?.settings.aiCodexPath;
+		if (override && override.trim().length > 0) {
+			this.cachedCodexPath = override.trim();
+			return this.cachedCodexPath;
+		}
+
+		if (this.cachedCodexPath) return this.cachedCodexPath;
+
+		const cp = await this.resolveChildProcess();
+		if (!cp) return null;
+
+		const env = this.getEnv();
+		const checkCommand = Platform.isWin ? "where" : "which";
+		const binaryName = "codex";
+
+		const detected = await new Promise<string | null>((resolve) => {
+			cp.execFile(
+				checkCommand,
+				[binaryName],
+				{ env, timeout: 3000 },
+				(err, stdout) => {
+					if (!err && stdout) {
+						const firstLine = stdout.toString().split("\n")[0]?.trim();
+						if (firstLine && firstLine.length > 0) {
+							resolve(firstLine);
+							return;
+						}
+					}
+					// Fallback to well-known paths on macOS
+					if (Platform.isMacOS) {
+						const proc = (
+							window as unknown as { process?: { env?: Record<string, string> } }
+						).process;
+						const home = proc?.env?.HOME || "/Users/anthony";
+						const candidates = [
+							`${home}/.nvm/versions/node/v24.13.0/bin/codex`,
+							"/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex",
+							"/opt/homebrew/bin/codex",
+							"/usr/local/bin/codex",
+						];
+						for (const candidate of candidates) {
+							try {
+								const win = window as unknown as {
+									require?: (mod: string) => { existsSync?: (p: string) => boolean };
+								};
+								if (typeof win.require === "function") {
+									const fs = win.require("fs");
+									if (fs?.existsSync?.(candidate)) {
+										resolve(candidate);
+										return;
+									}
+								}
+							} catch {
+								// ignore
+							}
+						}
+						resolve(candidates[0] ?? null);
+						return;
+					}
+					resolve(null);
+				},
+			);
+		});
+
+		this.cachedCodexPath = detected;
 		return detected;
 	}
 
@@ -271,6 +374,56 @@ export class AIService {
 		});
 	}
 
+	public async getCodexModels(): Promise<AgyModelInfo[]> {
+		try {
+			const proc = (
+				window as unknown as { process?: { env?: Record<string, string> } }
+			).process;
+			const home = proc?.env?.HOME || "/Users/anthony";
+			if (home) {
+				const win = window as unknown as {
+					require?: (mod: string) => {
+						readFileSync?: (path: string, enc: string) => string;
+						existsSync?: (path: string) => boolean;
+					};
+				};
+				if (typeof win.require === "function") {
+					const fs = win.require("fs");
+					const cacheFile = `${home}/.codex/models_cache.json`;
+					if (fs?.existsSync?.(cacheFile) && fs?.readFileSync) {
+						const raw = fs.readFileSync(cacheFile, "utf8");
+						const data = JSON.parse(raw) as {
+							models?: Array<{
+								slug?: string;
+								display_name?: string;
+								visibility?: string;
+							}>;
+						};
+						if (Array.isArray(data?.models) && data.models.length > 0) {
+							const filtered = data.models
+								.filter((m) => m.visibility !== "hide" && m.slug)
+								.map((m) => ({
+									id: m.slug as string,
+									displayName: m.display_name || (m.slug as string),
+								}));
+							if (filtered.length > 0) return filtered;
+						}
+					}
+				}
+			}
+		} catch {
+			// ignore
+		}
+		return DEFAULT_CODEX_MODELS;
+	}
+
+	public async getModelsForProvider(provider: AIProvider): Promise<AgyModelInfo[]> {
+		if (provider === "codex") {
+			return await this.getCodexModels();
+		}
+		return await this.getAvailableModels();
+	}
+
 	public async getVaultIgnorePatterns(): Promise<string[]> {
 		const configDir = this.app.vault.configDir;
 		const patterns: string[] = [configDir, ".trash", ".git"].filter(Boolean);
@@ -309,12 +462,52 @@ export class AIService {
 		return patterns;
 	}
 
-	public sendMessage(options: SendMessageOptions): AgyProcessHandle {
+	private async buildEffectivePrompt(options: SendMessageOptions): Promise<string> {
+		let effectivePrompt = options.prompt.trim();
+
+		if (options.scope === "active-note" && options.activeFile) {
+			const contextHeader = [
+				`[Context: Active Note "${options.activeFile.path}"]`,
+			];
+			if (options.selectedText && options.selectedText.trim().length > 0) {
+				contextHeader.push(
+					"Selected Text snippet:",
+					"```",
+					options.selectedText.trim(),
+					"```",
+				);
+			} else if (options.activeContent && options.activeContent.trim().length > 0) {
+				contextHeader.push(
+					"File Content:",
+					"```",
+					options.activeContent.trim(),
+					"```",
+				);
+			}
+			contextHeader.push("--- User Question / Request ---", effectivePrompt);
+			effectivePrompt = contextHeader.join("\n");
+		} else if (options.scope === "vault") {
+			const ignorePatterns = await this.getVaultIgnorePatterns();
+			const ignoreListText = ignorePatterns.map((p) => `- ${p}`).join("\n");
+			const vaultHeader = [
+				"[Context: Entire Vault]",
+				"Strict Ignore Rule: You MUST strictly ignore and skip all files and folders matching the following patterns (do NOT read, search, index, list, or modify them under any circumstances):",
+				ignoreListText,
+				"--- User Question / Request ---",
+				effectivePrompt,
+			];
+			effectivePrompt = vaultHeader.join("\n");
+		}
+
+		return effectivePrompt;
+	}
+
+	public sendMessage(options: SendMessageOptions): AIProcessHandle {
 		let isKilled = false;
 		let spawned: SpawnedProcess | null = null;
 		let activeConversationId = options.conversationId;
 
-		const handle: AgyProcessHandle = {
+		const handle: AIProcessHandle = {
 			kill: () => {
 				isKilled = true;
 				if (spawned) {
@@ -330,6 +523,165 @@ export class AIService {
 			},
 		};
 
+		const provider: AIProvider = options.provider ?? this.plugin?.settings.aiProvider ?? "antigravity";
+
+		if (provider === "codex") {
+			void (async () => {
+				const codexPath = await this.detectCodexPath();
+				if (!codexPath) {
+					options.onError?.(new Error("Codex CLI (codex) not found on system. Ensure Codex is installed and available in PATH."));
+					return;
+				}
+
+				const cp = await this.resolveChildProcess();
+				if (!cp) {
+					options.onError?.(new Error("Desktop child_process runtime not available"));
+					return;
+				}
+
+				const vaultPath = this.getVaultPath() || "";
+				const env = this.getEnv();
+				const effectivePrompt = await this.buildEffectivePrompt(options);
+
+				const isUuid = !!(options.conversationId && /^[0-9a-fA-F-]{36}$/.test(options.conversationId.trim()));
+				const args: string[] = [];
+
+				if (isUuid && options.conversationId) {
+					args.push("exec", "resume", options.conversationId.trim(), "--skip-git-repo-check", "--json", "-C", vaultPath);
+				} else {
+					args.push("exec", "--skip-git-repo-check", "--json", "-C", vaultPath);
+				}
+
+				if (options.model && options.model.trim().length > 0) {
+					args.push("-m", options.model.trim());
+				}
+
+				if (options.mode === "safe") {
+					args.push("-s", "read-only");
+				} else {
+					args.push("--dangerously-bypass-approvals-and-sandbox");
+				}
+
+				args.push(effectivePrompt);
+
+				try {
+					spawned = cp.spawn(codexPath, args, {
+						cwd: vaultPath,
+						env,
+						windowsHide: true,
+					});
+				} catch (err) {
+					options.onError?.(err instanceof Error ? err : new Error(String(err)));
+					return;
+				}
+
+				let accumulatedText = "";
+				let lineBuffer = "";
+
+				const processLine = (rawLine: string) => {
+					const line = rawLine.trim();
+					if (!line) return;
+
+					try {
+						const parsed = JSON.parse(line) as {
+							type?: string;
+							thread_id?: string;
+							item?: {
+								type?: string;
+								text?: string;
+							};
+							error?: {
+								message?: string;
+							};
+							message?: string;
+						};
+
+						if (parsed.type === "thread.started" && parsed.thread_id) {
+							activeConversationId = parsed.thread_id;
+							options.onInit?.(parsed.thread_id);
+						} else if (
+							parsed.type === "item.completed" &&
+							parsed.item?.type === "agent_message" &&
+							parsed.item?.text
+						) {
+							const delta = parsed.item.text;
+							accumulatedText += delta;
+							options.onDelta?.(delta);
+						} else if (parsed.type === "error" && parsed.message) {
+							try {
+								const inner = JSON.parse(parsed.message) as { error?: { message?: string } };
+								if (inner.error?.message) {
+									options.onError?.(new Error(inner.error.message));
+									return;
+								}
+							} catch {
+								// ignore
+							}
+						} else if (parsed.type === "turn.failed" && parsed.error?.message) {
+							try {
+								const inner = JSON.parse(parsed.error.message) as { error?: { message?: string } };
+								if (inner.error?.message) {
+									options.onError?.(new Error(inner.error.message));
+									return;
+								}
+							} catch {
+								// ignore
+							}
+							options.onError?.(new Error(parsed.error.message));
+						}
+					} catch {
+						if (!line.startsWith("{")) {
+							accumulatedText += line + "\n";
+							options.onDelta?.(line + "\n");
+						}
+					}
+				};
+
+				spawned.stdout?.on("data", (chunk: Uint8Array | string) => {
+					if (isKilled) return;
+					const str = typeof chunk === "string" ? chunk : new TextDecoder().decode(chunk);
+					lineBuffer += str;
+
+					const lines = lineBuffer.split("\n");
+					lineBuffer = lines.pop() ?? "";
+
+					for (const line of lines) {
+						processLine(line);
+					}
+				});
+
+				let stderrOutput = "";
+				spawned.stderr?.on("data", (chunk: Uint8Array | string) => {
+					if (isKilled) return;
+					const str = typeof chunk === "string" ? chunk : new TextDecoder().decode(chunk);
+					stderrOutput += str;
+				});
+
+				spawned.on("close", (code) => {
+					if (isKilled) return;
+
+					if (lineBuffer.trim().length > 0) {
+						processLine(lineBuffer);
+					}
+
+					if (code === 0 || accumulatedText.length > 0) {
+						options.onDone?.(accumulatedText);
+					} else {
+						const errMsg = stderrOutput.trim() || `Codex CLI exited with code ${code}`;
+						options.onError?.(new Error(errMsg));
+					}
+				});
+
+				spawned.on("error", (err: Error) => {
+					if (isKilled) return;
+					options.onError?.(err);
+				});
+			})();
+
+			return handle;
+		}
+
+		// Antigravity execution
 		void (async () => {
 			const agyPath = await this.detectAgyPath();
 			if (!agyPath) {
@@ -345,43 +697,7 @@ export class AIService {
 
 			const vaultPath = this.getVaultPath() || "";
 			const env = this.getEnv();
-
-			// Construct effective prompt with context
-			let effectivePrompt = options.prompt.trim();
-
-			if (options.scope === "active-note" && options.activeFile) {
-				const contextHeader = [
-					`[Context: Active Note "${options.activeFile.path}"]`,
-				];
-				if (options.selectedText && options.selectedText.trim().length > 0) {
-					contextHeader.push(
-						"Selected Text snippet:",
-						"```",
-						options.selectedText.trim(),
-						"```",
-					);
-				} else if (options.activeContent && options.activeContent.trim().length > 0) {
-					contextHeader.push(
-						"File Content:",
-						"```",
-						options.activeContent.trim(),
-						"```",
-					);
-				}
-				contextHeader.push("--- User Question / Request ---", effectivePrompt);
-				effectivePrompt = contextHeader.join("\n");
-			} else if (options.scope === "vault") {
-				const ignorePatterns = await this.getVaultIgnorePatterns();
-				const ignoreListText = ignorePatterns.map((p) => `- ${p}`).join("\n");
-				const vaultHeader = [
-					"[Context: Entire Vault]",
-					"Strict Ignore Rule: You MUST strictly ignore and skip all files and folders matching the following patterns (do NOT read, search, index, list, or modify them under any circumstances):",
-					ignoreListText,
-					"--- User Question / Request ---",
-					effectivePrompt,
-				];
-				effectivePrompt = vaultHeader.join("\n");
-			}
+			const effectivePrompt = await this.buildEffectivePrompt(options);
 
 			const args: string[] = [
 				"-p",

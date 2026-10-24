@@ -276,4 +276,13 @@ export const ru: TranslationSchema = {
 	settingsAICleanupNowName: "Очистить историю чата сейчас",
 	settingsAICleanupNowDesc: "Вручную удалить старые заметки чата из хранилища.",
 	settingsAICleanupNowBtn: "Очистить сейчас...",
+	settingsAIProviderName: "Провайдер ИИ",
+	settingsAIProviderDesc: "Бэкенд CLI-движок для запуска моделей ИИ-агента.",
+	settingsAIProviderAntigravity: "Antigravity (agy)",
+	settingsAIProviderCodex: "Codex (codex)",
+	settingsAICodexCustomPathName: "Путь к Codex CLI",
+	settingsAICodexCustomPathDesc: "Путь к исполняемому файлу codex. Оставьте пустым для автоопределения.",
+	aiChatProviderSelect: "Выбрать провайдера ИИ",
+	aiChatProviderAntigravity: "Antigravity",
+	aiChatProviderCodex: "Codex",
 };

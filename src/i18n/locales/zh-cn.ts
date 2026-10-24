@@ -276,4 +276,13 @@ export const zhCn: TranslationSchema = {
 	settingsAICleanupNowName: "立即清理对话记录",
 	settingsAICleanupNowDesc: "手动从保管库中移除较旧的对话笔记。",
 	settingsAICleanupNowBtn: "立即清理...",
+	settingsAIProviderName: "AI 提供商",
+	settingsAIProviderDesc: "用于运行 AI Agent 模型的后端 CLI 引擎。",
+	settingsAIProviderAntigravity: "Antigravity (agy)",
+	settingsAIProviderCodex: "Codex (codex)",
+	settingsAICodexCustomPathName: "Codex CLI 路径",
+	settingsAICodexCustomPathDesc: "codex 可执行文件的路径。留空以自动检测。",
+	aiChatProviderSelect: "选择 AI 提供商",
+	aiChatProviderAntigravity: "Antigravity",
+	aiChatProviderCodex: "Codex",
 };

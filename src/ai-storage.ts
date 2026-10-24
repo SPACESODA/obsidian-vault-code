@@ -5,6 +5,7 @@ export interface ChatMetadata {
 	title: string;
 	created: string;
 	last_chat?: string;
+	provider?: "antigravity" | "codex";
 	model: string;
 	scope: "active-note" | "vault";
 	mode: "safe" | "edit";
@@ -115,6 +116,10 @@ export class AIStorage {
 			`mode: ${JSON.stringify(metadata.mode)}`,
 		];
 
+		if (metadata.provider) {
+			yamlLines.push(`provider: ${JSON.stringify(metadata.provider)}`);
+		}
+
 		if (metadata.conversationId) {
 			yamlLines.push(`conversation_id: ${JSON.stringify(metadata.conversationId)}`);
 		}
@@ -163,6 +168,11 @@ export class AIStorage {
 
 			const lastChatMatch = fmBlock.match(/last_chat:\s*"?([^"\n\r]+)"?/);
 			if (lastChatMatch && lastChatMatch[1]) metadata.last_chat = lastChatMatch[1].trim();
+
+			const provMatch = fmBlock.match(/provider:\s*"?([^"\n\r]+)"?/);
+			if (provMatch && provMatch[1] && (provMatch[1] === "antigravity" || provMatch[1] === "codex")) {
+				metadata.provider = provMatch[1];
+			}
 
 			const modelMatch = fmBlock.match(/model:\s*"?([^"\n\r]+)"?/);
 			if (modelMatch && modelMatch[1]) metadata.model = modelMatch[1].trim();

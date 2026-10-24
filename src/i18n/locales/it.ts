@@ -276,4 +276,13 @@ export const it: TranslationSchema = {
 	settingsAICleanupNowName: "Pulisci cronologia chat ora",
 	settingsAICleanupNowDesc: "Rimuovi manualmente le note chat più vecchie dalla cassaforte.",
 	settingsAICleanupNowBtn: "Pulisci ora...",
+	settingsAIProviderName: "Provider IA",
+	settingsAIProviderDesc: "Il motore CLI di backend utilizzato per eseguire i modelli dell'Agente IA.",
+	settingsAIProviderAntigravity: "Antigravity (agy)",
+	settingsAIProviderCodex: "Codex (codex)",
+	settingsAICodexCustomPathName: "Percorso Codex CLI",
+	settingsAICodexCustomPathDesc: "Percorso dell'eseguibile codex. Lascia vuoto per il rilevamento automatico.",
+	aiChatProviderSelect: "Seleziona provider IA",
+	aiChatProviderAntigravity: "Antigravity",
+	aiChatProviderCodex: "Codex",
 };

@@ -276,4 +276,13 @@ export const ja: TranslationSchema = {
 	settingsAICleanupNowName: "今すぐチャット履歴をクリーンアップ",
 	settingsAICleanupNowDesc: "保管庫から古いチャットノートを手動で削除します。",
 	settingsAICleanupNowBtn: "今すぐクリーンアップ...",
+	settingsAIProviderName: "AIプロバイダー",
+	settingsAIProviderDesc: "AIエージェントモデルの実行に使用するバックエンドCLIエンジン。",
+	settingsAIProviderAntigravity: "Antigravity (agy)",
+	settingsAIProviderCodex: "Codex (codex)",
+	settingsAICodexCustomPathName: "Codex CLIのパス",
+	settingsAICodexCustomPathDesc: "codex実行可能ファイルのパス。自動検出する場合は空のままにします。",
+	aiChatProviderSelect: "AIプロバイダーを選択",
+	aiChatProviderAntigravity: "Antigravity",
+	aiChatProviderCodex: "Codex",
 };

@@ -623,10 +623,13 @@ interface VaultCodeSettings {
 	lineWrapping: boolean;
 	enableGitIntegration: boolean;
 	enableAIChat: boolean;
+	aiProvider: "antigravity" | "codex";
 	aiModel: string;
+	aiCodexModel: string;
 	aiScope: "active-note" | "vault";
 	aiMode: "safe" | "edit";
 	aiCustomPath: string;
+	aiCodexPath: string;
 	aiChatFolder: string;
 	aiChatAutoClean: "never" | "7d" | "30d" | "90d";
 }
@@ -665,10 +668,13 @@ const DEFAULT_SETTINGS: VaultCodeSettings = {
 	lineWrapping: true,
 	enableGitIntegration: true,
 	enableAIChat: true,
+	aiProvider: "antigravity",
 	aiModel: "gemini-3.8-flash-high",
+	aiCodexModel: "gpt-6.1-sol",
 	aiScope: "active-note",
 	aiMode: "edit",
 	aiCustomPath: "",
+	aiCodexPath: "",
 	aiChatFolder: "Agent-Chats",
 	aiChatAutoClean: "never",
 };
@@ -8642,22 +8648,58 @@ class VaultCodeSettingTab extends PluginSettingTab {
 				);
 
 			new Setting(containerEl)
-				.setName(t("settingsAIDefaultModelName"))
-				.setDesc(t("settingsAIDefaultModelDesc"))
+				.setName(t("settingsAIProviderName"))
+				.setDesc(t("settingsAIProviderDesc"))
 				.addDropdown((dropdown) => {
 					dropdown
-						.addOption("gemini-3.8-flash-high", "Gemini 3.8 Flash (High)")
-						.addOption("gemini-3.8-flash-medium", "Gemini 3.8 Flash (Medium)")
-						.addOption("gemini-3.8-flash-low", "Gemini 3.8 Flash (Low)")
-						.addOption("claude-sonnet-4-6", "Claude Sonnet 4.6 (Thinking)")
-						.addOption("claude-opus-4-6-thinking", "Claude Opus 4.6 (Thinking)")
-						.addOption("gpt-oss-120b-medium", "GPT-OSS 120b (medium)")
-						.setValue(this.plugin.settings.aiModel)
-						.onChange(async (value) => {
-							this.plugin.settings.aiModel = value;
+						.addOption("antigravity", t("settingsAIProviderAntigravity"))
+						.addOption("codex", t("settingsAIProviderCodex"))
+						.setValue(this.plugin.settings.aiProvider || "antigravity")
+						.onChange(async (val) => {
+							this.plugin.settings.aiProvider = val as "antigravity" | "codex";
 							await this.plugin.saveSettings();
+							this.display();
 						});
 				});
+
+			if ((this.plugin.settings.aiProvider || "antigravity") === "codex") {
+				new Setting(containerEl)
+					.setName(t("settingsAIDefaultModelName"))
+					.setDesc(t("settingsAIDefaultModelDesc"))
+					.addDropdown((dropdown) => {
+						dropdown
+							.addOption("gpt-6.1-sol", "GPT-6.1-Sol")
+							.addOption("gpt-6-astra", "GPT-6-Astra")
+							.addOption("gpt-6-sol", "GPT-6-Sol")
+							.addOption("gpt-6-luna", "GPT-6-Luna")
+							.addOption("gpt-5.6-sol", "GPT-5.6-Sol")
+							.addOption("gpt-5.6-terra", "GPT-5.6-Terra")
+							.addOption("gpt-5.6-luna", "GPT-5.6-Luna")
+							.setValue(this.plugin.settings.aiCodexModel || "gpt-6.1-sol")
+							.onChange(async (value) => {
+								this.plugin.settings.aiCodexModel = value;
+								await this.plugin.saveSettings();
+							});
+					});
+			} else {
+				new Setting(containerEl)
+					.setName(t("settingsAIDefaultModelName"))
+					.setDesc(t("settingsAIDefaultModelDesc"))
+					.addDropdown((dropdown) => {
+						dropdown
+							.addOption("gemini-3.8-flash-high", "Gemini 3.8 Flash (High)")
+							.addOption("gemini-3.8-flash-medium", "Gemini 3.8 Flash (Medium)")
+							.addOption("gemini-3.8-flash-low", "Gemini 3.8 Flash (Low)")
+							.addOption("claude-sonnet-4-6", "Claude Sonnet 4.6 (Thinking)")
+							.addOption("claude-opus-4-6-thinking", "Claude Opus 4.6 (Thinking)")
+							.addOption("gpt-oss-120b-medium", "GPT-OSS 120b (medium)")
+							.setValue(this.plugin.settings.aiModel || "gemini-3.8-flash-high")
+							.onChange(async (value) => {
+								this.plugin.settings.aiModel = value;
+								await this.plugin.saveSettings();
+							});
+					});
+			}
 
 			new Setting(containerEl)
 				.setName(t("settingsAIDefaultScopeName"))
@@ -8696,6 +8738,19 @@ class VaultCodeSettingTab extends PluginSettingTab {
 						.setValue(this.plugin.settings.aiCustomPath)
 						.onChange(async (value) => {
 							this.plugin.settings.aiCustomPath = value.trim();
+							await this.plugin.saveSettings();
+						}),
+				);
+
+			new Setting(containerEl)
+				.setName(t("settingsAICodexCustomPathName"))
+				.setDesc(t("settingsAICodexCustomPathDesc"))
+				.addText((text) =>
+					text
+						.setPlaceholder("/opt/homebrew/bin/codex")
+						.setValue(this.plugin.settings.aiCodexPath || "")
+						.onChange(async (value) => {
+							this.plugin.settings.aiCodexPath = value.trim();
 							await this.plugin.saveSettings();
 						}),
 				);

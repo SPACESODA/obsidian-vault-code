@@ -124,12 +124,16 @@ export class AIChatHistoryModal extends Modal {
 
 		const mainEl = itemEl.createDiv({ cls: "vault-code-history-item-main" });
 
-		const titleWrapper = mainEl.createDiv({ cls: "vault-code-history-item-title" });
-		const fileIcon = titleWrapper.createSpan({ cls: "vault-code-history-item-icon" });
+		const fileIcon = mainEl.createSpan({ cls: "vault-code-history-item-icon" });
 		setIcon(fileIcon, "message-square");
-		titleWrapper.createSpan({ text: this.getDisplayTitle(file) });
 
-		const metaEl = mainEl.createDiv({ cls: "vault-code-history-item-meta" });
+		const textEl = mainEl.createDiv({ cls: "vault-code-history-item-text" });
+		textEl.createDiv({
+			cls: "vault-code-history-item-title",
+			text: this.getDisplayTitle(file),
+		});
+
+		const metaEl = textEl.createDiv({ cls: "vault-code-history-item-meta" });
 		metaEl.createSpan({
 			cls: "vault-code-history-item-date",
 			text: this.formatDate(file),
@@ -255,7 +259,7 @@ export class AIChatHistoryModal extends Modal {
 	}
 
 	private async executeBatchCleanup(rule: "7d" | "30d" | "90d" | "all"): Promise<void> {
-		const folder = this.plugin.settings.aiChatFolder || "Agent chats";
+		const folder = this.plugin.settings.aiChatFolder || "Agent-Chats";
 		try {
 			const count = await this.plugin.aiStorage.cleanupOldChats(folder, rule);
 			new Notice(t("aiChatNoticeCleanedCount").replace("{0}", String(count)));

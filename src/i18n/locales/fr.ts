@@ -276,4 +276,13 @@ export const fr: TranslationSchema = {
 	settingsAICleanupNowName: "Nettoyer l'historique des discussions maintenant",
 	settingsAICleanupNowDesc: "Supprimer manuellement les anciennes discussions du coffre.",
 	settingsAICleanupNowBtn: "Nettoyer maintenant...",
+	settingsAIProviderName: "Fournisseur d'IA",
+	settingsAIProviderDesc: "Le moteur CLI principal utilisé pour exécuter les modèles de l'Agent IA.",
+	settingsAIProviderAntigravity: "Antigravity (agy)",
+	settingsAIProviderCodex: "Codex (codex)",
+	settingsAICodexCustomPathName: "Chemin vers Codex CLI",
+	settingsAICodexCustomPathDesc: "Chemin vers l'exécutable codex. Laisser vide pour détection automatique.",
+	aiChatProviderSelect: "Sélectionner le fournisseur d'IA",
+	aiChatProviderAntigravity: "Antigravity",
+	aiChatProviderCodex: "Codex",
 };

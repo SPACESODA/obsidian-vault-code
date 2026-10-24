@@ -276,4 +276,13 @@ export const de: TranslationSchema = {
 	settingsAICleanupNowName: "Chat-Verlauf jetzt bereinigen",
 	settingsAICleanupNowDesc: "Ältere Chat-Notizen manuell aus dem Vault entfernen.",
 	settingsAICleanupNowBtn: "Jetzt bereinigen...",
+	settingsAIProviderName: "KI-Anbieter",
+	settingsAIProviderDesc: "Die Backend-CLI-Engine zum Ausführen von KI-Agent-Modellen.",
+	settingsAIProviderAntigravity: "Antigravity (agy)",
+	settingsAIProviderCodex: "Codex (codex)",
+	settingsAICodexCustomPathName: "Codex CLI-Pfad",
+	settingsAICodexCustomPathDesc: "Pfad zur ausführbaren Datei codex. Leer lassen für automatische Erkennung.",
+	aiChatProviderSelect: "KI-Anbieter auswählen",
+	aiChatProviderAntigravity: "Antigravity",
+	aiChatProviderCodex: "Codex",
 };

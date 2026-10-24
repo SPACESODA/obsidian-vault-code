@@ -10,7 +10,8 @@ import {
 } from "obsidian";
 import type VaultCodePlugin from "./main";
 import { t } from "./i18n";
-import type { AgyModelInfo, AgyProcessHandle } from "./ai-service";
+import type { AgyModelInfo, AIProcessHandle, AIProvider } from "./ai-service";
+import { DEFAULT_AGY_MODELS, DEFAULT_CODEX_MODELS } from "./ai-service";
 import { AIChatHistoryModal } from "./ai-history-modal";
 import { createCustomMenu } from "./custom-menu";
 
@@ -27,11 +28,12 @@ export class AIChatView extends ItemView {
 	private plugin: VaultCodePlugin;
 	private messages: ChatMessage[] = [];
 	private conversationId?: string;
+	private selectedProvider: AIProvider;
 	private selectedModel: string;
 	private chatScope: "active-note" | "vault";
 	private mode: "safe" | "edit";
 	private isGenerating = false;
-	private activeProcessHandle: AgyProcessHandle | null = null;
+	private activeProcessHandle: AIProcessHandle | null = null;
 	private availableModels: AgyModelInfo[] = [];
 
 	// Active chat file in vault
@@ -50,6 +52,7 @@ export class AIChatView extends ItemView {
 	private messagesContainerEl!: HTMLElement;
 	private inputEl!: HTMLTextAreaElement;
 	private sendBtnEl!: HTMLElement;
+	private providerBtnEl!: HTMLElement;
 	private modelBtnEl!: HTMLElement;
 	private modeBtnEl!: HTMLElement;
 	private vaultToggle: ToggleComponent | null = null;
@@ -66,7 +69,10 @@ export class AIChatView extends ItemView {
 	constructor(leaf: WorkspaceLeaf, plugin: VaultCodePlugin) {
 		super(leaf);
 		this.plugin = plugin;
-		this.selectedModel = plugin.settings.aiModel || "gemini-3.8-flash-high";
+		this.selectedProvider = plugin.settings.aiProvider || "antigravity";
+		this.selectedModel = this.selectedProvider === "codex"
+			? (plugin.settings.aiCodexModel || "gpt-6.1-sol")
+			: (plugin.settings.aiModel || "gemini-3.8-flash-high");
 		this.chatScope = plugin.settings.aiScope || "active-note";
 		this.mode = plugin.settings.aiMode || "edit";
 	}
@@ -92,11 +98,8 @@ export class AIChatView extends ItemView {
 		this.buildMessageList(container);
 		this.buildFooter(container);
 
-		// Fetch available models asynchronously
-		void this.plugin.aiService.getAvailableModels().then((models) => {
-			this.availableModels = models;
-			this.updateModelBtnLabel();
-		});
+		// Fetch available models asynchronously for active provider
+		void this.loadModelsForProvider(this.selectedProvider);
 
 		// Listen to active note changes to update context chip
 		this.registerEvent(
@@ -111,6 +114,12 @@ export class AIChatView extends ItemView {
 		);
 
 		this.updateContextChip();
+	}
+
+	private async loadModelsForProvider(provider: AIProvider): Promise<void> {
+		const models = await this.plugin.aiService.getModelsForProvider(provider);
+		this.availableModels = models;
+		this.updateModelBtnLabel();
 	}
 
 	async onClose(): Promise<void> {
@@ -273,8 +282,14 @@ export class AIChatView extends ItemView {
 		// Bottom controls inside the card
 		const cardBottom = inputCard.createDiv({ cls: "vault-code-chat-card-bottom" });
 
-		// Row 1: Model Selection
+		// Row 1: Provider selection & Model selection
 		const topRow = cardBottom.createDiv({ cls: "vault-code-chat-bottom-row-top" });
+		this.providerBtnEl = topRow.createEl("button", {
+			cls: "vault-code-chat-pill vault-code-chat-pill-provider",
+			attr: { "aria-label": t("aiChatProviderSelect") },
+		});
+		this.providerBtnEl.addEventListener("click", (e) => this.showProviderMenu(e));
+
 		this.modelBtnEl = topRow.createEl("button", {
 			cls: "vault-code-chat-pill vault-code-chat-pill-model",
 			attr: { "aria-label": t("settingsAIDefaultModelName") },
@@ -311,6 +326,7 @@ export class AIChatView extends ItemView {
 			this.updateContextChip();
 		});
 
+		this.updateProviderBtnLabel();
 		this.updateModelBtnLabel();
 		this.updateModeBtnLabel();
 		this.updateVaultToggleState();
@@ -330,11 +346,32 @@ export class AIChatView extends ItemView {
 		this.inputEl.setCssProps({ "--chat-input-height": `${newHeight}px` });
 	}
 
+	private updateProviderBtnLabel(): void {
+		if (!this.providerBtnEl) return;
+		this.providerBtnEl.empty();
+		const iconSpan = this.providerBtnEl.createSpan({ cls: "vault-code-pill-icon" });
+		if (this.selectedProvider === "codex") {
+			setIcon(iconSpan, "zap");
+			this.providerBtnEl.createSpan({
+				cls: "vault-code-pill-label",
+				text: t("aiChatProviderCodex"),
+			});
+		} else {
+			setIcon(iconSpan, "sparkles");
+			this.providerBtnEl.createSpan({
+				cls: "vault-code-pill-label",
+				text: t("aiChatProviderAntigravity"),
+			});
+		}
+		const chevronSpan = this.providerBtnEl.createSpan({ cls: "vault-code-pill-chevron" });
+		setIcon(chevronSpan, "chevron-down");
+	}
+
 	private updateModelBtnLabel(): void {
 		if (!this.modelBtnEl) return;
 		this.modelBtnEl.empty();
 		const iconSpan = this.modelBtnEl.createSpan({ cls: "vault-code-pill-icon" });
-		setIcon(iconSpan, "sparkles");
+		setIcon(iconSpan, this.selectedProvider === "codex" ? "cpu" : "sparkles");
 
 		const found = this.availableModels.find((m) => m.id === this.selectedModel);
 		const label = found ? found.displayName : this.selectedModel;
@@ -467,20 +504,47 @@ export class AIChatView extends ItemView {
 		this.updateContextChip();
 	}
 
+	private showProviderMenu(event: MouseEvent): void {
+		const menu = createCustomMenu();
+
+		menu.addItem((item) => {
+			item.setTitle(t("aiChatProviderAntigravity"));
+			item.setIcon("sparkles");
+			item.setChecked(this.selectedProvider === "antigravity");
+			item.onClick(() => {
+				if (this.selectedProvider !== "antigravity") {
+					this.selectedProvider = "antigravity";
+					this.selectedModel = this.plugin.settings.aiModel || "gemini-3.8-flash-high";
+					this.updateProviderBtnLabel();
+					void this.loadModelsForProvider("antigravity");
+				}
+			});
+		});
+
+		menu.addItem((item) => {
+			item.setTitle(t("aiChatProviderCodex"));
+			item.setIcon("zap");
+			item.setChecked(this.selectedProvider === "codex");
+			item.onClick(() => {
+				if (this.selectedProvider !== "codex") {
+					this.selectedProvider = "codex";
+					this.selectedModel = this.plugin.settings.aiCodexModel || "gpt-6.1-sol";
+					this.updateProviderBtnLabel();
+					void this.loadModelsForProvider("codex");
+				}
+			});
+		});
+
+		menu.showAtMouseEvent(event);
+	}
+
 	private showModelMenu(event: MouseEvent): void {
 		const menu = createCustomMenu();
 
 		const modelsToUse =
 			this.availableModels.length > 0
 				? this.availableModels
-				: [
-						{ id: "gemini-3.8-flash-high", displayName: "Gemini 3.8 Flash (High)" },
-						{ id: "gemini-3.8-flash-medium", displayName: "Gemini 3.8 Flash (Medium)" },
-						{ id: "gemini-3.8-flash-low", displayName: "Gemini 3.8 Flash (Low)" },
-						{ id: "claude-sonnet-4-6", displayName: "Claude Sonnet 4.6 (Thinking)" },
-						{ id: "claude-opus-4-6-thinking", displayName: "Claude Opus 4.6 (Thinking)" },
-						{ id: "gpt-oss-120b-medium", displayName: "GPT-OSS 120b (medium)" },
-					];
+				: (this.selectedProvider === "codex" ? DEFAULT_CODEX_MODELS : DEFAULT_AGY_MODELS);
 
 		for (const model of modelsToUse) {
 			menu.addItem((item) => {
@@ -543,6 +607,9 @@ export class AIChatView extends ItemView {
 			this.currentChatFile = file;
 			this.currentChatTitle = parsed.metadata.title;
 			this.conversationId = parsed.metadata.conversationId;
+			if (parsed.metadata.provider) {
+				this.selectedProvider = parsed.metadata.provider;
+			}
 			this.selectedModel = parsed.metadata.model;
 			this.chatScope = parsed.metadata.scope;
 			this.mode = parsed.metadata.mode;
@@ -551,7 +618,9 @@ export class AIChatView extends ItemView {
 			this.headerTitleEl?.setText(this.currentChatTitle);
 			this.headerTitleEl.title = `${this.currentChatTitle} (${t("aiChatRenameChat")})`;
 			this.headerTitleEl.addClass("is-editable");
+			this.updateProviderBtnLabel();
 			this.updateModelBtnLabel();
+			void this.loadModelsForProvider(this.selectedProvider);
 			this.updateVaultToggleState();
 			this.updateModeBtnLabel();
 			this.updateContextChip();
@@ -579,6 +648,12 @@ export class AIChatView extends ItemView {
 		this.headerTitleEl?.removeClass("is-editable");
 		this.openNoteBtnEl?.hide();
 		this.chatScope = "active-note";
+		this.selectedProvider = this.plugin.settings.aiProvider || "antigravity";
+		this.selectedModel = this.selectedProvider === "codex"
+			? (this.plugin.settings.aiCodexModel || "gpt-6.1-sol")
+			: (this.plugin.settings.aiModel || "gemini-3.8-flash-high");
+		this.updateProviderBtnLabel();
+		void this.loadModelsForProvider(this.selectedProvider);
 		this.updateVaultToggleState();
 		this.updateContextChip();
 		this.renderMessages();
@@ -778,6 +853,7 @@ export class AIChatView extends ItemView {
 					this.currentChatTitle,
 					this.messages,
 					{
+						provider: this.selectedProvider,
 						model: this.selectedModel,
 						scope: this.chatScope,
 						mode: this.mode,
@@ -795,6 +871,7 @@ export class AIChatView extends ItemView {
 
 		this.activeProcessHandle = this.plugin.aiService.sendMessage({
 			prompt: text,
+			provider: this.selectedProvider,
 			model: this.selectedModel,
 			scope: this.chatScope,
 			mode: this.mode,
@@ -855,6 +932,7 @@ export class AIChatView extends ItemView {
 						{
 							title: this.currentChatTitle,
 							created: this.plugin.aiStorage.formatDateTime(),
+							provider: this.selectedProvider,
 							model: this.selectedModel,
 							scope: this.chatScope,
 							mode: this.mode,
@@ -888,6 +966,7 @@ export class AIChatView extends ItemView {
 						{
 							title: this.currentChatTitle,
 							created: this.plugin.aiStorage.formatDateTime(),
+							provider: this.selectedProvider,
 							model: this.selectedModel,
 							scope: this.chatScope,
 							mode: this.mode,

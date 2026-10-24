@@ -274,6 +274,15 @@ export const en = {
 	settingsAICleanupNowName: "Clean up chat history now",
 	settingsAICleanupNowDesc: "Manually remove older chat notes from the vault.",
 	settingsAICleanupNowBtn: "Clean up now...",
+	settingsAIProviderName: "AI provider",
+	settingsAIProviderDesc: "The backend CLI engine used to run AI Agent models.",
+	settingsAIProviderAntigravity: "Antigravity (agy)",
+	settingsAIProviderCodex: "Codex (codex)",
+	settingsAICodexCustomPathName: "Codex CLI path",
+	settingsAICodexCustomPathDesc: "Path to the codex executable. Leave empty to auto-detect.",
+	aiChatProviderSelect: "Select AI provider",
+	aiChatProviderAntigravity: "Antigravity",
+	aiChatProviderCodex: "Codex",
 };
 
 export type TranslationSchema = typeof en;

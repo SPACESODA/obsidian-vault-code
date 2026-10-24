@@ -276,4 +276,13 @@ export const es: TranslationSchema = {
 	settingsAICleanupNowName: "Limpiar historial de chat ahora",
 	settingsAICleanupNowDesc: "Eliminar manualmente notas de chat antiguas del almacén.",
 	settingsAICleanupNowBtn: "Limpiar ahora...",
+	settingsAIProviderName: "Proveedor de IA",
+	settingsAIProviderDesc: "El motor CLI de backend utilizado para ejecutar modelos de Agente de IA.",
+	settingsAIProviderAntigravity: "Antigravity (agy)",
+	settingsAIProviderCodex: "Codex (codex)",
+	settingsAICodexCustomPathName: "Ruta de Codex CLI",
+	settingsAICodexCustomPathDesc: "Ruta al ejecutable codex. Dejar vacío para autodetección.",
+	aiChatProviderSelect: "Seleccionar proveedor de IA",
+	aiChatProviderAntigravity: "Antigravity",
+	aiChatProviderCodex: "Codex",
 };
