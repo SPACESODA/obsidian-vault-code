@@ -2,7 +2,6 @@ import {
 	ItemView,
 	WorkspaceLeaf,
 	setIcon,
-	MarkdownRenderer,
 	Notice,
 	TFile,
 	ToggleComponent,
@@ -24,6 +23,7 @@ import { AIChatHistoryModal } from "./ai-history-modal";
 import { createCustomMenu } from "./custom-menu";
 import { isConnectionProvider, connectionProvider, extractEditProposal } from "./ai-connections";
 import { AIEditReviewModal } from "./ai-edit-review";
+import { renderChatMarkdown } from "./ai-chat-markdown";
 
 export const VIEW_TYPE_AI_CHAT = "vault-code-ai-chat";
 
@@ -962,15 +962,13 @@ export class AIChatView extends ItemView {
 		});
 
 		const bodyEl = bubbleEl.createDiv({ cls: "vault-code-chat-msg-body" });
-		void MarkdownRenderer.render(
-			this.app,
-			msg.role === "assistant" ? extractEditProposal(msg.content)?.explanation || msg.content : msg.content,
-			bodyEl,
-			"",
-			this,
-		);
+		void this.renderMessageBody(msg.role === "assistant" ? extractEditProposal(msg.content)?.explanation || msg.content : msg.content, bodyEl);
 
 		return bubbleEl;
+	}
+
+	private renderMessageBody(markdown: string, bodyEl: HTMLElement): Promise<void> {
+		return renderChatMarkdown(this.app, markdown, bodyEl, this.currentChatFile?.path || "", this);
 	}
 
 	private scheduleStreamingRender(msg: ChatMessage, bodyEl: HTMLElement): void {
@@ -978,15 +976,8 @@ export class AIChatView extends ItemView {
 
 		this.renderRafId = window.requestAnimationFrame(() => {
 			this.renderRafId = null;
-			bodyEl.empty();
-			void MarkdownRenderer.render(
-				this.app,
-				extractEditProposal(msg.content)?.explanation || msg.content,
-				bodyEl,
-				"",
-				this,
-			);
-			this.scrollToBottom();
+			void this.renderMessageBody(extractEditProposal(msg.content)?.explanation || msg.content, bodyEl)
+				.then(() => this.scrollToBottom());
 		});
 	}
 
@@ -1145,14 +1136,8 @@ export class AIChatView extends ItemView {
 					}
 				}
 				if (asstBodyEl) {
-					asstBodyEl.empty();
-					void MarkdownRenderer.render(
-						this.app,
-						proposal ? proposal.explanation || "Proposed note update." : assistantMsg.content,
-						asstBodyEl,
-						"",
-						this,
-					);
+					void this.renderMessageBody(proposal ? proposal.explanation || "Proposed note update." : assistantMsg.content, asstBodyEl)
+						.then(() => this.scrollToBottom());
 				}
 
 				// Add copy button to assistant message
@@ -1212,14 +1197,8 @@ export class AIChatView extends ItemView {
 
 				assistantMsg.content = `> ⚠️ **Error**: ${err.message}`;
 				if (asstBodyEl) {
-					asstBodyEl.empty();
-					void MarkdownRenderer.render(
-						this.app,
-						assistantMsg.content,
-						asstBodyEl,
-						"",
-						this,
-					);
+					if (this.renderRafId !== null) { window.cancelAnimationFrame(this.renderRafId); this.renderRafId = null; }
+					void this.renderMessageBody(assistantMsg.content, asstBodyEl).then(() => this.scrollToBottom());
 				}
 				this.finishGenerating();
 
