@@ -12,6 +12,7 @@ export interface ChildProcessStdin {
 }
 
 export interface SpawnedProcess {
+	pid?: number;
 	stdout: ChildProcessStream | null;
 	stderr: ChildProcessStream | null;
 	stdin: ChildProcessStdin | null;
@@ -30,6 +31,7 @@ export type SpawnFn = (
 		cwd?: string;
 		env?: Record<string, string>;
 		windowsHide?: boolean;
+		shell?: boolean | string;
 	},
 ) => SpawnedProcess;
 
@@ -41,6 +43,7 @@ export type ExecFileFn = (
 		timeout?: number;
 		maxBuffer?: number;
 		windowsHide?: boolean;
+		shell?: boolean | string;
 		env?: Record<string, string>;
 	},
 	callback: (
@@ -311,36 +314,51 @@ export class AIService {
 			window as unknown as { process?: { env?: Record<string, string> } }
 		).process;
 		const procEnv: Record<string, string> = proc?.env ?? {};
-		const home = procEnv.HOME || (Platform.isMacOS ? `/Users/${procEnv.USER || ""}` : "");
+		const home = procEnv.HOME || procEnv.USERPROFILE || "";
+		const pathSep = Platform.isWin ? ";" : ":";
+		const currentPath = procEnv.PATH ?? "";
+		const extraPaths = currentPath.split(pathSep).filter(Boolean);
 
-		const extraPaths: string[] = [
-			"/opt/homebrew/bin",
-			"/opt/homebrew/sbin",
-			"/usr/local/bin",
-			"/usr/bin",
-			"/bin",
-			"/usr/sbin",
-			"/sbin",
-		];
-
-		if (home) {
+		if (Platform.isWin) {
+			const appData = procEnv.APPDATA || (home ? `${home}\\AppData\\Roaming` : "");
+			const localAppData = procEnv.LOCALAPPDATA || (home ? `${home}\\AppData\\Local` : "");
+			if (appData) {
+				extraPaths.unshift(`${appData}\\npm`);
+			}
+			if (localAppData) {
+				extraPaths.unshift(
+					`${localAppData}\\Programs\\OpenCode\\bin`,
+					`${localAppData}\\Programs\\Antigravity\\bin`,
+				);
+			}
+			if (home) {
+				extraPaths.unshift(`${home}\\.cargo\\bin`, `${home}\\bin`);
+			}
+		} else {
+			if (home) {
+				extraPaths.unshift(
+					`${home}/.local/bin`,
+					`${home}/.nvm/versions/node/v24.13.0/bin`,
+					`${home}/.nvm/versions/node/v20.20.0/bin`,
+					`${home}/.opencode/bin`,
+					`${home}/.cargo/bin`,
+					`${home}/bin`,
+				);
+			}
 			extraPaths.unshift(
-				`${home}/.local/bin`,
-				`${home}/.nvm/versions/node/v24.13.0/bin`,
-				`${home}/.nvm/versions/node/v20.20.0/bin`,
-				`${home}/.opencode/bin`,
-				`${home}/.cargo/bin`,
-				`${home}/bin`,
+				"/opt/homebrew/bin",
+				"/opt/homebrew/sbin",
+				"/usr/local/bin",
+				"/usr/bin",
+				"/bin",
+				"/usr/sbin",
+				"/sbin",
 			);
-		}
-
-		if (procEnv.PATH) {
-			extraPaths.push(procEnv.PATH);
 		}
 
 		return {
 			...procEnv,
-			PATH: extraPaths.join(":"),
+			PATH: Array.from(new Set(extraPaths)).join(pathSep),
 		};
 	}
 
@@ -402,7 +420,7 @@ export class AIService {
 			cp.execFile(
 				checkCommand,
 				[binary],
-				{ env, timeout: 3000 },
+				{ env, timeout: 3000, shell: Platform.isWin },
 				(err, stdout) => {
 					if (!err && stdout) {
 						const firstLine = stdout.toString().split("\n")[0]?.trim();
@@ -412,37 +430,51 @@ export class AIService {
 						}
 					}
 
-					// Fallback to candidates
-					if (Platform.isMacOS) {
-						const proc = (
-							window as unknown as { process?: { env?: Record<string, string> } }
-						).process;
-						const home = proc?.env?.HOME || "/Users/anthony";
-						const win = window as unknown as {
-							require?: (mod: string) => { existsSync?: (p: string) => boolean };
-						};
+					// Fallback candidates check via filesystem
+					const proc = (
+						window as unknown as { process?: { env?: Record<string, string> } }
+					).process;
+					const home = proc?.env?.HOME || proc?.env?.USERPROFILE || "";
+					const win = window as unknown as {
+						require?: (mod: string) => { existsSync?: (p: string) => boolean };
+					};
 
-						const allFallbacks = [
-							...fallbackCandidates,
+					const allFallbacks: string[] = [...fallbackCandidates];
+					if (home) {
+						allFallbacks.push(
 							`${home}/.local/bin/${binary}`,
 							`${home}/.nvm/versions/node/v24.13.0/bin/${binary}`,
+							`${home}/.nvm/versions/node/v20.20.0/bin/${binary}`,
 							`${home}/.opencode/bin/${binary}`,
+							`${home}/.cargo/bin/${binary}`,
+							`${home}/bin/${binary}`,
+						);
+						if (Platform.isWin) {
+							allFallbacks.push(
+								`${home}\\AppData\\Roaming\\npm\\${binary}.cmd`,
+								`${home}\\AppData\\Roaming\\npm\\${binary}`,
+							);
+						}
+					}
+					if (!Platform.isWin) {
+						allFallbacks.push(
 							`/opt/homebrew/bin/${binary}`,
 							`/usr/local/bin/${binary}`,
-						];
+							`/usr/bin/${binary}`,
+						);
+					}
 
-						for (const c of allFallbacks) {
-							try {
-								if (typeof win.require === "function") {
-									const fs = win.require("fs");
-									if (fs?.existsSync?.(c)) {
-										resolve(c);
-										return;
-									}
+					for (const c of allFallbacks) {
+						try {
+							if (typeof win.require === "function") {
+								const fs = win.require("fs");
+								if (fs?.existsSync?.(c)) {
+									resolve(c);
+									return;
 								}
-							} catch {
-								// ignore
 							}
+						} catch {
+							// ignore
 						}
 					}
 					resolve(null);
@@ -488,7 +520,7 @@ export class AIService {
 					cp.execFile(
 						binPath,
 						def.versionArgs,
-						{ env, timeout: 3000 },
+						{ env, timeout: 3000, shell: Platform.isWin },
 						(err, stdout, stderr) => {
 							const text = (stdout || stderr || "").toString().trim();
 							const firstLine = text.split("\n")[0]?.trim() || "";
@@ -571,7 +603,7 @@ export class AIService {
 			const proc = (
 				window as unknown as { process?: { env?: Record<string, string> } }
 			).process;
-			const home = proc?.env?.HOME || "/Users/anthony";
+			const home = proc?.env?.HOME || proc?.env?.USERPROFILE || "";
 			if (home) {
 				const win = window as unknown as {
 					require?: (mod: string) => {
@@ -581,7 +613,8 @@ export class AIService {
 				};
 				if (typeof win.require === "function") {
 					const fs = win.require("fs");
-					const cacheFile = `${home}/.codex/models_cache.json`;
+					const sep = Platform.isWin ? "\\" : "/";
+					const cacheFile = `${home}${sep}.codex${sep}models_cache.json`;
 					if (fs?.existsSync?.(cacheFile) && fs?.readFileSync) {
 						const raw = fs.readFileSync(cacheFile, "utf8");
 						const data = JSON.parse(raw) as {
@@ -708,9 +741,28 @@ export class AIService {
 				isKilled = true;
 				if (spawned) {
 					try {
-						spawned.kill("SIGTERM");
+						if (Platform.isWin && spawned.pid) {
+							const win = window as unknown as {
+								require?: (mod: string) => { execSync?: (cmd: string) => void };
+							};
+							const cpSync = win.require?.("child_process");
+							cpSync?.execSync?.(`taskkill /pid ${spawned.pid} /T /F`);
+						} else {
+							spawned.kill("SIGTERM");
+							window.setTimeout(() => {
+								try {
+									spawned?.kill("SIGKILL");
+								} catch {
+									// ignore
+								}
+							}, 800);
+						}
 					} catch {
-						// ignore
+						try {
+							spawned.kill();
+						} catch {
+							// ignore
+						}
 					}
 				}
 			},
@@ -852,6 +904,7 @@ export class AIService {
 					cwd: vaultPath,
 					env,
 					windowsHide: true,
+					shell: Platform.isWin,
 				});
 			} catch (err) {
 				options.onError?.(err instanceof Error ? err : new Error(String(err)));
@@ -962,7 +1015,12 @@ export class AIService {
 				if (code === 0 || accumulatedText.length > 0) {
 					options.onDone?.(accumulatedText);
 				} else {
-					const errMsg = stderrOutput.trim() || `${provider} CLI exited with code ${code}`;
+					const def = ALL_AGENT_DEFS.find((d) => d.id === provider);
+					const agentName = def?.name || provider;
+					let errMsg = stderrOutput.trim();
+					if (!errMsg) {
+						errMsg = `${agentName} exited with code ${code}. Please check that the agent is authenticated and up to date.`;
+					}
 					options.onError?.(new Error(errMsg));
 				}
 			});
