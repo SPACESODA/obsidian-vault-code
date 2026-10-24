@@ -329,4 +329,6 @@ export const ko: TranslationSchema = {
 	settingsAIUpdatePartial: "{0}개 제공업체 업데이트 완료 ({1}개 실패).",
 	settingsAIUpdateFailed: "CLI 업데이트 실패",
 	settingsAICommandCopied: "터미널 실행 명령이 클립보드에 복사되었습니다: {0}",
+	settingsAIAgentChecking: "확인 중...",
+	settingsAIAgentUpdateFailedSingle: "{0} 업데이트 실패",
 };

@@ -327,6 +327,8 @@ export const en = {
 	settingsAIUpdatePartial: "Updated {0} providers ({1} failed).",
 	settingsAIUpdateFailed: "Failed to update CLIs",
 	settingsAICommandCopied: "Command copied to clipboard to run in Terminal: {0}",
+	settingsAIAgentChecking: "Checking...",
+	settingsAIAgentUpdateFailedSingle: "Failed to update {0}",
 };
 
 export type TranslationSchema = typeof en;

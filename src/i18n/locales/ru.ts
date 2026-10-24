@@ -329,4 +329,6 @@ export const ru: TranslationSchema = {
 	settingsAIUpdatePartial: "Обновлено провайдеров: {0} (сбоев: {1}).",
 	settingsAIUpdateFailed: "Не удалось обновить CLI",
 	settingsAICommandCopied: "Команда терминала скопирована в буфер обмена: {0}",
+	settingsAIAgentChecking: "Проверка...",
+	settingsAIAgentUpdateFailedSingle: "Не удалось обновить {0}",
 };

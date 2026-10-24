@@ -329,4 +329,6 @@ export const fr: TranslationSchema = {
 	settingsAIUpdatePartial: "{0} fournisseurs mis à jour ({1} ont échoué).",
 	settingsAIUpdateFailed: "Échec de la mise à jour des CLI",
 	settingsAICommandCopied: "Commande de terminal copiée dans le presse-papiers : {0}",
+	settingsAIAgentChecking: "Vérification...",
+	settingsAIAgentUpdateFailedSingle: "Échec de la mise à jour de {0}",
 };

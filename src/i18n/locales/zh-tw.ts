@@ -329,4 +329,6 @@ export const zhTw: TranslationSchema = {
 	settingsAIUpdatePartial: "已更新 {0} 個提供者（{1} 個失敗）。",
 	settingsAIUpdateFailed: "更新 CLI 失敗",
 	settingsAICommandCopied: "已複製終端機安裝指令至剪貼簿：{0}",
+	settingsAIAgentChecking: "檢查中...",
+	settingsAIAgentUpdateFailedSingle: "更新 {0} 失敗",
 };

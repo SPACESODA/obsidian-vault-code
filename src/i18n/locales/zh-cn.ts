@@ -329,4 +329,6 @@ export const zhCn: TranslationSchema = {
 	settingsAIUpdatePartial: "已更新 {0} 个提供者（{1} 个失败）。",
 	settingsAIUpdateFailed: "更新 CLI 失败",
 	settingsAICommandCopied: "已复制终端安装命令至剪贴板：{0}",
+	settingsAIAgentChecking: "检查中...",
+	settingsAIAgentUpdateFailedSingle: "更新 {0} 失败",
 };

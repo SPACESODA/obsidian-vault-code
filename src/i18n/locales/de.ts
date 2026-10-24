@@ -329,4 +329,6 @@ export const de: TranslationSchema = {
 	settingsAIUpdatePartial: "{0} Anbieter aktualisiert ({1} fehlgeschlagen).",
 	settingsAIUpdateFailed: "Fehler beim Aktualisieren der CLIs",
 	settingsAICommandCopied: "Terminalbefehl in die Zwischenablage kopiert: {0}",
+	settingsAIAgentChecking: "Wird überprüft...",
+	settingsAIAgentUpdateFailedSingle: "Fehler beim Aktualisieren von {0}",
 };

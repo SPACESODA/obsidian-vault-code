@@ -329,4 +329,6 @@ export const ja: TranslationSchema = {
 	settingsAIUpdatePartial: "{0} 個のプロバイダーを更新しました（{1} 個失敗）。",
 	settingsAIUpdateFailed: "CLI の更新に失敗しました",
 	settingsAICommandCopied: "ターミナル用コマンドをクリップボードにコピーしました: {0}",
+	settingsAIAgentChecking: "確認中...",
+	settingsAIAgentUpdateFailedSingle: "{0} の更新に失敗しました",
 };

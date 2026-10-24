@@ -3159,6 +3159,15 @@ textarea.vault-code-chat-input:active {
 	transition: all 0.15s ease;
 }
 
+.vault-code-agent-card-badge.is-checking {
+	color: var(--text-muted);
+	background-color: var(--background-modifier-hover);
+	cursor: default;
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+}
+
 .vault-code-agent-card-badge.is-installable {
 	cursor: pointer;
 }

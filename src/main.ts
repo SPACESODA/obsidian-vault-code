@@ -8733,13 +8733,16 @@ class VaultCodeSettingTab extends PluginSettingTab {
 
 			const gridEl = agentSection.createDiv({ cls: "vault-code-agent-grid" });
 
-			const renderCards = (agents: Array<{
-				id: AIProvider;
-				name: string;
-				icon: string;
-				isInstalled?: boolean;
-				version?: string;
-			}>) => {
+			const renderCards = (
+				agents: Array<{
+					id: AIProvider;
+					name: string;
+					icon: string;
+					isInstalled?: boolean;
+					version?: string;
+				}>,
+				isChecking = false,
+			) => {
 				gridEl.empty();
 				for (const agent of agents) {
 					const isActive = (this.plugin.settings.aiProvider || "antigravity") === agent.id;
@@ -8755,9 +8758,11 @@ class VaultCodeSettingTab extends PluginSettingTab {
 					textEl.createDiv({ cls: "vault-code-agent-card-name", text: agent.name });
 
 					const isInstalled = !!agent.isInstalled;
-					const versionText = isInstalled
-						? (agent.version || t("settingsAIAgentNotDetected"))
-						: t("settingsAIAgentMissing");
+					const versionText = isChecking
+						? t("settingsAIAgentChecking")
+						: isInstalled
+							? (agent.version || t("settingsAIAgentNotDetected"))
+							: t("settingsAIAgentMissing");
 					textEl.createDiv({ cls: "vault-code-agent-card-version", text: versionText });
 
 					const handleInstallAgent = async (
@@ -8777,7 +8782,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 								new Notice(t("settingsAIAgentInstallSuccess", agentToInstall.name));
 								this.plugin.aiService.refreshAgentsCache();
 								const updatedAgents = await this.plugin.aiService.detectAllAgents();
-								renderCards(updatedAgents);
+								renderCards(updatedAgents, false);
 							} else {
 								new Notice(res.message, 8000);
 								if (
@@ -8808,7 +8813,13 @@ class VaultCodeSettingTab extends PluginSettingTab {
 						}
 					};
 
-					if (isInstalled) {
+					if (isChecking) {
+						const checkingBadge = cardEl.createDiv({
+							cls: "vault-code-agent-card-badge is-checking",
+						});
+						checkingBadge.createSpan({ cls: "vault-code-badge-spinner" });
+						checkingBadge.createSpan({ text: t("settingsAIAgentChecking") });
+					} else if (isInstalled) {
 						cardEl.createDiv({
 							cls: "vault-code-agent-card-badge is-installed",
 							text: t("settingsAIAgentInstalled"),
@@ -8839,12 +8850,13 @@ class VaultCodeSettingTab extends PluginSettingTab {
 					name: d.name,
 					icon: d.icon,
 					isInstalled: false,
-					version: t("settingsAIAgentNotDetected"),
+					version: t("settingsAIAgentChecking"),
 				})),
+				true,
 			);
 
 			void this.plugin.aiService.detectAllAgents().then((agents) => {
-				renderCards(agents);
+				renderCards(agents, false);
 			});
 
 			const footerEl = agentSection.createDiv({ cls: "vault-code-agent-footer" });
@@ -8864,17 +8876,24 @@ class VaultCodeSettingTab extends PluginSettingTab {
 
 				void (async () => {
 					try {
-						const result = await this.plugin.aiService.updateAllConnectedAgents();
+						const result = await this.plugin.aiService.updateAllConnectedAgents(
+							(agent, success, error) => {
+								if (!success) {
+									const detail = error ? `: ${error}` : "";
+									new Notice(`${t("settingsAIAgentUpdateFailedSingle", agent.name)}${detail}`, 9000);
+								}
+							},
+						);
 						if (result.total === 0) {
 							new Notice(t("settingsAINoConnectedCLIsToUpdate"));
 						} else if (result.failed === 0) {
 							new Notice(t("settingsAIUpdateAllSuccess", result.updated));
-						} else {
-							new Notice(t("settingsAIUpdatePartial", result.updated, result.failed));
+						} else if (result.updated > 0) {
+							new Notice(t("settingsAIUpdateAllSuccess", result.updated));
 						}
 						this.plugin.aiService.refreshAgentsCache();
 						const fresh = await this.plugin.aiService.detectAllAgents();
-						renderCards(fresh);
+						renderCards(fresh, false);
 					} catch (err: unknown) {
 						const msg = err instanceof Error ? err.message : String(err);
 						new Notice(`${t("settingsAIUpdateFailed")}: ${msg}`);

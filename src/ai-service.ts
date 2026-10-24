@@ -964,7 +964,9 @@ export class AIService {
 		});
 	}
 
-	public async updateAllConnectedAgents(): Promise<{
+	public async updateAllConnectedAgents(
+		onItemUpdate?: (agent: DetectedAgentInfo, success: boolean, error?: string) => void,
+	): Promise<{
 		total: number;
 		updated: number;
 		failed: number;
@@ -992,9 +994,11 @@ export class AIService {
 			if (res.success) {
 				updated++;
 				results.push({ id: agent.id, name: agent.name, success: true });
+				onItemUpdate?.(agent, true);
 			} else {
 				failed++;
 				results.push({ id: agent.id, name: agent.name, success: false, error: res.message });
+				onItemUpdate?.(agent, false, res.message);
 			}
 		}
 
