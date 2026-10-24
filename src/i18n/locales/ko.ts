@@ -123,6 +123,7 @@ export const ko: TranslationSchema = {
 	settingsResetAllName: "모든 설정 재설정",
 	settingsResetAllDesc: "모든 플러그인 설정 및 파일 확장자를 기본값으로 복원합니다.",
 	settingsButtonResetAll: "모두 초기화",
+	settingsButtonConfirmResetAll: "모든 설정 초기화 확인",
 	settingsTooltipResetAll: "모든 설정을 기본값으로 재설정",
 
 	// Notices

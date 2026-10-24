@@ -123,6 +123,7 @@ export const fr: TranslationSchema = {
 	settingsResetAllName: "Réinitialiser tous les paramètres",
 	settingsResetAllDesc: "Restaurer tous les paramètres du plugin et extensions à leurs valeurs par défaut.",
 	settingsButtonResetAll: "Tout réinitialiser",
+	settingsButtonConfirmResetAll: "Confirmer la réinitialisation",
 	settingsTooltipResetAll: "Rétablir tous les paramètres par défaut",
 
 	// Notices

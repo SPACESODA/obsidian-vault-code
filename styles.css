@@ -955,6 +955,19 @@ body .hidden-files-editor-wrapper .cm-searchMatch-selected {
 	outline: none;
 }
 
+/* Reset all two-step confirmation state */
+.vault-code-reset-setting button.is-confirming {
+	background-color: var(--text-error, #f85149);
+	border-color: var(--text-error, #f85149);
+	color: #ffffff;
+}
+
+.vault-code-reset-setting button.is-confirming:hover {
+	background-color: var(--text-error-hover, #d73a49);
+	border-color: var(--text-error-hover, #d73a49);
+	color: #ffffff;
+}
+
 /* Settings tab footer */
 .vault-code-settings-footer {
 	text-align: center;

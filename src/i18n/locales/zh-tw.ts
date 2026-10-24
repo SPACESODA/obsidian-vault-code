@@ -123,6 +123,7 @@ export const zhTw: TranslationSchema = {
 	settingsResetAllName: "重設所有設定",
 	settingsResetAllDesc: "將所有外掛程式設定與副檔名還原為預設值。",
 	settingsButtonResetAll: "全部重設",
+	settingsButtonConfirmResetAll: "確認重設所有設定",
 	settingsTooltipResetAll: "將所有設定重設為預設值",
 
 	// Notices

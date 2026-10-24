@@ -123,6 +123,7 @@ export const zhCn: TranslationSchema = {
 	settingsResetAllName: "重置所有设置",
 	settingsResetAllDesc: "将所有插件设置与文件扩展名恢复为默认值。",
 	settingsButtonResetAll: "全部重置",
+	settingsButtonConfirmResetAll: "确认重置所有设置",
 	settingsTooltipResetAll: "将所有设置重置为默认值",
 
 	// Notices

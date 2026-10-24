@@ -121,6 +121,7 @@ export const en = {
 	settingsResetAllName: "Reset all settings",
 	settingsResetAllDesc: "Restore all plugin settings and file extensions back to their default values.",
 	settingsButtonResetAll: "Reset all",
+	settingsButtonConfirmResetAll: "Confirm reset all",
 	settingsTooltipResetAll: "Reset all settings to default",
 
 	// Notices

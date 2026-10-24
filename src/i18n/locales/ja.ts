@@ -123,6 +123,7 @@ export const ja: TranslationSchema = {
 	settingsResetAllName: "すべての設定を初期化",
 	settingsResetAllDesc: "すべてのプラグイン設定と拡張子リストをデフォルト値に戻します。",
 	settingsButtonResetAll: "すべてリセット",
+	settingsButtonConfirmResetAll: "すべての初期化を確認",
 	settingsTooltipResetAll: "すべての設定をデフォルトに戻す",
 
 	// Notices

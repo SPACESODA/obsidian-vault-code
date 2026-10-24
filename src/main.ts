@@ -9236,6 +9236,9 @@ class VaultCodeSettingTab extends PluginSettingTab {
 			}
 		}
 
+		let isConfirmingReset = false;
+		let resetTimeoutId: number | null = null;
+
 		new Setting(containerEl)
 			.setClass("vault-code-reset-setting")
 			.setName(t("settingsResetAllName"))
@@ -9246,6 +9249,27 @@ class VaultCodeSettingTab extends PluginSettingTab {
 					.setWarning()
 					.setTooltip(t("settingsTooltipResetAll"))
 					.onClick(async () => {
+						if (!isConfirmingReset) {
+							isConfirmingReset = true;
+							button.buttonEl.addClass("is-confirming");
+							button.setButtonText(t("settingsButtonConfirmResetAll"));
+							resetTimeoutId = window.setTimeout(() => {
+								if (!isConfirmingReset) return;
+								isConfirmingReset = false;
+								button.buttonEl.removeClass("is-confirming");
+								button.setButtonText(t("settingsButtonResetAll"));
+								resetTimeoutId = null;
+							}, 4000);
+							return;
+						}
+
+						if (resetTimeoutId !== null) {
+							window.clearTimeout(resetTimeoutId);
+							resetTimeoutId = null;
+						}
+						isConfirmingReset = false;
+						button.buttonEl.removeClass("is-confirming");
+
 						this.plugin.settings = {
 							...DEFAULT_SETTINGS,
 							aiProviderLastModel: { ...DEFAULT_SETTINGS.aiProviderLastModel },

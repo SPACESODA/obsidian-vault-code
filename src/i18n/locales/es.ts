@@ -123,6 +123,7 @@ export const es: TranslationSchema = {
 	settingsResetAllName: "Restablecer todos los ajustes",
 	settingsResetAllDesc: "Restaurar todos los ajustes del plugin y extensiones a sus valores predeterminados.",
 	settingsButtonResetAll: "Restablecer todo",
+	settingsButtonConfirmResetAll: "Confirmar restablecer todo",
 	settingsTooltipResetAll: "Restablecer todos los ajustes por defecto",
 
 	// Notices

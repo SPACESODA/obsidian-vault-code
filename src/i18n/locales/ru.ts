@@ -123,6 +123,7 @@ export const ru: TranslationSchema = {
 	settingsResetAllName: "Сбросить все настройки",
 	settingsResetAllDesc: "Восстановить все настройки плагина и расширения файлов до значений по умолчанию.",
 	settingsButtonResetAll: "Сбросить все",
+	settingsButtonConfirmResetAll: "Подтвердить сброс",
 	settingsTooltipResetAll: "Сбросить все настройки к значениям по умолчанию",
 
 	// Notices

@@ -1,7 +1,7 @@
 # Vault Code
 
-**The must-have all-in-one workspace for Obsidian.**  
-A file manager to display and manage all file types, including hidden files, plus a beautiful code editor and more.
+<span style="color: #8a5cf5; font-weight: bold; font-size: 1.125em;">Make your Obsidian vault a complete workspace for notes, code, and files.</span>
+See hidden files, create and organize files of any kind, edit any languages, preview and edit HTML, SVG, and MJML, work together with AI Agent, all without leaving Obsidian.
 
 ---
 
