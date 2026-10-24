@@ -288,3 +288,22 @@ test('Ollama status only shows confirmed service or model information', async ()
     assert.equal((await h.service.detectAllAgents()).find(a=>a.id==='ollama').connectionStatus,expected);
   }
 });
+
+test('Ollama background checks do not spawn child process when server is not listening', async () => {
+  let listExecuted = false;
+  const h = harness({
+    bins: { ollama: '/usr/local/bin/ollama' },
+    filesystem: { existsSync: (p) => p === '/usr/local/bin/ollama' },
+    execute: (f, a) => {
+      if (a[0] === 'list') {
+        listExecuted = true;
+        return { stdout: 'NAME ID SIZE MODIFIED\n' };
+      }
+      return null;
+    },
+  });
+  const agents = await h.service.detectAllAgents();
+  const ollama = agents.find(a => a.id === 'ollama');
+  assert.equal(ollama.connectionStatus, 'Start Ollama');
+  assert.equal(listExecuted, false, 'ollama list should not be spawned when server is not listening');
+});

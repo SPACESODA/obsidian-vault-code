@@ -1,13 +1,11 @@
 # Vault Code
 
 <span style="color: #8a5cf5; font-weight: bold; font-size: 1.125em;">Make your Obsidian vault a complete workspace for notes, code, and files.</span>
-See hidden files, create and organize files of any kind, edit any languages, preview and edit HTML, SVG, and MJML, work together with AI Agent, all without leaving Obsidian.
+See hidden files, create, edit and organize files of any kind in beautiful code editor, preview HTML, SVG, and MJML, work together with AI Agent, all without leaving Obsidian.
 
 ---
 
-Obsidian is where you think, write, and organize your knowledge. But when you need to tweak a script, check a `.env` file, or preview an HTML, you're usually forced to jump out to VS Code or another window.
-
-**Vault Code keeps you in flow.** It turns your vault into a fast, focused workspace where you can view hidden dotfiles, edit code across most programming languages, and live-preview HTML, SVG, and MJML files, all while feeling completely native to your Obsidian experience.
+**<span style="color: #8a5cf5; font-weight: bold;">Vault Code</span> keeps you in flow** — It turns your vault into a fast, focused workspace where you can view hidden dotfiles, edit code across most programming languages, and live-preview HTML, SVG, and MJML files, all while feeling completely native to your Obsidian experience.
 
 Vault Code automatically adapts to your Obsidian display language: English, 繁體中文, 简体中文, 日本語, 한국어, Español, Français, Italiano, Deutsch, and Русский.
 

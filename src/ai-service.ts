@@ -462,6 +462,55 @@ export class AIService {
 		return Platform.isDesktop ? await import("fs") : null;
 	}
 
+	private async resolveNet(): Promise<Pick<typeof import("net"), "createConnection"> | null> {
+		if (!Platform.isDesktop) return null;
+		const win = window as unknown as { require?: (name: string) => unknown };
+		if (typeof win.require === "function") {
+			try {
+				const net = win.require("net") as typeof import("net");
+				if (typeof net?.createConnection === "function") return net;
+			} catch {
+				/* ignore */
+			}
+		}
+		try {
+			return Platform.isDesktop ? await import("net") : null;
+		} catch {
+			return null;
+		}
+	}
+
+	private getOllamaHostAndPort(): { host: string; port: number } {
+		const raw = this.getEnv().OLLAMA_HOST || "127.0.0.1:11434";
+		const cleaned = raw.replace(/^https?:\/\//, "");
+		const [hostPart, portPart] = cleaned.split(":");
+		const host = hostPart?.trim() || "127.0.0.1";
+		const port = portPart ? parseInt(portPart, 10) : 11434;
+		return { host: host || "127.0.0.1", port: isNaN(port) ? 11434 : port };
+	}
+
+	private async isOllamaListening(): Promise<boolean> {
+		const net = await this.resolveNet();
+		if (!net) return false;
+		const { host, port } = this.getOllamaHostAndPort();
+		return new Promise((resolve) => {
+			const socket = net.createConnection({ host, port });
+			const timer = window.setTimeout(() => {
+				socket.destroy();
+				resolve(false);
+			}, 300);
+			socket.on("connect", () => {
+				window.clearTimeout(timer);
+				socket.destroy();
+				resolve(true);
+			});
+			socket.on("error", () => {
+				window.clearTimeout(timer);
+				resolve(false);
+			});
+		});
+	}
+
 	private async loadShellPath(cp: NodeChildProcess): Promise<void> {
 		if (Platform.isWin) return;
 		if (!this.shellPathPromise) {
@@ -681,6 +730,14 @@ export class AIService {
 	}
 
 	private async checkConnection(provider: AIProvider, path: string): Promise<string | undefined> {
+		if (provider === "ollama") {
+			const fs = await this.resolveFileSystem();
+			const isRealBinary = fs ? fs.existsSync(path) : true;
+			if (isRealBinary) {
+				const isListening = await this.isOllamaListening();
+				if (!isListening) return "Start Ollama";
+			}
+		}
 		const commands: Partial<Record<AIProvider, string[]>> = {
 			claude: ["auth", "status"], codex: ["login", "status"], cursor: ["models"], ollama: ["list"],
 		};
@@ -734,7 +791,8 @@ export class AIService {
 						{ env, timeout: 3000, shell: Platform.isWin },
 						(err, stdout, stderr) => {
 							const text = (stdout || stderr || "").toString().trim();
-							const firstLine = text.split("\n")[0]?.trim() || "";
+							const match = def.id === "ollama" ? text.match(/version (?:is )?([0-9.]+)/i) : null;
+							const firstLine = match?.[1] ? `ollama ${match[1]}` : (text.split("\n")[0]?.trim() || "");
 							if (err) diagnostic = firstLine || err.message;
 							resolve(err ? "Version check failed" : firstLine || "Installed");
 						},
@@ -1119,6 +1177,14 @@ export class AIService {
 		const command = discovery[provider];
 		const cp = await this.resolveChildProcess();
 		const path = command ? await this.detectProviderPath(provider) : null;
+		if (provider === "ollama" && path) {
+			const fs = await this.resolveFileSystem();
+			const isRealBinary = fs ? fs.existsSync(path) : true;
+			if (isRealBinary) {
+				const isListening = await this.isOllamaListening();
+				if (!isListening) return [];
+			}
+		}
 		if (cp && path && command) {
 			const models = await new Promise<AgyModelInfo[]>((resolve) => {
 				cp.execFile(path, command, { env: this.getEnv(), timeout: 15000, maxBuffer: 1024 * 1024, shell: Platform.isWin }, (err, stdout) => {
