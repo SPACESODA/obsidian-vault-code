@@ -78,6 +78,26 @@ interface NodeChildProcess {
 	exec?: ExecFn;
 }
 
+// Runtime contracts do not depend on Node type declarations being installed by reviewers.
+interface NodeFileSystem {
+	existsSync(path: string): boolean;
+	realpathSync(path: string): string;
+}
+interface NodeSocket {
+	on(event: "connect" | "error", listener: () => void): this;
+	destroy(): void;
+}
+interface NodeNetwork {
+	createConnection(options: { host: string; port: number }): NodeSocket;
+}
+function isNodeFileSystem(value: unknown): value is NodeFileSystem {
+	return typeof value === "object" && value !== null && "existsSync" in value && typeof value.existsSync === "function" &&
+		"realpathSync" in value && typeof value.realpathSync === "function";
+}
+function isNodeNetwork(value: unknown): value is NodeNetwork {
+	return typeof value === "object" && value !== null && "createConnection" in value && typeof value.createConnection === "function";
+}
+
 export type CLIProvider =
 	| "antigravity"
 	| "codex"
@@ -450,31 +470,37 @@ export class AIService {
 		return null;
 	}
 
-	private async resolveFileSystem(): Promise<Pick<typeof import("fs"), "realpathSync" | "existsSync"> | null> {
+	private async resolveFileSystem(): Promise<NodeFileSystem | null> {
 		if (!Platform.isDesktop) return null;
 		// Obsidian exposes Node through window.require. Bare dynamic imports can
 		// fail in its renderer even though the desktop Node APIs are available.
 		const win = window as unknown as { require?: (name: string) => unknown };
 		if (typeof win.require === "function") {
-			const fs = win.require("fs") as typeof import("fs");
-			if (typeof fs?.realpathSync === "function" && typeof fs.existsSync === "function") return fs;
+			try {
+				const fs: unknown = win.require("fs");
+				if (isNodeFileSystem(fs)) return fs;
+			} catch { /* Try the module loader below. */ }
 		}
-		return Platform.isDesktop ? await import("fs") : null;
+		try {
+			const fs: unknown = await import("fs");
+			return isNodeFileSystem(fs) ? fs : null;
+		} catch { return null; }
 	}
 
-	private async resolveNet(): Promise<Pick<typeof import("net"), "createConnection"> | null> {
+	private async resolveNet(): Promise<NodeNetwork | null> {
 		if (!Platform.isDesktop) return null;
 		const win = window as unknown as { require?: (name: string) => unknown };
 		if (typeof win.require === "function") {
 			try {
-				const net = win.require("net") as typeof import("net");
-				if (typeof net?.createConnection === "function") return net;
+				const net: unknown = win.require("net");
+				if (isNodeNetwork(net)) return net;
 			} catch {
 				/* ignore */
 			}
 		}
 		try {
-			return Platform.isDesktop ? await import("net") : null;
+			const net: unknown = await import("net");
+			return isNodeNetwork(net) ? net : null;
 		} catch {
 			return null;
 		}
@@ -846,7 +872,7 @@ export class AIService {
 		if (update && installedPath && !Platform.isWin) {
 			try {
 				const fs = await this.resolveFileSystem();
-				if (!fs) return { success: false, message: "CLI management requires desktop Obsidian" };
+				if (!fs) return { success: false, message: "Cannot resolve the installed CLI path in this desktop runtime." };
 				const realPath = fs.realpathSync(installedPath);
 				if (/\/(?:Cellar|Caskroom)\//.test(realPath)) {
 					const formula = { claude: "claude-code", codex: "codex", copilot: "copilot-cli", ollama: "ollama", opencode: "opencode" }[provider as string];

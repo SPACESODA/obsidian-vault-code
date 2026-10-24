@@ -307,3 +307,27 @@ test('Ollama background checks do not spawn child process when server is not lis
   assert.equal(ollama.connectionStatus, 'Start Ollama');
   assert.equal(listExecuted, false, 'ollama list should not be spawned when server is not listening');
 });
+
+test('filesystem lookup falls back when the renderer module is missing or malformed', async () => {
+  for (const value of [null, {}, { existsSync: true }, { existsSync: () => false }]) {
+    const h = harness();
+    const originalRequire = window.require;
+    window.require = name => name === 'fs' ? value : originalRequire(name);
+    const fs = await h.service.resolveFileSystem();
+    assert.equal(fs.existsSync(process.execPath), true);
+    assert.equal(typeof fs.realpathSync(process.execPath), 'string');
+  }
+  const h = harness();
+  const originalRequire = window.require;
+  window.require = name => { if (name === 'fs') throw new Error('Renderer loader unavailable'); return originalRequire(name); };
+  assert.equal((await h.service.resolveFileSystem()).existsSync(process.execPath), true);
+});
+
+test('socket lookup falls back when the renderer module is malformed', async () => {
+  for (const value of [null, {}, { createConnection: false }]) {
+    const h = harness();
+    const originalRequire = window.require;
+    window.require = name => name === 'net' ? value : originalRequire(name);
+    assert.equal(typeof (await h.service.resolveNet()).createConnection, 'function');
+  }
+});
