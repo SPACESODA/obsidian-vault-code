@@ -283,6 +283,21 @@ export const en = {
 	aiChatProviderSelect: "Select AI provider",
 	aiChatProviderAntigravity: "Antigravity",
 	aiChatProviderCodex: "Codex",
+	settingsAIDefaultTargetName: "Default AI target",
+	settingsAIDefaultTargetDesc: "The default local coding agent used for chat and vault editing.",
+	settingsAIAgentsTitle: "Identified local agents",
+	settingsAIAgentsDesc: "Local agents can use tools to inspect and edit the vault. Installation status is detected from this device.",
+	settingsAIAgentInstalled: "Installed",
+	settingsAIAgentMissing: "Missing",
+	settingsAIAgentNotDetected: "No version detected",
+	settingsAICopyMCPConfig: "Copy MCP configuration",
+	settingsAICopiedMCPConfig: "Copied MCP configuration to clipboard",
+	aiChatProviderClaude: "Claude Code",
+	aiChatProviderCopilot: "GitHub Copilot",
+	aiChatProviderOpenCode: "OpenCode",
+	aiChatProviderPi: "Pi",
+	aiChatProviderKiro: "Kiro",
+	aiChatProviderHermes: "Hermes Agent",
 };
 
 export type TranslationSchema = typeof en;

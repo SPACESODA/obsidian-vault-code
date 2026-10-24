@@ -1,5 +1,6 @@
 import { Platform, App, FileSystemAdapter, TFile } from "obsidian";
 import type VaultCodePlugin from "./main";
+import { t } from "./i18n";
 
 export interface ChildProcessStream {
 	on(event: "data", listener: (chunk: Uint8Array | string) => void): this;
@@ -54,7 +55,15 @@ interface NodeChildProcess {
 	execFile: ExecFileFn;
 }
 
-export type AIProvider = "antigravity" | "codex";
+export type AIProvider =
+	| "antigravity"
+	| "codex"
+	| "claude"
+	| "copilot"
+	| "opencode"
+	| "pi"
+	| "kiro"
+	| "hermes";
 
 export interface SendMessageOptions {
 	prompt: string;
@@ -86,6 +95,18 @@ export interface AgyModelInfo {
 
 export type AIModelInfo = AgyModelInfo;
 
+export interface DetectedAgentInfo {
+	id: AIProvider;
+	name: string;
+	binary: string;
+	icon: string;
+	isInstalled: boolean;
+	version: string;
+	path: string | null;
+	defaultModel: string;
+	models: AgyModelInfo[];
+}
+
 export const DEFAULT_AGY_MODELS: AgyModelInfo[] = [
 	{ id: "gemini-3.8-flash-high", displayName: "Gemini 3.8 Flash (High)" },
 	{ id: "gemini-3.8-flash-medium", displayName: "Gemini 3.8 Flash (Medium)" },
@@ -105,12 +126,136 @@ export const DEFAULT_CODEX_MODELS: AgyModelInfo[] = [
 	{ id: "gpt-5.6-luna", displayName: "GPT-5.6-Luna" },
 ];
 
+export const DEFAULT_CLAUDE_MODELS: AgyModelInfo[] = [
+	{ id: "claude-sonnet-4-6", displayName: "Claude Sonnet 4.6 (Thinking)" },
+	{ id: "claude-opus-4-6-thinking", displayName: "Claude Opus 4.6 (Thinking)" },
+	{ id: "claude-haiku-4-5", displayName: "Claude Haiku 4.5" },
+	{ id: "default", displayName: "Agent default" },
+];
+
+export const DEFAULT_COPILOT_MODELS: AgyModelInfo[] = [
+	{ id: "claude-3.7-sonnet", displayName: "Claude 3.7 Sonnet" },
+	{ id: "gpt-4o", displayName: "GPT-4o" },
+	{ id: "o3-mini", displayName: "o3-mini" },
+	{ id: "default", displayName: "Agent default" },
+];
+
+export const DEFAULT_GENERIC_MODELS: AgyModelInfo[] = [
+	{ id: "default", displayName: "Agent default" },
+];
+
+export const ALL_AGENT_DEFS: Array<{
+	id: AIProvider;
+	name: string;
+	binary: string;
+	icon: string;
+	versionArgs: string[];
+	defaultModel: string;
+	models: AgyModelInfo[];
+}> = [
+	{
+		id: "claude",
+		name: "Claude Code",
+		binary: "claude",
+		icon: "sun",
+		versionArgs: ["--version"],
+		defaultModel: "claude-sonnet-4-6",
+		models: DEFAULT_CLAUDE_MODELS,
+	},
+	{
+		id: "codex",
+		name: "Codex",
+		binary: "codex",
+		icon: "zap",
+		versionArgs: ["--version"],
+		defaultModel: "gpt-6.1-sol",
+		models: DEFAULT_CODEX_MODELS,
+	},
+	{
+		id: "copilot",
+		name: "GitHub Copilot",
+		binary: "copilot",
+		icon: "bot",
+		versionArgs: ["version"],
+		defaultModel: "claude-3.7-sonnet",
+		models: DEFAULT_COPILOT_MODELS,
+	},
+	{
+		id: "opencode",
+		name: "OpenCode",
+		binary: "opencode",
+		icon: "box",
+		versionArgs: ["-v"],
+		defaultModel: "default",
+		models: DEFAULT_GENERIC_MODELS,
+	},
+	{
+		id: "pi",
+		name: "Pi",
+		binary: "pi",
+		icon: "cpu",
+		versionArgs: ["--version"],
+		defaultModel: "default",
+		models: DEFAULT_GENERIC_MODELS,
+	},
+	{
+		id: "antigravity",
+		name: "Antigravity CLI",
+		binary: "agy",
+		icon: "sparkles",
+		versionArgs: ["--version"],
+		defaultModel: "gemini-3.8-flash-high",
+		models: DEFAULT_AGY_MODELS,
+	},
+	{
+		id: "kiro",
+		name: "Kiro",
+		binary: "kiro",
+		icon: "ghost",
+		versionArgs: ["--version"],
+		defaultModel: "default",
+		models: DEFAULT_GENERIC_MODELS,
+	},
+	{
+		id: "hermes",
+		name: "Hermes Agent",
+		binary: "hermes",
+		icon: "terminal",
+		versionArgs: ["--version"],
+		defaultModel: "default",
+		models: DEFAULT_GENERIC_MODELS,
+	},
+];
+
+export function getAgentDisplayName(provider: AIProvider): string {
+	switch (provider) {
+		case "antigravity":
+			return t("settingsAIProviderAntigravity");
+		case "codex":
+			return t("settingsAIProviderCodex");
+		case "claude":
+			return t("aiChatProviderClaude");
+		case "copilot":
+			return t("aiChatProviderCopilot");
+		case "opencode":
+			return t("aiChatProviderOpenCode");
+		case "pi":
+			return t("aiChatProviderPi");
+		case "kiro":
+			return t("aiChatProviderKiro");
+		case "hermes":
+			return t("aiChatProviderHermes");
+		default:
+			return provider;
+	}
+}
+
 export class AIService {
 	private app: App;
 	private plugin?: VaultCodePlugin;
 	private cachedCp: NodeChildProcess | null = null;
-	private cachedAgyPath: string | null = null;
-	private cachedCodexPath: string | null = null;
+	private cachedPaths = new Map<string, string | null>();
+	private detectedAgentsCache: DetectedAgentInfo[] | null = null;
 
 	constructor(app: App, plugin?: VaultCodePlugin) {
 		this.app = app;
@@ -180,10 +325,11 @@ export class AIService {
 
 		if (home) {
 			extraPaths.unshift(
+				`${home}/.local/bin`,
 				`${home}/.nvm/versions/node/v24.13.0/bin`,
 				`${home}/.nvm/versions/node/v20.20.0/bin`,
+				`${home}/.opencode/bin`,
 				`${home}/.cargo/bin`,
-				`${home}/.local/bin`,
 				`${home}/bin`,
 			);
 		}
@@ -216,69 +362,46 @@ export class AIService {
 		return null;
 	}
 
-	public async detectAgyPath(customOverride?: string): Promise<string | null> {
-		const override = customOverride || this.plugin?.settings.aiCustomPath;
-		if (override && override.trim().length > 0) {
-			this.cachedAgyPath = override.trim();
-			return this.cachedAgyPath;
-		}
-
-		if (this.cachedAgyPath) return this.cachedAgyPath;
-
-		const cp = await this.resolveChildProcess();
-		if (!cp) return null;
-
-		const env = this.getEnv();
-		const checkCommand = Platform.isWin ? "where" : "which";
-		const binaryName = "agy";
-
-		const detected = await new Promise<string | null>((resolve) => {
-			cp.execFile(
-				checkCommand,
-				[binaryName],
-				{ env, timeout: 3000 },
-				(err, stdout) => {
-					if (!err && stdout) {
-						const firstLine = stdout.toString().split("\n")[0]?.trim();
-						if (firstLine && firstLine.length > 0) {
-							resolve(firstLine);
-							return;
-						}
-					}
-					// Fallback to well-known homebrew path on macOS
-					if (Platform.isMacOS) {
-						resolve("/opt/homebrew/bin/agy");
-						return;
-					}
-					resolve(null);
+	public getMCPConfigSnippet(): string {
+		const vaultPath = this.getVaultPath() || "";
+		const config = {
+			mcpServers: {
+				tolaria: {
+					command: "/opt/homebrew/bin/node",
+					args: ["/Applications/Tolaria.app/Contents/Resources/mcp-server/index.js"],
+					env: {
+						WS_UI_PORT: "9711",
+						VAULT_PATH: vaultPath,
+					},
+					type: "stdio",
 				},
-			);
-		});
-
-		this.cachedAgyPath = detected;
-		return detected;
+			},
+		};
+		return JSON.stringify(config, null, 2);
 	}
 
-	public async detectCodexPath(customOverride?: string): Promise<string | null> {
-		const override = customOverride || this.plugin?.settings.aiCodexPath;
-		if (override && override.trim().length > 0) {
-			this.cachedCodexPath = override.trim();
-			return this.cachedCodexPath;
+	public async detectBinaryPath(
+		binary: string,
+		customOverride?: string,
+		fallbackCandidates: string[] = [],
+	): Promise<string | null> {
+		if (customOverride && customOverride.trim().length > 0) {
+			return customOverride.trim();
 		}
 
-		if (this.cachedCodexPath) return this.cachedCodexPath;
+		const cached = this.cachedPaths.get(binary);
+		if (cached !== undefined) return cached;
 
 		const cp = await this.resolveChildProcess();
 		if (!cp) return null;
 
 		const env = this.getEnv();
 		const checkCommand = Platform.isWin ? "where" : "which";
-		const binaryName = "codex";
 
 		const detected = await new Promise<string | null>((resolve) => {
 			cp.execFile(
 				checkCommand,
-				[binaryName],
+				[binary],
 				{ env, timeout: 3000 },
 				(err, stdout) => {
 					if (!err && stdout) {
@@ -288,27 +411,32 @@ export class AIService {
 							return;
 						}
 					}
-					// Fallback to well-known paths on macOS
+
+					// Fallback to candidates
 					if (Platform.isMacOS) {
 						const proc = (
 							window as unknown as { process?: { env?: Record<string, string> } }
 						).process;
 						const home = proc?.env?.HOME || "/Users/anthony";
-						const candidates = [
-							`${home}/.nvm/versions/node/v24.13.0/bin/codex`,
-							"/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex",
-							"/opt/homebrew/bin/codex",
-							"/usr/local/bin/codex",
+						const win = window as unknown as {
+							require?: (mod: string) => { existsSync?: (p: string) => boolean };
+						};
+
+						const allFallbacks = [
+							...fallbackCandidates,
+							`${home}/.local/bin/${binary}`,
+							`${home}/.nvm/versions/node/v24.13.0/bin/${binary}`,
+							`${home}/.opencode/bin/${binary}`,
+							`/opt/homebrew/bin/${binary}`,
+							`/usr/local/bin/${binary}`,
 						];
-						for (const candidate of candidates) {
+
+						for (const c of allFallbacks) {
 							try {
-								const win = window as unknown as {
-									require?: (mod: string) => { existsSync?: (p: string) => boolean };
-								};
 								if (typeof win.require === "function") {
 									const fs = win.require("fs");
-									if (fs?.existsSync?.(candidate)) {
-										resolve(candidate);
+									if (fs?.existsSync?.(c)) {
+										resolve(c);
 										return;
 									}
 								}
@@ -316,16 +444,80 @@ export class AIService {
 								// ignore
 							}
 						}
-						resolve(candidates[0] ?? null);
-						return;
 					}
 					resolve(null);
 				},
 			);
 		});
 
-		this.cachedCodexPath = detected;
+		this.cachedPaths.set(binary, detected);
 		return detected;
+	}
+
+	public async detectAgyPath(customOverride?: string): Promise<string | null> {
+		const override = customOverride || this.plugin?.settings.aiCustomPath;
+		return await this.detectBinaryPath("agy", override, ["/opt/homebrew/bin/agy", "/usr/local/bin/agy"]);
+	}
+
+	public async detectCodexPath(customOverride?: string): Promise<string | null> {
+		const override = customOverride || this.plugin?.settings.aiCodexPath;
+		return await this.detectBinaryPath("codex", override, [
+			"/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex",
+		]);
+	}
+
+	public async detectAllAgents(): Promise<DetectedAgentInfo[]> {
+		if (this.detectedAgentsCache) return this.detectedAgentsCache;
+
+		const cp = await this.resolveChildProcess();
+		const env = this.getEnv();
+		const results: DetectedAgentInfo[] = [];
+
+		for (const def of ALL_AGENT_DEFS) {
+			let customOverride: string | undefined;
+			if (def.id === "antigravity") customOverride = this.plugin?.settings.aiCustomPath;
+			if (def.id === "codex") customOverride = this.plugin?.settings.aiCodexPath;
+
+			const binPath = await this.detectBinaryPath(def.binary, customOverride);
+			let version = "";
+			let isInstalled = false;
+
+			if (binPath && cp) {
+				isInstalled = true;
+				version = await new Promise<string>((resolve) => {
+					cp.execFile(
+						binPath,
+						def.versionArgs,
+						{ env, timeout: 3000 },
+						(err, stdout, stderr) => {
+							const text = (stdout || stderr || "").toString().trim();
+							const firstLine = text.split("\n")[0]?.trim() || "";
+							resolve(firstLine || "Installed");
+						},
+					);
+				});
+			}
+
+			results.push({
+				id: def.id,
+				name: def.name,
+				binary: def.binary,
+				icon: def.icon,
+				isInstalled,
+				version,
+				path: binPath,
+				defaultModel: def.defaultModel,
+				models: def.models,
+			});
+		}
+
+		this.detectedAgentsCache = results;
+		return results;
+	}
+
+	public refreshAgentsCache(): void {
+		this.detectedAgentsCache = null;
+		this.cachedPaths.clear();
 	}
 
 	public async getAvailableModels(customOverride?: string): Promise<AgyModelInfo[]> {
@@ -421,7 +613,11 @@ export class AIService {
 		if (provider === "codex") {
 			return await this.getCodexModels();
 		}
-		return await this.getAvailableModels();
+		if (provider === "antigravity") {
+			return await this.getAvailableModels();
+		}
+		const found = ALL_AGENT_DEFS.find((d) => d.id === provider);
+		return found ? found.models : DEFAULT_GENERIC_MODELS;
 	}
 
 	public async getVaultIgnorePatterns(): Promise<string[]> {
@@ -525,170 +721,7 @@ export class AIService {
 
 		const provider: AIProvider = options.provider ?? this.plugin?.settings.aiProvider ?? "antigravity";
 
-		if (provider === "codex") {
-			void (async () => {
-				const codexPath = await this.detectCodexPath();
-				if (!codexPath) {
-					options.onError?.(new Error("Codex CLI (codex) not found on system. Ensure Codex is installed and available in PATH."));
-					return;
-				}
-
-				const cp = await this.resolveChildProcess();
-				if (!cp) {
-					options.onError?.(new Error("Desktop child_process runtime not available"));
-					return;
-				}
-
-				const vaultPath = this.getVaultPath() || "";
-				const env = this.getEnv();
-				const effectivePrompt = await this.buildEffectivePrompt(options);
-
-				const isUuid = !!(options.conversationId && /^[0-9a-fA-F-]{36}$/.test(options.conversationId.trim()));
-				const args: string[] = [];
-
-				if (isUuid && options.conversationId) {
-					args.push("exec", "resume", options.conversationId.trim(), "--skip-git-repo-check", "--json", "-C", vaultPath);
-				} else {
-					args.push("exec", "--skip-git-repo-check", "--json", "-C", vaultPath);
-				}
-
-				if (options.model && options.model.trim().length > 0) {
-					args.push("-m", options.model.trim());
-				}
-
-				if (options.mode === "safe") {
-					args.push("-s", "read-only");
-				} else {
-					args.push("--dangerously-bypass-approvals-and-sandbox");
-				}
-
-				args.push(effectivePrompt);
-
-				try {
-					spawned = cp.spawn(codexPath, args, {
-						cwd: vaultPath,
-						env,
-						windowsHide: true,
-					});
-				} catch (err) {
-					options.onError?.(err instanceof Error ? err : new Error(String(err)));
-					return;
-				}
-
-				let accumulatedText = "";
-				let lineBuffer = "";
-
-				const processLine = (rawLine: string) => {
-					const line = rawLine.trim();
-					if (!line) return;
-
-					try {
-						const parsed = JSON.parse(line) as {
-							type?: string;
-							thread_id?: string;
-							item?: {
-								type?: string;
-								text?: string;
-							};
-							error?: {
-								message?: string;
-							};
-							message?: string;
-						};
-
-						if (parsed.type === "thread.started" && parsed.thread_id) {
-							activeConversationId = parsed.thread_id;
-							options.onInit?.(parsed.thread_id);
-						} else if (
-							parsed.type === "item.completed" &&
-							parsed.item?.type === "agent_message" &&
-							parsed.item?.text
-						) {
-							const delta = parsed.item.text;
-							accumulatedText += delta;
-							options.onDelta?.(delta);
-						} else if (parsed.type === "error" && parsed.message) {
-							try {
-								const inner = JSON.parse(parsed.message) as { error?: { message?: string } };
-								if (inner.error?.message) {
-									options.onError?.(new Error(inner.error.message));
-									return;
-								}
-							} catch {
-								// ignore
-							}
-						} else if (parsed.type === "turn.failed" && parsed.error?.message) {
-							try {
-								const inner = JSON.parse(parsed.error.message) as { error?: { message?: string } };
-								if (inner.error?.message) {
-									options.onError?.(new Error(inner.error.message));
-									return;
-								}
-							} catch {
-								// ignore
-							}
-							options.onError?.(new Error(parsed.error.message));
-						}
-					} catch {
-						if (!line.startsWith("{")) {
-							accumulatedText += line + "\n";
-							options.onDelta?.(line + "\n");
-						}
-					}
-				};
-
-				spawned.stdout?.on("data", (chunk: Uint8Array | string) => {
-					if (isKilled) return;
-					const str = typeof chunk === "string" ? chunk : new TextDecoder().decode(chunk);
-					lineBuffer += str;
-
-					const lines = lineBuffer.split("\n");
-					lineBuffer = lines.pop() ?? "";
-
-					for (const line of lines) {
-						processLine(line);
-					}
-				});
-
-				let stderrOutput = "";
-				spawned.stderr?.on("data", (chunk: Uint8Array | string) => {
-					if (isKilled) return;
-					const str = typeof chunk === "string" ? chunk : new TextDecoder().decode(chunk);
-					stderrOutput += str;
-				});
-
-				spawned.on("close", (code) => {
-					if (isKilled) return;
-
-					if (lineBuffer.trim().length > 0) {
-						processLine(lineBuffer);
-					}
-
-					if (code === 0 || accumulatedText.length > 0) {
-						options.onDone?.(accumulatedText);
-					} else {
-						const errMsg = stderrOutput.trim() || `Codex CLI exited with code ${code}`;
-						options.onError?.(new Error(errMsg));
-					}
-				});
-
-				spawned.on("error", (err: Error) => {
-					if (isKilled) return;
-					options.onError?.(err);
-				});
-			})();
-
-			return handle;
-		}
-
-		// Antigravity execution
 		void (async () => {
-			const agyPath = await this.detectAgyPath();
-			if (!agyPath) {
-				options.onError?.(new Error("Antigravity CLI (agy) not found on system"));
-				return;
-			}
-
 			const cp = await this.resolveChildProcess();
 			if (!cp) {
 				options.onError?.(new Error("Desktop child_process runtime not available"));
@@ -699,30 +732,123 @@ export class AIService {
 			const env = this.getEnv();
 			const effectivePrompt = await this.buildEffectivePrompt(options);
 
-			const args: string[] = [
-				"-p",
-				effectivePrompt,
-				"--output-format",
-				"stream-json",
-			];
+			let binPath: string | null = null;
+			let args: string[] = [];
 
-			if (options.model && options.model.trim().length > 0) {
-				args.push("--model", options.model.trim());
+			if (provider === "antigravity") {
+				binPath = await this.detectAgyPath();
+				if (!binPath) {
+					options.onError?.(new Error("Antigravity CLI (agy) not found on system"));
+					return;
+				}
+				args = ["-p", effectivePrompt, "--output-format", "stream-json"];
+				if (options.model && options.model.trim().length > 0) {
+					args.push("--model", options.model.trim());
+				}
+				if (options.mode === "safe") {
+					args.push("--sandbox");
+				} else {
+					args.push("--mode", "accept-edits", "--dangerously-skip-permissions");
+				}
+				if (options.conversationId && options.conversationId.trim().length > 0) {
+					args.push("--conversation", options.conversationId.trim());
+				}
+			} else if (provider === "codex") {
+				binPath = await this.detectCodexPath();
+				if (!binPath) {
+					options.onError?.(new Error("Codex CLI (codex) not found on system"));
+					return;
+				}
+				const isUuid = !!(options.conversationId && /^[0-9a-fA-F-]{36}$/.test(options.conversationId.trim()));
+				if (isUuid && options.conversationId) {
+					args.push("exec", "resume", options.conversationId.trim(), "--skip-git-repo-check", "--json", "-C", vaultPath);
+				} else {
+					args.push("exec", "--skip-git-repo-check", "--json", "-C", vaultPath);
+				}
+				if (options.model && options.model.trim().length > 0) {
+					args.push("-m", options.model.trim());
+				}
+				if (options.mode === "safe") {
+					args.push("-s", "read-only");
+				} else {
+					args.push("--dangerously-bypass-approvals-and-sandbox");
+				}
+				args.push(effectivePrompt);
+			} else if (provider === "claude") {
+				binPath = await this.detectBinaryPath("claude");
+				if (!binPath) {
+					options.onError?.(new Error("Claude Code CLI (claude) not found on system"));
+					return;
+				}
+				args = ["-p", effectivePrompt];
+				if (options.mode === "edit") {
+					args.push("--dangerously-skip-permissions");
+				}
+				if (options.model && options.model !== "default") {
+					args.push("--model", options.model.trim());
+				}
+				if (options.conversationId && options.conversationId.trim()) {
+					args.push("--resume", options.conversationId.trim());
+				}
+			} else if (provider === "copilot") {
+				binPath = await this.detectBinaryPath("copilot");
+				if (!binPath) {
+					options.onError?.(new Error("GitHub Copilot CLI (copilot) not found on system"));
+					return;
+				}
+				args = ["-p", effectivePrompt];
+				if (options.model && options.model !== "default") {
+					args.push("--model", options.model.trim());
+				}
+			} else if (provider === "opencode") {
+				binPath = await this.detectBinaryPath("opencode");
+				if (!binPath) {
+					options.onError?.(new Error("OpenCode CLI (opencode) not found on system"));
+					return;
+				}
+				args = ["run", effectivePrompt, "--dir", vaultPath];
+				if (options.mode === "edit") {
+					args.push("--auto");
+				}
+				if (options.model && options.model !== "default") {
+					args.push("-m", options.model.trim());
+				}
+				if (options.conversationId && options.conversationId.trim()) {
+					args.push("-s", options.conversationId.trim());
+				}
+			} else if (provider === "pi") {
+				binPath = await this.detectBinaryPath("pi");
+				if (!binPath) {
+					options.onError?.(new Error("Pi CLI (pi) not found on system"));
+					return;
+				}
+				args = ["-p", effectivePrompt, "--mode", "text"];
+				if (options.model && options.model !== "default") {
+					args.push("--model", options.model.trim());
+				}
+			} else if (provider === "kiro") {
+				binPath = await this.detectBinaryPath("kiro");
+				if (!binPath) {
+					options.onError?.(new Error("Kiro CLI not found on system"));
+					return;
+				}
+				args = ["-p", effectivePrompt];
+			} else if (provider === "hermes") {
+				binPath = await this.detectBinaryPath("hermes");
+				if (!binPath) {
+					options.onError?.(new Error("Hermes Agent CLI not found on system"));
+					return;
+				}
+				args = ["-p", effectivePrompt];
 			}
 
-			if (options.mode === "safe") {
-				args.push("--sandbox");
-			} else {
-				args.push("--mode", "accept-edits");
-				args.push("--dangerously-skip-permissions");
-			}
-
-			if (options.conversationId && options.conversationId.trim().length > 0) {
-				args.push("--conversation", options.conversationId.trim());
+			if (!binPath) {
+				options.onError?.(new Error(`Provider '${provider}' executable not found`));
+				return;
 			}
 
 			try {
-				spawned = cp.spawn(agyPath, args, {
+				spawned = cp.spawn(binPath, args, {
 					cwd: vaultPath,
 					env,
 					windowsHide: true,
@@ -739,42 +865,70 @@ export class AIService {
 				const line = rawLine.trim();
 				if (!line) return;
 
-				try {
-					const parsed = JSON.parse(line) as {
-						event?: string;
-						conversation_id?: string;
-						step_update?: {
-							step_type?: string;
-							text_delta?: string;
+				if (provider === "antigravity") {
+					try {
+						const parsed = JSON.parse(line) as {
+							event?: string;
+							conversation_id?: string;
+							step_update?: { text_delta?: string };
+							result?: { response?: string };
 						};
-						result?: {
-							status?: string;
-							response?: string;
-						};
-					};
-
-					if (parsed.event === "init" && parsed.conversation_id) {
-						activeConversationId = parsed.conversation_id;
-						options.onInit?.(parsed.conversation_id);
-					} else if (
-						parsed.event === "step_update" &&
-						parsed.step_update?.text_delta
-					) {
-						const delta = parsed.step_update.text_delta;
-						accumulatedText += delta;
-						options.onDelta?.(delta);
-					} else if (parsed.event === "result" && parsed.result?.response) {
-						if (!accumulatedText) {
-							accumulatedText = parsed.result.response;
-							options.onDelta?.(accumulatedText);
+						if (parsed.event === "init" && parsed.conversation_id) {
+							activeConversationId = parsed.conversation_id;
+							options.onInit?.(parsed.conversation_id);
+						} else if (parsed.event === "step_update" && parsed.step_update?.text_delta) {
+							const delta = parsed.step_update.text_delta;
+							accumulatedText += delta;
+							options.onDelta?.(delta);
+						} else if (parsed.event === "result" && parsed.result?.response) {
+							if (!accumulatedText) {
+								accumulatedText = parsed.result.response;
+								options.onDelta?.(accumulatedText);
+							}
+						}
+					} catch {
+						if (!line.startsWith("{")) {
+							accumulatedText += line + "\n";
+							options.onDelta?.(line + "\n");
 						}
 					}
-				} catch {
-					// Fallback for non-JSON lines (e.g. CLI warnings or standard text)
-					if (!line.startsWith("{")) {
-						accumulatedText += line + "\n";
-						options.onDelta?.(line + "\n");
+				} else if (provider === "codex") {
+					try {
+						const parsed = JSON.parse(line) as {
+							type?: string;
+							thread_id?: string;
+							item?: { type?: string; text?: string };
+							error?: { message?: string };
+							message?: string;
+						};
+						if (parsed.type === "thread.started" && parsed.thread_id) {
+							activeConversationId = parsed.thread_id;
+							options.onInit?.(parsed.thread_id);
+						} else if (parsed.type === "item.completed" && parsed.item?.type === "agent_message" && parsed.item?.text) {
+							const delta = parsed.item.text;
+							accumulatedText += delta;
+							options.onDelta?.(delta);
+						} else if (parsed.type === "error" && parsed.message) {
+							try {
+								const inner = JSON.parse(parsed.message) as { error?: { message?: string } };
+								if (inner.error?.message) {
+									options.onError?.(new Error(inner.error.message));
+									return;
+								}
+							} catch {
+								// ignore
+							}
+						}
+					} catch {
+						if (!line.startsWith("{")) {
+							accumulatedText += line + "\n";
+							options.onDelta?.(line + "\n");
+						}
 					}
+				} else {
+					// Claude, Copilot, OpenCode, Pi, Kiro, Hermes text streaming
+					accumulatedText += line + "\n";
+					options.onDelta?.(line + "\n");
 				}
 			};
 
@@ -808,7 +962,7 @@ export class AIService {
 				if (code === 0 || accumulatedText.length > 0) {
 					options.onDone?.(accumulatedText);
 				} else {
-					const errMsg = stderrOutput.trim() || `Antigravity CLI exited with code ${code}`;
+					const errMsg = stderrOutput.trim() || `${provider} CLI exited with code ${code}`;
 					options.onError?.(new Error(errMsg));
 				}
 			});

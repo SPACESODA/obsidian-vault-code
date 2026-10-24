@@ -2490,14 +2490,21 @@ button.vault-code-ignore-btn:hover {
 	display: inline-flex;
 	align-items: center;
 	align-self: flex-start;
-	gap: 5px;
-	padding: 2px 6px;
+	gap: 6px;
+	padding: 2px 7px;
 	border-radius: var(--radius-s, 4px);
-	background-color: var(--background-modifier-form-field);
+	background-color: var(--background-primary);
 	border: 1px solid var(--background-modifier-border);
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 	font-size: var(--font-ui-smaller, 11px);
 	color: var(--text-muted);
 	max-width: 100%;
+	transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.vault-code-chat-context-chip:hover {
+	border-color: var(--background-modifier-border-hover);
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
 }
 
 .vault-code-chat-context-chip.is-detached {
@@ -2988,6 +2995,144 @@ textarea.vault-code-chat-input:active {
 	width: 12px;
 	height: 12px;
 	display: block;
+}
+
+/* Identified Local Agents Grid (Tolaria style) */
+.vault-code-agent-section {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-top: 14px;
+	margin-bottom: 16px;
+}
+
+.vault-code-agent-section-header {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.vault-code-agent-section-title {
+	font-size: var(--font-ui-small, 13px);
+	font-weight: 600;
+	color: var(--text-normal);
+}
+
+.vault-code-agent-section-desc {
+	font-size: var(--font-ui-smaller, 11px);
+	color: var(--text-muted);
+}
+
+.vault-code-agent-grid {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 10px;
+	margin-top: 6px;
+}
+
+@media (max-width: 600px) {
+	.vault-code-agent-grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+.vault-code-agent-card {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 10px 14px;
+	border-radius: var(--radius-m, 8px);
+	background-color: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	cursor: pointer;
+	transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.vault-code-agent-card:hover {
+	border-color: var(--interactive-accent);
+	background-color: var(--background-modifier-hover);
+}
+
+.vault-code-agent-card.is-active {
+	border-color: var(--interactive-accent);
+	box-shadow: 0 0 0 1px var(--interactive-accent);
+	background-color: var(--background-secondary-alt, var(--background-secondary));
+}
+
+.vault-code-agent-card-info {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	min-width: 0;
+	flex: 1;
+}
+
+.vault-code-agent-card-icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	color: var(--text-accent);
+}
+
+.vault-code-agent-card-icon svg {
+	width: 20px;
+	height: 20px;
+	display: block;
+}
+
+.vault-code-agent-card-text {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+	flex: 1;
+}
+
+.vault-code-agent-card-name {
+	font-size: var(--font-ui-small, 13px);
+	font-weight: 600;
+	color: var(--text-normal);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.vault-code-agent-card-version {
+	font-size: var(--font-ui-smaller, 11px);
+	color: var(--text-muted);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	line-height: 1.2;
+}
+
+.vault-code-agent-card-badge {
+	font-size: var(--font-ui-smaller, 11px);
+	font-weight: 500;
+	padding: 2px 6px;
+	border-radius: var(--radius-s, 4px);
+	white-space: nowrap;
+	flex-shrink: 0;
+	margin-left: 8px;
+}
+
+.vault-code-agent-card-badge.is-installed {
+	color: var(--text-success, #10b981);
+	background-color: rgba(16, 185, 129, 0.1);
+}
+
+.vault-code-agent-card-badge.is-missing {
+	color: var(--text-muted);
+	background-color: var(--background-modifier-hover);
+}
+
+.vault-code-agent-footer-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	align-self: flex-start;
+	margin-top: 6px;
 }
 
 

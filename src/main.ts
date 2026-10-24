@@ -107,7 +107,13 @@ import {
 import mjml2html from "mjml-browser";
 import { t, setLanguage, SUPPORTED_LANGUAGES } from "./i18n";
 import { GitService } from "./git-service";
-import { AIService } from "./ai-service";
+import {
+	AIService,
+	AIProvider,
+	ALL_AGENT_DEFS,
+	DEFAULT_AGY_MODELS,
+	getAgentDisplayName,
+} from "./ai-service";
 import { AIChatView, VIEW_TYPE_AI_CHAT } from "./ai-chat-view";
 import { AIStorage } from "./ai-storage";
 import { createCustomMenu } from "./custom-menu";
@@ -623,7 +629,15 @@ interface VaultCodeSettings {
 	lineWrapping: boolean;
 	enableGitIntegration: boolean;
 	enableAIChat: boolean;
-	aiProvider: "antigravity" | "codex";
+	aiProvider:
+		| "antigravity"
+		| "codex"
+		| "claude"
+		| "copilot"
+		| "opencode"
+		| "pi"
+		| "kiro"
+		| "hermes";
 	aiModel: string;
 	aiCodexModel: string;
 	aiScope: "active-note" | "vault";
@@ -8648,58 +8662,127 @@ class VaultCodeSettingTab extends PluginSettingTab {
 				);
 
 			new Setting(containerEl)
-				.setName(t("settingsAIProviderName"))
-				.setDesc(t("settingsAIProviderDesc"))
+				.setName(t("settingsAIDefaultTargetName"))
+				.setDesc(t("settingsAIDefaultTargetDesc"))
 				.addDropdown((dropdown) => {
+					for (const def of ALL_AGENT_DEFS) {
+						dropdown.addOption(def.id, getAgentDisplayName(def.id));
+					}
 					dropdown
-						.addOption("antigravity", t("settingsAIProviderAntigravity"))
-						.addOption("codex", t("settingsAIProviderCodex"))
 						.setValue(this.plugin.settings.aiProvider || "antigravity")
 						.onChange(async (val) => {
-							this.plugin.settings.aiProvider = val as "antigravity" | "codex";
+							this.plugin.settings.aiProvider = val as AIProvider;
 							await this.plugin.saveSettings();
 							this.display();
 						});
 				});
 
-			if ((this.plugin.settings.aiProvider || "antigravity") === "codex") {
-				new Setting(containerEl)
-					.setName(t("settingsAIDefaultModelName"))
-					.setDesc(t("settingsAIDefaultModelDesc"))
-					.addDropdown((dropdown) => {
-						dropdown
-							.addOption("gpt-6.1-sol", "GPT-6.1-Sol")
-							.addOption("gpt-6-astra", "GPT-6-Astra")
-							.addOption("gpt-6-sol", "GPT-6-Sol")
-							.addOption("gpt-6-luna", "GPT-6-Luna")
-							.addOption("gpt-5.6-sol", "GPT-5.6-Sol")
-							.addOption("gpt-5.6-terra", "GPT-5.6-Terra")
-							.addOption("gpt-5.6-luna", "GPT-5.6-Luna")
-							.setValue(this.plugin.settings.aiCodexModel || "gpt-6.1-sol")
-							.onChange(async (value) => {
+			const agentSection = containerEl.createDiv({ cls: "vault-code-agent-section" });
+			const sectionHeader = agentSection.createDiv({ cls: "vault-code-agent-section-header" });
+			sectionHeader.createDiv({
+				cls: "vault-code-agent-section-title",
+				text: t("settingsAIAgentsTitle"),
+			});
+			sectionHeader.createDiv({
+				cls: "vault-code-agent-section-desc",
+				text: t("settingsAIAgentsDesc"),
+			});
+
+			const gridEl = agentSection.createDiv({ cls: "vault-code-agent-grid" });
+
+			const renderCards = (agents: Array<{
+				id: AIProvider;
+				name: string;
+				icon: string;
+				isInstalled?: boolean;
+				version?: string;
+			}>) => {
+				gridEl.empty();
+				for (const agent of agents) {
+					const isActive = (this.plugin.settings.aiProvider || "antigravity") === agent.id;
+					const cardEl = gridEl.createDiv({
+						cls: `vault-code-agent-card${isActive ? " is-active" : ""}`,
+					});
+
+					const infoEl = cardEl.createDiv({ cls: "vault-code-agent-card-info" });
+					const iconEl = infoEl.createDiv({ cls: "vault-code-agent-card-icon" });
+					setIcon(iconEl, agent.icon);
+
+					const textEl = infoEl.createDiv({ cls: "vault-code-agent-card-text" });
+					textEl.createDiv({ cls: "vault-code-agent-card-name", text: agent.name });
+
+					const isInstalled = !!agent.isInstalled;
+					const versionText = isInstalled
+						? (agent.version || t("settingsAIAgentNotDetected"))
+						: t("settingsAIAgentMissing");
+					textEl.createDiv({ cls: "vault-code-agent-card-version", text: versionText });
+
+					cardEl.createDiv({
+						cls: `vault-code-agent-card-badge is-${isInstalled ? "installed" : "missing"}`,
+						text: isInstalled ? t("settingsAIAgentInstalled") : t("settingsAIAgentMissing"),
+					});
+
+					cardEl.addEventListener("click", () => {
+						this.plugin.settings.aiProvider = agent.id;
+						void this.plugin.saveSettings().then(() => {
+							this.display();
+						});
+					});
+				}
+			};
+
+			renderCards(
+				ALL_AGENT_DEFS.map((d) => ({
+					id: d.id,
+					name: d.name,
+					icon: d.icon,
+					isInstalled: false,
+					version: t("settingsAIAgentNotDetected"),
+				})),
+			);
+
+			void this.plugin.aiService.detectAllAgents().then((agents) => {
+				renderCards(agents);
+			});
+
+			const copyBtn = agentSection.createEl("button", {
+				cls: "mod-cta vault-code-agent-footer-btn",
+			});
+			const copyIcon = copyBtn.createSpan({ cls: "vault-code-pill-icon" });
+			setIcon(copyIcon, "copy");
+			copyBtn.createSpan({ text: t("settingsAICopyMCPConfig") });
+			copyBtn.addEventListener("click", () => {
+				const snippet = this.plugin.aiService.getMCPConfigSnippet();
+				void navigator.clipboard.writeText(snippet).then(() => {
+					new Notice(t("settingsAICopiedMCPConfig"));
+				});
+			});
+
+			const currentProvider = this.plugin.settings.aiProvider || "antigravity";
+			const agentDef = ALL_AGENT_DEFS.find((d) => d.id === currentProvider);
+			const models = agentDef?.models || DEFAULT_AGY_MODELS;
+
+			new Setting(containerEl)
+				.setName(t("settingsAIDefaultModelName"))
+				.setDesc(t("settingsAIDefaultModelDesc"))
+				.addDropdown((dropdown) => {
+					for (const m of models) {
+						dropdown.addOption(m.id, m.displayName);
+					}
+					const currentVal = currentProvider === "codex"
+						? (this.plugin.settings.aiCodexModel || "gpt-6.1-sol")
+						: (this.plugin.settings.aiModel || agentDef?.defaultModel || "gemini-3.8-flash-high");
+					dropdown
+						.setValue(currentVal)
+						.onChange(async (value) => {
+							if (currentProvider === "codex") {
 								this.plugin.settings.aiCodexModel = value;
-								await this.plugin.saveSettings();
-							});
-					});
-			} else {
-				new Setting(containerEl)
-					.setName(t("settingsAIDefaultModelName"))
-					.setDesc(t("settingsAIDefaultModelDesc"))
-					.addDropdown((dropdown) => {
-						dropdown
-							.addOption("gemini-3.8-flash-high", "Gemini 3.8 Flash (High)")
-							.addOption("gemini-3.8-flash-medium", "Gemini 3.8 Flash (Medium)")
-							.addOption("gemini-3.8-flash-low", "Gemini 3.8 Flash (Low)")
-							.addOption("claude-sonnet-4-6", "Claude Sonnet 4.6 (Thinking)")
-							.addOption("claude-opus-4-6-thinking", "Claude Opus 4.6 (Thinking)")
-							.addOption("gpt-oss-120b-medium", "GPT-OSS 120b (medium)")
-							.setValue(this.plugin.settings.aiModel || "gemini-3.8-flash-high")
-							.onChange(async (value) => {
+							} else {
 								this.plugin.settings.aiModel = value;
-								await this.plugin.saveSettings();
-							});
-					});
-			}
+							}
+							await this.plugin.saveSettings();
+						});
+				});
 
 			new Setting(containerEl)
 				.setName(t("settingsAIDefaultScopeName"))

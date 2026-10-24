@@ -11,7 +11,11 @@ import {
 import type VaultCodePlugin from "./main";
 import { t } from "./i18n";
 import type { AgyModelInfo, AIProcessHandle, AIProvider } from "./ai-service";
-import { DEFAULT_AGY_MODELS, DEFAULT_CODEX_MODELS } from "./ai-service";
+import {
+	DEFAULT_AGY_MODELS,
+	ALL_AGENT_DEFS,
+	getAgentDisplayName,
+} from "./ai-service";
 import { AIChatHistoryModal } from "./ai-history-modal";
 import { createCustomMenu } from "./custom-menu";
 
@@ -70,9 +74,14 @@ export class AIChatView extends ItemView {
 		super(leaf);
 		this.plugin = plugin;
 		this.selectedProvider = plugin.settings.aiProvider || "antigravity";
-		this.selectedModel = this.selectedProvider === "codex"
-			? (plugin.settings.aiCodexModel || "gpt-6.1-sol")
-			: (plugin.settings.aiModel || "gemini-3.8-flash-high");
+		const def = ALL_AGENT_DEFS.find((d) => d.id === this.selectedProvider);
+		if (this.selectedProvider === "codex") {
+			this.selectedModel = plugin.settings.aiCodexModel || "gpt-6.1-sol";
+		} else if (this.selectedProvider === "antigravity") {
+			this.selectedModel = plugin.settings.aiModel || "gemini-3.8-flash-high";
+		} else {
+			this.selectedModel = def?.defaultModel || "default";
+		}
 		this.chatScope = plugin.settings.aiScope || "active-note";
 		this.mode = plugin.settings.aiMode || "edit";
 	}
@@ -349,20 +358,13 @@ export class AIChatView extends ItemView {
 	private updateProviderBtnLabel(): void {
 		if (!this.providerBtnEl) return;
 		this.providerBtnEl.empty();
+		const def = ALL_AGENT_DEFS.find((d) => d.id === this.selectedProvider);
 		const iconSpan = this.providerBtnEl.createSpan({ cls: "vault-code-pill-icon" });
-		if (this.selectedProvider === "codex") {
-			setIcon(iconSpan, "zap");
-			this.providerBtnEl.createSpan({
-				cls: "vault-code-pill-label",
-				text: t("aiChatProviderCodex"),
-			});
-		} else {
-			setIcon(iconSpan, "sparkles");
-			this.providerBtnEl.createSpan({
-				cls: "vault-code-pill-label",
-				text: t("aiChatProviderAntigravity"),
-			});
-		}
+		setIcon(iconSpan, def?.icon || "sparkles");
+		this.providerBtnEl.createSpan({
+			cls: "vault-code-pill-label",
+			text: getAgentDisplayName(this.selectedProvider),
+		});
 		const chevronSpan = this.providerBtnEl.createSpan({ cls: "vault-code-pill-chevron" });
 		setIcon(chevronSpan, "chevron-down");
 	}
@@ -370,10 +372,13 @@ export class AIChatView extends ItemView {
 	private updateModelBtnLabel(): void {
 		if (!this.modelBtnEl) return;
 		this.modelBtnEl.empty();
+		const def = ALL_AGENT_DEFS.find((d) => d.id === this.selectedProvider);
 		const iconSpan = this.modelBtnEl.createSpan({ cls: "vault-code-pill-icon" });
-		setIcon(iconSpan, this.selectedProvider === "codex" ? "cpu" : "sparkles");
+		setIcon(iconSpan, def?.icon || "sparkles");
 
-		const found = this.availableModels.find((m) => m.id === this.selectedModel);
+		const found =
+			this.availableModels.find((m) => m.id === this.selectedModel) ||
+			def?.models.find((m) => m.id === this.selectedModel);
 		const label = found ? found.displayName : this.selectedModel;
 		this.modelBtnEl.createSpan({ cls: "vault-code-pill-label", text: label });
 
@@ -507,33 +512,28 @@ export class AIChatView extends ItemView {
 	private showProviderMenu(event: MouseEvent): void {
 		const menu = createCustomMenu();
 
-		menu.addItem((item) => {
-			item.setTitle(t("aiChatProviderAntigravity"));
-			item.setIcon("sparkles");
-			item.setChecked(this.selectedProvider === "antigravity");
-			item.onClick(() => {
-				if (this.selectedProvider !== "antigravity") {
-					this.selectedProvider = "antigravity";
-					this.selectedModel = this.plugin.settings.aiModel || "gemini-3.8-flash-high";
-					this.updateProviderBtnLabel();
-					void this.loadModelsForProvider("antigravity");
-				}
+		for (const def of ALL_AGENT_DEFS) {
+			const label = getAgentDisplayName(def.id);
+			menu.addItem((item) => {
+				item.setTitle(label);
+				item.setIcon(def.icon);
+				item.setChecked(this.selectedProvider === def.id);
+				item.onClick(() => {
+					if (this.selectedProvider !== def.id) {
+						this.selectedProvider = def.id;
+						if (def.id === "codex") {
+							this.selectedModel = this.plugin.settings.aiCodexModel || def.defaultModel;
+						} else if (def.id === "antigravity") {
+							this.selectedModel = this.plugin.settings.aiModel || def.defaultModel;
+						} else {
+							this.selectedModel = def.defaultModel;
+						}
+						this.updateProviderBtnLabel();
+						void this.loadModelsForProvider(def.id);
+					}
+				});
 			});
-		});
-
-		menu.addItem((item) => {
-			item.setTitle(t("aiChatProviderCodex"));
-			item.setIcon("zap");
-			item.setChecked(this.selectedProvider === "codex");
-			item.onClick(() => {
-				if (this.selectedProvider !== "codex") {
-					this.selectedProvider = "codex";
-					this.selectedModel = this.plugin.settings.aiCodexModel || "gpt-6.1-sol";
-					this.updateProviderBtnLabel();
-					void this.loadModelsForProvider("codex");
-				}
-			});
-		});
+		}
 
 		menu.showAtMouseEvent(event);
 	}
@@ -541,10 +541,11 @@ export class AIChatView extends ItemView {
 	private showModelMenu(event: MouseEvent): void {
 		const menu = createCustomMenu();
 
+		const def = ALL_AGENT_DEFS.find((d) => d.id === this.selectedProvider);
 		const modelsToUse =
 			this.availableModels.length > 0
 				? this.availableModels
-				: (this.selectedProvider === "codex" ? DEFAULT_CODEX_MODELS : DEFAULT_AGY_MODELS);
+				: (def?.models || DEFAULT_AGY_MODELS);
 
 		for (const model of modelsToUse) {
 			menu.addItem((item) => {
@@ -649,9 +650,14 @@ export class AIChatView extends ItemView {
 		this.openNoteBtnEl?.hide();
 		this.chatScope = "active-note";
 		this.selectedProvider = this.plugin.settings.aiProvider || "antigravity";
-		this.selectedModel = this.selectedProvider === "codex"
-			? (this.plugin.settings.aiCodexModel || "gpt-6.1-sol")
-			: (this.plugin.settings.aiModel || "gemini-3.8-flash-high");
+		const def = ALL_AGENT_DEFS.find((d) => d.id === this.selectedProvider);
+		if (this.selectedProvider === "codex") {
+			this.selectedModel = this.plugin.settings.aiCodexModel || "gpt-6.1-sol";
+		} else if (this.selectedProvider === "antigravity") {
+			this.selectedModel = this.plugin.settings.aiModel || "gemini-3.8-flash-high";
+		} else {
+			this.selectedModel = def?.defaultModel || "default";
+		}
 		this.updateProviderBtnLabel();
 		void this.loadModelsForProvider(this.selectedProvider);
 		this.updateVaultToggleState();

@@ -1,11 +1,12 @@
 import { App, TFile, TFolder, normalizePath } from "obsidian";
 import type { ChatMessage } from "./ai-chat-view";
+import type { AIProvider } from "./ai-service";
 
 export interface ChatMetadata {
 	title: string;
 	created: string;
 	last_chat?: string;
-	provider?: "antigravity" | "codex";
+	provider?: AIProvider;
 	model: string;
 	scope: "active-note" | "vault";
 	mode: "safe" | "edit";
@@ -170,8 +171,8 @@ export class AIStorage {
 			if (lastChatMatch && lastChatMatch[1]) metadata.last_chat = lastChatMatch[1].trim();
 
 			const provMatch = fmBlock.match(/provider:\s*"?([^"\n\r]+)"?/);
-			if (provMatch && provMatch[1] && (provMatch[1] === "antigravity" || provMatch[1] === "codex")) {
-				metadata.provider = provMatch[1];
+			if (provMatch && provMatch[1]) {
+				metadata.provider = provMatch[1].trim() as AIProvider;
 			}
 
 			const modelMatch = fmBlock.match(/model:\s*"?([^"\n\r]+)"?/);
