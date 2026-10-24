@@ -6335,7 +6335,7 @@ export default class VaultCodePlugin extends Plugin {
 			Platform.isDesktop &&
 			this.settings.enableAIChat &&
 			!(view instanceof AIChatView) &&
-			Boolean(file && this.isFileEditable(file));
+			Boolean(file);
 
 		if (shouldShowAiChatBtn) {
 			if (!existingAiChatBtn) {
@@ -6353,24 +6353,16 @@ export default class VaultCodePlugin extends Plugin {
 					void this.activateAIChatView();
 				});
 
-				const toggleBtn = actionsEl.querySelector<HTMLElement>(
-					".vault-code-header-toggle-btn",
-				);
-				const moreBtn =
-					(view as unknown as { moreOptionsButtonEl?: HTMLElement })
-						.moreOptionsButtonEl ??
-					actionsEl.querySelector(
-						".clickable-icon[aria-label*='options' i], .clickable-icon:last-child",
-					);
-
-				const anchor = toggleBtn ?? moreBtn;
-				if (anchor && anchor.parentElement === actionsEl) {
-					actionsEl.insertBefore(aiChatBtn, anchor);
+				if (actionsEl.firstChild) {
+					actionsEl.insertBefore(aiChatBtn, actionsEl.firstChild);
 				} else {
 					actionsEl.appendChild(aiChatBtn);
 				}
 			} else {
 				existingAiChatBtn.setAttribute("aria-label", t("commandOpenAIChat"));
+				if (actionsEl.firstChild && existingAiChatBtn !== actionsEl.firstChild) {
+					actionsEl.insertBefore(existingAiChatBtn, actionsEl.firstChild);
+				}
 			}
 		} else if (existingAiChatBtn) {
 			existingAiChatBtn.remove();
