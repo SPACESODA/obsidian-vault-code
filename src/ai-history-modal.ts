@@ -34,10 +34,8 @@ export class AIChatHistoryModal extends Modal {
 		setIcon(titleIcon, "history");
 		titleEl.prepend(titleIcon);
 
-		// Search box
+		// Search box (no magnifying glass icon)
 		const searchWrapper = contentEl.createDiv({ cls: "vault-code-history-search-wrapper" });
-		const searchIcon = searchWrapper.createSpan({ cls: "vault-code-history-search-icon" });
-		setIcon(searchIcon, "search");
 
 		const searchInput = searchWrapper.createEl("input", {
 			type: "search",
@@ -62,8 +60,10 @@ export class AIChatHistoryModal extends Modal {
 
 		const cleanupBtn = footerEl.createEl("button", {
 			cls: "vault-code-history-cleanup-btn",
-			text: t("aiChatHistoryCleanupBtn"),
 		});
+		const cleanIcon = cleanupBtn.createSpan({ cls: "vault-code-history-cleanup-icon" });
+		setIcon(cleanIcon, "trash-2");
+		cleanupBtn.createSpan({ text: t("aiChatHistoryCleanupBtn") });
 		cleanupBtn.addEventListener("click", (e) => this.showCleanupMenu(e));
 
 		// Load files
@@ -77,7 +77,7 @@ export class AIChatHistoryModal extends Modal {
 	}
 
 	private async loadFiles(): Promise<void> {
-		const folder = this.plugin.settings.aiChatFolder || "Agent chats";
+		const folder = this.plugin.settings.aiChatFolder || "Agent-Chats";
 		this.files = await this.plugin.aiStorage.listChatNotes(folder);
 		this.filterAndRender();
 	}
@@ -86,10 +86,13 @@ export class AIChatHistoryModal extends Modal {
 		if (!this.searchQuery) {
 			this.filteredFiles = [...this.files];
 		} else {
-			this.filteredFiles = this.files.filter((f) =>
-				f.basename.toLowerCase().includes(this.searchQuery) ||
-				f.name.toLowerCase().includes(this.searchQuery),
-			);
+			this.filteredFiles = this.files.filter((f) => {
+				const title = this.getDisplayTitle(f).toLowerCase();
+				return (
+					title.includes(this.searchQuery) ||
+					f.basename.toLowerCase().includes(this.searchQuery)
+				);
+			});
 		}
 
 		this.renderList();
@@ -124,12 +127,12 @@ export class AIChatHistoryModal extends Modal {
 		const titleWrapper = mainEl.createDiv({ cls: "vault-code-history-item-title" });
 		const fileIcon = titleWrapper.createSpan({ cls: "vault-code-history-item-icon" });
 		setIcon(fileIcon, "message-square");
-		titleWrapper.createSpan({ text: this.formatTitle(file.basename) });
+		titleWrapper.createSpan({ text: this.getDisplayTitle(file) });
 
 		const metaEl = mainEl.createDiv({ cls: "vault-code-history-item-meta" });
 		metaEl.createSpan({
 			cls: "vault-code-history-item-date",
-			text: this.formatDate(file.stat.mtime),
+			text: this.formatDate(file),
 		});
 
 		// Clicking row selects and loads this chat
@@ -141,7 +144,7 @@ export class AIChatHistoryModal extends Modal {
 		// Hover action buttons
 		const actionsEl = itemEl.createDiv({ cls: "vault-code-history-item-actions" });
 
-		// 1. Open as Note button
+		// 1. Open as Note button (always open as new tab)
 		const openNoteBtn = actionsEl.createEl("button", {
 			cls: "clickable-icon vault-code-history-action-btn",
 			attr: { "aria-label": t("aiChatOpenAsNote") },
@@ -152,9 +155,9 @@ export class AIChatHistoryModal extends Modal {
 			this.openAsNote(file);
 		});
 
-		// 2. Delete button
+		// 2. Delete button (red background, white icon)
 		const deleteBtn = actionsEl.createEl("button", {
-			cls: "clickable-icon vault-code-history-action-btn mod-warning",
+			cls: "clickable-icon vault-code-history-action-btn vault-code-btn-danger",
 			attr: { "aria-label": t("aiChatDeleteChat") },
 		});
 		setIcon(deleteBtn, "trash-2");
@@ -164,31 +167,28 @@ export class AIChatHistoryModal extends Modal {
 		});
 	}
 
-	private formatTitle(basename: string): string {
-		// Strip date prefix if present (e.g. 2026-10-24-my-chat -> my-chat)
-		const stripped = basename.replace(/^\d{4}-\d{2}-\d{2}-/, "");
-		// Capitalize words
-		return stripped
-			.split("-")
-			.map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-			.join(" ");
+	private getDisplayTitle(file: TFile): string {
+		const cache = this.app.metadataCache.getFileCache(file);
+		const fmTitle = typeof cache?.frontmatter?.title === "string" ? cache.frontmatter.title.trim() : "";
+		if (fmTitle) return fmTitle;
+
+		const cleaned = file.basename.replace(/--(\d{2})(\d{2})(\d{2})$/, " $1:$2:$3");
+		return cleaned || "Untitled Chat";
 	}
 
-	private formatDate(mtime: number): string {
-		const now = Date.now();
-		const diffMs = now - mtime;
-		const diffMins = Math.floor(diffMs / (60 * 1000));
-		const diffHours = Math.floor(diffMs / (60 * 60 * 1000));
-		const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
-
-		if (diffMins < 1) return t("aiChatTimeJustNow");
-		if (diffMins < 60) return t("aiChatTimeMinsAgo").replace("{0}", String(diffMins));
-		if (diffHours < 24) return t("aiChatTimeHoursAgo").replace("{0}", String(diffHours));
-		if (diffDays === 1) return t("aiChatTimeYesterday");
-		if (diffDays < 7) return t("aiChatTimeDaysAgo").replace("{0}", String(diffDays));
-
-		const date = new Date(mtime);
-		return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+	private formatDate(file: TFile): string {
+		const cache = this.app.metadataCache.getFileCache(file);
+		const lastChat = typeof cache?.frontmatter?.last_chat === "string" ? cache.frontmatter.last_chat.trim() : "";
+		if (lastChat) {
+			return lastChat.replace(/^(\d{4}-\d{2}-\d{2})\s+/, "$1  ");
+		}
+		const created = typeof cache?.frontmatter?.created === "string" ? cache.frontmatter.created.trim() : "";
+		if (created) {
+			return created.replace(/^(\d{4}-\d{2}-\d{2})\s+/, "$1  ");
+		}
+		const d = new Date(file.stat.mtime);
+		const pad = (n: number) => String(n).padStart(2, "0");
+		return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}  ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 	}
 
 	private updateCount(): void {
@@ -198,7 +198,7 @@ export class AIChatHistoryModal extends Modal {
 	}
 
 	private openAsNote(file: TFile): void {
-		const leaf = this.app.workspace.getLeaf(false);
+		const leaf = this.app.workspace.getLeaf("tab");
 		void leaf.openFile(file);
 		this.close();
 	}

@@ -2214,16 +2214,20 @@ button.vault-code-ignore-btn:hover {
 }
 
 .vault-code-chat-title-input {
+	font-family: inherit;
 	font-weight: 600;
 	font-size: var(--font-ui-medium, 14px);
 	color: var(--text-normal);
-	background: var(--background-modifier-form-field);
-	border: 1px solid var(--interactive-accent);
-	border-radius: var(--radius-s, 4px);
-	padding: 2px 6px;
+	background: transparent;
+	border: none;
+	border-bottom: 1.5px solid var(--interactive-accent);
+	border-radius: 0;
+	padding: 0 2px;
 	outline: none;
-	height: 26px;
-	max-width: 240px;
+	box-shadow: none;
+	height: 22px;
+	line-height: 22px;
+	max-width: 260px;
 	flex: 1;
 }
 
@@ -2784,28 +2788,16 @@ button.vault-code-ignore-btn:hover {
 	width: 100%;
 }
 
-.vault-code-history-search-icon {
-	position: absolute;
-	left: 10px;
-	display: flex;
-	align-items: center;
-	color: var(--text-muted);
-	pointer-events: none;
-}
-
-.vault-code-history-search-icon svg {
-	width: 14px;
-	height: 14px;
-}
-
 .vault-code-history-search-input {
 	width: 100%;
-	padding: 8px 12px 8px 32px;
+	padding: 7px 12px;
 	border-radius: var(--radius-m, 6px);
 	background-color: var(--background-modifier-form-field);
 	border: 1px solid var(--background-modifier-border);
 	font-size: var(--font-ui-small, 13px);
 	color: var(--text-normal);
+	outline: none;
+	box-sizing: border-box;
 }
 
 .vault-code-history-search-input:focus {
@@ -2917,8 +2909,22 @@ button.vault-code-ignore-btn:hover {
 	background-color: var(--background-modifier-hover);
 }
 
+.vault-code-history-action-btn.vault-code-btn-danger,
+.vault-code-history-action-btn.mod-warning {
+	background-color: var(--text-error, #ef4444);
+	color: #ffffff;
+}
+
+.vault-code-history-action-btn.vault-code-btn-danger:hover,
 .vault-code-history-action-btn.mod-warning:hover {
-	color: var(--text-error, #ef4444);
+	background-color: #dc2626;
+	color: #ffffff;
+}
+
+.vault-code-history-action-btn.vault-code-btn-danger svg,
+.vault-code-history-action-btn.mod-warning svg {
+	color: #ffffff;
+	stroke: #ffffff;
 }
 
 .vault-code-history-action-btn svg {
@@ -2937,18 +2943,30 @@ button.vault-code-ignore-btn:hover {
 }
 
 .vault-code-history-cleanup-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
 	background: transparent;
-	border: none;
+	border: 1px solid var(--background-modifier-border);
 	color: var(--text-muted);
 	font-size: var(--font-ui-smaller, 11px);
+	font-weight: 500;
 	cursor: pointer;
-	padding: 4px 8px;
+	padding: 4px 10px;
 	border-radius: var(--radius-s, 4px);
+	transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
 .vault-code-history-cleanup-btn:hover {
 	color: var(--text-normal);
 	background-color: var(--background-modifier-hover);
+	border-color: var(--text-muted);
+}
+
+.vault-code-history-cleanup-icon svg {
+	width: 12px;
+	height: 12px;
+	display: block;
 }
 
 

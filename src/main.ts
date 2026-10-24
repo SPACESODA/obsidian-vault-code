@@ -5680,8 +5680,15 @@ export default class VaultCodePlugin extends Plugin {
 				});
 			}
 		}
+
+		// Ensure the right sidebar is expanded if collapsed
+		const rightSplit = workspace.rightSplit;
+		if (rightSplit && "collapsed" in rightSplit && rightSplit.collapsed) {
+			rightSplit.expand();
+		}
+
 		if (leaf) {
-			this.app.workspace.setActiveLeaf(leaf, { focus: true });
+			workspace.setActiveLeaf(leaf, { focus: true });
 		}
 	}
 

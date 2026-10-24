@@ -161,16 +161,6 @@ export class AIChatView extends ItemView {
 		});
 		setIcon(newChatBtn, "plus");
 		newChatBtn.addEventListener("click", () => this.startNewChat());
-
-		// 4. Delete Chat button
-		const deleteBtn = actionsEl.createEl("button", {
-			cls: "clickable-icon vault-code-chat-header-btn vault-code-btn-danger",
-			attr: { "aria-label": t("aiChatDeleteChat") },
-		});
-		setIcon(deleteBtn, "trash-2");
-		deleteBtn.addEventListener("click", () => {
-			void this.confirmDeleteActiveChat();
-		});
 	}
 
 	private startEditingChatTitle(): void {
@@ -347,7 +337,7 @@ export class AIChatView extends ItemView {
 		setIcon(iconSpan, "sparkles");
 
 		const found = this.availableModels.find((m) => m.id === this.selectedModel);
-		const label = found ? found.displayName.replace(/\s*\(.*?\)/, "") : this.selectedModel;
+		const label = found ? found.displayName : this.selectedModel;
 		this.modelBtnEl.createSpan({ cls: "vault-code-pill-label", text: label });
 
 		const chevronSpan = this.modelBtnEl.createSpan({ cls: "vault-code-pill-chevron" });
@@ -458,17 +448,14 @@ export class AIChatView extends ItemView {
 		this.pinnedContextFile = null;
 		this.updateVaultToggleState();
 		this.updateContextChip();
-		new Notice(t("aiChatContextAttachedNotice").replace("{0}", file.name));
 	}
 
 	private togglePinContext(file: TFile): void {
 		this.isContextPinned = !this.isContextPinned;
 		if (this.isContextPinned) {
 			this.pinnedContextFile = file;
-			new Notice(t("aiChatContextPinnedNotice").replace("{0}", file.name));
 		} else {
 			this.pinnedContextFile = null;
-			new Notice(t("aiChatContextUnpinnedNotice"));
 		}
 		this.updateContextChip();
 	}
@@ -478,7 +465,6 @@ export class AIChatView extends ItemView {
 		this.isContextPinned = false;
 		this.pinnedContextFile = null;
 		this.updateContextChip();
-		new Notice(t("aiChatContextRemovedNotice"));
 	}
 
 	private showModelMenu(event: MouseEvent): void {
@@ -538,7 +524,7 @@ export class AIChatView extends ItemView {
 
 	private openActiveChatAsNote(): void {
 		if (this.currentChatFile) {
-			const leaf = this.app.workspace.getLeaf(false);
+			const leaf = this.app.workspace.getLeaf("tab");
 			void leaf.openFile(this.currentChatFile);
 		}
 	}
@@ -577,26 +563,6 @@ export class AIChatView extends ItemView {
 			console.error("Vault Code: Failed to load chat note", e);
 			new Notice(t("aiChatNoticeDeleteFailed"));
 		}
-	}
-
-	private formatHeaderTitle(title: string): string {
-		if (title.length > 20) {
-			return `${title.slice(0, 19)}...`;
-		}
-		return title;
-	}
-
-	private async confirmDeleteActiveChat(): Promise<void> {
-		if (this.currentChatFile) {
-			const file = this.currentChatFile;
-			try {
-				await this.plugin.aiStorage.deleteChatNote(file);
-				new Notice(t("aiChatNoticeDeleted").replace("{0}", file.basename));
-			} catch (e) {
-				console.error("Vault Code: Failed to delete active chat note", e);
-			}
-		}
-		this.startNewChat();
 	}
 
 	public startNewChat(): void {
