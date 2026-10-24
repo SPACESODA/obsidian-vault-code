@@ -226,6 +226,8 @@ export const es: TranslationSchema = {
 	aiChatContextPin: "Fijar nota de contexto",
 	aiChatContextUnpin: "Desfijar nota de contexto",
 	aiChatContextRemove: "Eliminar contexto de nota",
+	aiChatAttachActiveNote: "Adjuntar nota activa",
+	aiChatContextAttachedNotice: "Nota '{0}' adjunta",
 	aiChatContextPinnedNotice: "Contexto fijado a '{0}'",
 	aiChatContextUnpinnedNotice: "Contexto desfijado",
 	aiChatContextRemovedNotice: "Contexto de nota eliminado (bóveda completa)",

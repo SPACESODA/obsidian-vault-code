@@ -1,6 +1,7 @@
-import { App, Modal, TFile, setIcon, Menu, Notice } from "obsidian";
+import { App, Modal, TFile, setIcon, Notice } from "obsidian";
 import type VaultCodePlugin from "./main";
 import { t } from "./i18n";
+import { createCustomMenu } from "./custom-menu";
 
 export class AIChatHistoryModal extends Modal {
 	private plugin: VaultCodePlugin;
@@ -221,7 +222,7 @@ export class AIChatHistoryModal extends Modal {
 	}
 
 	private showCleanupMenu(event: MouseEvent): void {
-		const menu = new Menu();
+		const menu = createCustomMenu();
 
 		menu.addItem((item) => {
 			item.setTitle(t("aiChatCleanupOlder7d"));

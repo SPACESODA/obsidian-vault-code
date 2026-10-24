@@ -4,6 +4,7 @@ import type { ChatMessage } from "./ai-chat-view";
 export interface ChatMetadata {
 	title: string;
 	created: string;
+	last_chat?: string;
 	model: string;
 	scope: "active-note" | "vault";
 	mode: "safe" | "edit";
@@ -73,10 +74,17 @@ export class AIStorage {
 	/**
 	 * Generates a unique, available file path in the target folder.
 	 */
-	public async getAvailablePath(folderPath: string, baseSlug: string): Promise<string> {
+	/**
+	 * Generates a unique, available file path in the target folder using local date and 24H time:
+	 * YYYY-MM-DD-HH-mm-ss.md
+	 */
+	public async getAvailablePath(folderPath: string, _baseSlug?: string): Promise<string> {
 		const folder = normalizePath(folderPath).replace(/^\/+|\/+$/g, "");
-		const datePrefix = new Date().toISOString().slice(0, 10);
-		const baseName = `${datePrefix}-${baseSlug}`;
+		const now = new Date();
+		const pad = (n: number) => String(n).padStart(2, "0");
+		const datePart = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+		const timePart = `${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+		const baseName = `${datePart}-${timePart}`;
 
 		let candidate = folder ? `${folder}/${baseName}.md` : `${baseName}.md`;
 		let counter = 1;
@@ -93,13 +101,16 @@ export class AIStorage {
 
 	/**
 	 * Serializes chat metadata and message transcript into a clean Markdown string.
+	 * Writes YAML property 'last_chat' and uses '#### You' and '#### Agent' (no emojis).
 	 */
 	public serializeChat(metadata: ChatMetadata, messages: ChatMessage[]): string {
+		const lastChat = metadata.last_chat || this.formatDateTime();
 		const yamlLines = [
 			"---",
 			"type: Agent Chat",
 			`title: ${JSON.stringify(metadata.title)}`,
 			`created: ${JSON.stringify(metadata.created)}`,
+			`last_chat: ${JSON.stringify(lastChat)}`,
 			`model: ${JSON.stringify(metadata.model)}`,
 			`scope: ${JSON.stringify(metadata.scope)}`,
 			`mode: ${JSON.stringify(metadata.mode)}`,
@@ -113,9 +124,9 @@ export class AIStorage {
 
 		for (const msg of messages) {
 			if (msg.role === "user") {
-				yamlLines.push("### 👤 You", "", msg.content.trim(), "");
+				yamlLines.push("#### You", "", msg.content.trim(), "");
 			} else {
-				yamlLines.push("### ✦ Agent", "", msg.content.trim(), "");
+				yamlLines.push("#### Agent", "", msg.content.trim(), "");
 			}
 		}
 
@@ -124,14 +135,17 @@ export class AIStorage {
 
 	/**
 	 * Parses a Markdown chat note back into structured metadata and messages.
+	 * Supports '#### You' / '#### Agent' as well as legacy header formats.
 	 */
 	public parseChat(content: string, defaultModel = "gemini-3.8-flash-high"): ParsedChat {
+		const nowStr = this.formatDateTime();
 		const metadata: ChatMetadata = {
 			title: "Untitled Chat",
-			created: this.formatDateTime(),
+			created: nowStr,
+			last_chat: nowStr,
 			model: defaultModel,
 			scope: "active-note",
-			mode: "safe",
+			mode: "edit",
 		};
 
 		let bodyContent = content;
@@ -147,6 +161,9 @@ export class AIStorage {
 
 			const createdMatch = fmBlock.match(/created:\s*"?([^"\n\r]+)"?/);
 			if (createdMatch && createdMatch[1]) metadata.created = createdMatch[1].trim();
+
+			const lastChatMatch = fmBlock.match(/last_chat:\s*"?([^"\n\r]+)"?/);
+			if (lastChatMatch && lastChatMatch[1]) metadata.last_chat = lastChatMatch[1].trim();
 
 			const modelMatch = fmBlock.match(/model:\s*"?([^"\n\r]+)"?/);
 			if (modelMatch && modelMatch[1]) metadata.model = modelMatch[1].trim();
@@ -165,16 +182,19 @@ export class AIStorage {
 			if (convMatch && convMatch[1]) metadata.conversationId = convMatch[1].trim();
 		}
 
-		// Parse Turns
+		// Parse Turns (support #### You / #### Agent as well as legacy ### 👤 You / ### ✦ Agent / ### ✨ Assistant)
 		const messages: ChatMessage[] = [];
-		const turnSections = bodyContent.split(/\n(?=### (?:👤|✨|✦))/g);
+		const turnSections = bodyContent.split(/\n(?=#{2,4}\s+(?:👤|✨|✦\s*)?(?:You|Agent|Assistant))/gi);
 
 		for (let i = 0; i < turnSections.length; i++) {
 			const section = turnSections[i]?.trim();
 			if (!section) continue;
 
-			if (section.startsWith("### 👤")) {
-				const text = section.replace(/^### 👤[^\n]*\n+/g, "").trim();
+			const isUser = /^#{2,4}\s+(?:👤\s*)?You/i.test(section);
+			const isAssistant = /^#{2,4}\s+(?:✨|✦\s*)?(?:Agent|Assistant)/i.test(section);
+
+			if (isUser) {
+				const text = section.replace(/^#{2,4}[^\n]*\n+/i, "").trim();
 				if (text) {
 					messages.push({
 						id: `user-${Date.now()}-${i}`,
@@ -183,8 +203,8 @@ export class AIStorage {
 						timestamp: Date.now(),
 					});
 				}
-			} else if (section.startsWith("### ✨") || section.startsWith("### ✦")) {
-				const text = section.replace(/^### (?:✨|✦)[^\n]*\n+/g, "").trim();
+			} else if (isAssistant) {
+				const text = section.replace(/^#{2,4}[^\n]*\n+/i, "").trim();
 				if (text) {
 					messages.push({
 						id: `asst-${Date.now()}-${i}`,
@@ -213,10 +233,12 @@ export class AIStorage {
 		const baseSlug = this.slugifyTitle(title);
 		const filePath = await this.getAvailablePath(folderPath, baseSlug);
 
+		const nowStr = this.formatDateTime();
 		const fullMetadata: ChatMetadata = {
 			...metadata,
 			title,
-			created: this.formatDateTime(),
+			created: nowStr,
+			last_chat: nowStr,
 		};
 
 		const content = this.serializeChat(fullMetadata, messages);
@@ -231,7 +253,11 @@ export class AIStorage {
 		metadata: ChatMetadata,
 		messages: ChatMessage[],
 	): Promise<void> {
-		const content = this.serializeChat(metadata, messages);
+		const updatedMetadata: ChatMetadata = {
+			...metadata,
+			last_chat: this.formatDateTime(),
+		};
+		const content = this.serializeChat(updatedMetadata, messages);
 		await this.app.vault.modify(file, content);
 	}
 

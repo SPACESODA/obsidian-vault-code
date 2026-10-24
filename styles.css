@@ -2191,18 +2191,29 @@ button.vault-code-ignore-btn:hover {
 	font-weight: 600;
 	font-size: var(--font-ui-medium, 14px);
 	color: var(--text-normal);
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+}
+
+.vault-code-chat-header-title span:last-child {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .vault-code-chat-header-icon svg {
 	width: 15px;
 	height: 15px;
 	color: var(--text-accent);
+	flex-shrink: 0;
 }
 
 .vault-code-chat-header-actions {
 	display: flex;
 	align-items: center;
 	gap: 4px;
+	flex-shrink: 0;
 }
 
 .vault-code-chat-header-btn {
@@ -2222,7 +2233,8 @@ button.vault-code-ignore-btn:hover {
 	background-color: var(--background-modifier-hover);
 }
 
-.vault-code-chat-header-btn.mod-warning:hover {
+.vault-code-chat-header-btn.mod-warning:hover,
+.vault-code-chat-header-btn.vault-code-btn-danger:hover {
 	color: var(--text-error, #ef4444);
 	background-color: var(--background-modifier-hover);
 }
@@ -2423,7 +2435,7 @@ button.vault-code-ignore-btn:hover {
 
 /* Modern Input Card */
 .vault-code-chat-footer {
-	padding: 8px 12px 12px 12px;
+	padding: 8px 12px 28px 12px;
 	background-color: var(--background-primary);
 	flex-shrink: 0;
 }
@@ -2457,6 +2469,47 @@ button.vault-code-ignore-btn:hover {
 	font-size: var(--font-ui-smaller, 11px);
 	color: var(--text-muted);
 	max-width: 100%;
+}
+
+.vault-code-chat-context-chip.is-detached {
+	background: transparent;
+	border: none;
+	padding: 0;
+}
+
+.vault-code-context-attach-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	padding: 2px 7px;
+	border-radius: var(--radius-s, 4px);
+	background-color: transparent;
+	border: 1px dashed var(--background-modifier-border);
+	font-size: var(--font-ui-smaller, 11px);
+	color: var(--text-muted);
+	cursor: pointer;
+	max-width: 100%;
+	transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.vault-code-context-attach-btn:hover {
+	background-color: var(--background-modifier-hover);
+	border-color: var(--interactive-accent);
+	color: var(--text-normal);
+}
+
+.vault-code-context-attach-icon svg {
+	width: 11px;
+	height: 11px;
+	display: block;
+	color: var(--text-accent);
+}
+
+.vault-code-context-attach-text {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 220px;
 }
 
 .vault-code-context-chip-icon svg {
@@ -2502,7 +2555,10 @@ button.vault-code-ignore-btn:hover {
 	display: block;
 }
 
-.vault-code-chat-input {
+.vault-code-chat-input,
+.vault-code-chat-input:focus,
+.vault-code-chat-input:focus-visible,
+.vault-code-chat-input:active {
 	width: 100%;
 	height: var(--chat-input-height, 28px);
 	min-height: 28px;
@@ -2522,7 +2578,7 @@ button.vault-code-ignore-btn:hover {
 
 .vault-code-chat-card-bottom {
 	display: flex;
-	align-items: center;
+	align-items: flex-end;
 	justify-content: space-between;
 	padding-top: 2px;
 	gap: 6px;
@@ -2533,6 +2589,8 @@ button.vault-code-ignore-btn:hover {
 	align-items: center;
 	gap: 4px;
 	flex-wrap: wrap;
+	flex: 1;
+	min-width: 0;
 }
 
 .vault-code-chat-pill {
@@ -2594,6 +2652,7 @@ button.vault-code-ignore-btn:hover {
 	background: transparent;
 	border: none;
 	color: var(--text-muted);
+	align-self: flex-end;
 	transition: background-color 0.15s ease, color 0.15s ease;
 }
 
@@ -2603,11 +2662,17 @@ button.vault-code-ignore-btn:hover {
 }
 
 .vault-code-chat-send-btn.has-input {
-	color: var(--interactive-accent);
+	color: var(--text-on-accent, #ffffff);
+	background-color: var(--interactive-accent);
+}
+
+.vault-code-chat-send-btn.has-input:hover {
+	background-color: var(--interactive-accent-hover);
 }
 
 .vault-code-chat-send-btn.is-generating {
 	color: var(--text-error, #ef4444);
+	background-color: transparent;
 }
 
 .vault-code-chat-send-btn svg {

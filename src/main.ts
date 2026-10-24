@@ -110,6 +110,7 @@ import { GitService } from "./git-service";
 import { AIService } from "./ai-service";
 import { AIChatView, VIEW_TYPE_AI_CHAT } from "./ai-chat-view";
 import { AIStorage } from "./ai-storage";
+import { createCustomMenu } from "./custom-menu";
 
 /* ── View type constants ───────────────────────────────────── */
 
@@ -666,9 +667,9 @@ const DEFAULT_SETTINGS: VaultCodeSettings = {
 	enableAIChat: true,
 	aiModel: "gemini-3.8-flash-high",
 	aiScope: "active-note",
-	aiMode: "safe",
+	aiMode: "edit",
 	aiCustomPath: "",
-	aiChatFolder: "Agent chats",
+	aiChatFolder: "Agent-Chats",
 	aiChatAutoClean: "never",
 };
 
@@ -4925,7 +4926,7 @@ export default class VaultCodePlugin extends Plugin {
 	aiStorage!: AIStorage;
 
 	async onload() {
-		this.aiService = new AIService(this.app);
+		this.aiService = new AIService(this.app, this);
 		this.aiStorage = new AIStorage(this.app);
 
 		this.registerView(
@@ -8697,10 +8698,10 @@ class VaultCodeSettingTab extends PluginSettingTab {
 				.setDesc(t("settingsAIChatFolderDesc"))
 				.addText((text) =>
 					text
-						.setPlaceholder("Agent chats")
+						.setPlaceholder("Agent-Chats")
 						.setValue(this.plugin.settings.aiChatFolder)
 						.onChange(async (value) => {
-							this.plugin.settings.aiChatFolder = value.trim() || "Agent chats";
+							this.plugin.settings.aiChatFolder = value.trim() || "Agent-Chats";
 							await this.plugin.saveSettings();
 						}),
 				);
@@ -8728,7 +8729,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 					button
 						.setButtonText(t("settingsAICleanupNowBtn"))
 						.onClick((e) => {
-							const menu = new Menu();
+							const menu = createCustomMenu();
 							menu.addItem((item) => {
 								item.setTitle(t("aiChatCleanupOlder7d"));
 								item.setIcon("calendar");

@@ -226,6 +226,8 @@ export const zhTw: TranslationSchema = {
 	aiChatContextPin: "釘選上下文筆記",
 	aiChatContextUnpin: "取消釘選上下文筆記",
 	aiChatContextRemove: "移除筆記上下文",
+	aiChatAttachActiveNote: "附加目前筆記",
+	aiChatContextAttachedNotice: "已附加筆記「{0}」",
 	aiChatContextPinnedNotice: "已將上下文釘選至「{0}」",
 	aiChatContextUnpinnedNotice: "已取消釘選上下文",
 	aiChatContextRemovedNotice: "已移除筆記上下文（整個保管庫）",

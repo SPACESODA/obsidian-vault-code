@@ -3,7 +3,6 @@ import {
 	WorkspaceLeaf,
 	setIcon,
 	MarkdownRenderer,
-	Menu,
 	Notice,
 	TFile,
 	debounce,
@@ -12,6 +11,7 @@ import type VaultCodePlugin from "./main";
 import { t } from "./i18n";
 import type { AgyModelInfo, AgyProcessHandle } from "./ai-service";
 import { AIChatHistoryModal } from "./ai-history-modal";
+import { createCustomMenu } from "./custom-menu";
 
 export const VIEW_TYPE_AI_CHAT = "vault-code-ai-chat";
 
@@ -64,7 +64,7 @@ export class AIChatView extends ItemView {
 		this.plugin = plugin;
 		this.selectedModel = plugin.settings.aiModel || "gemini-3.8-flash-high";
 		this.chatScope = plugin.settings.aiScope || "active-note";
-		this.mode = plugin.settings.aiMode || "safe";
+		this.mode = plugin.settings.aiMode || "edit";
 	}
 
 	getViewType(): string {
@@ -154,7 +154,7 @@ export class AIChatView extends ItemView {
 
 		// 4. Delete Chat button
 		const deleteBtn = actionsEl.createEl("button", {
-			cls: "clickable-icon vault-code-chat-header-btn mod-warning",
+			cls: "clickable-icon vault-code-chat-header-btn vault-code-btn-danger",
 			attr: { "aria-label": t("aiChatDeleteChat") },
 		});
 		setIcon(deleteBtn, "trash-2");
@@ -313,56 +313,86 @@ export class AIChatView extends ItemView {
 		if (!this.contextChipEl) return;
 		this.contextChipEl.empty();
 
-		if (this.chatScope === "vault" || this.contextExcluded) {
-			this.contextChipEl.hide();
-			return;
-		}
-
 		const activeFile = (this.isContextPinned && this.pinnedContextFile)
 			? this.pinnedContextFile
 			: this.app.workspace.getActiveFile();
 
-		if (!activeFile) {
-			this.contextChipEl.hide();
-			return;
+		const hasAttachedNote = !this.contextExcluded && this.chatScope === "active-note" && activeFile;
+
+		if (hasAttachedNote && activeFile) {
+			this.contextChipEl.show();
+			this.contextChipEl.removeClass("is-detached");
+
+			const iconSpan = this.contextChipEl.createSpan({ cls: "vault-code-context-chip-icon" });
+			setIcon(iconSpan, "file-code");
+
+			const nameSpan = this.contextChipEl.createSpan({
+				cls: "vault-code-context-chip-name",
+				text: activeFile.name,
+			});
+			nameSpan.title = activeFile.path;
+
+			// Pin button
+			this.contextPinBtnEl = this.contextChipEl.createEl("button", {
+				cls: `clickable-icon vault-code-context-chip-btn vault-code-context-pin-btn${this.isContextPinned ? " is-pinned" : ""}`,
+				attr: {
+					"aria-label": this.isContextPinned
+						? t("aiChatContextUnpin")
+						: t("aiChatContextPin"),
+				},
+			});
+			setIcon(this.contextPinBtnEl, "pin");
+			this.contextPinBtnEl.addEventListener("click", (e) => {
+				e.stopPropagation();
+				this.togglePinContext(activeFile);
+			});
+
+			// Remove button
+			const removeBtn = this.contextChipEl.createEl("button", {
+				cls: "clickable-icon vault-code-context-chip-btn vault-code-context-remove-btn",
+				attr: { "aria-label": t("aiChatContextRemove") },
+			});
+			setIcon(removeBtn, "x");
+			removeBtn.addEventListener("click", (e) => {
+				e.stopPropagation();
+				this.removeContext();
+			});
+		} else {
+			// Detached state: render 1-click re-attach button if an active note exists
+			const currentOpen = this.app.workspace.getActiveFile();
+			if (currentOpen) {
+				this.contextChipEl.show();
+				this.contextChipEl.addClass("is-detached");
+
+				const attachBtn = this.contextChipEl.createEl("button", {
+					cls: "vault-code-context-attach-btn",
+					attr: { "aria-label": t("aiChatAttachActiveNote") },
+				});
+				const iconSpan = attachBtn.createSpan({ cls: "vault-code-context-attach-icon" });
+				setIcon(iconSpan, "paperclip");
+				attachBtn.createSpan({
+					cls: "vault-code-context-attach-text",
+					text: `${t("aiChatAttachActiveNote")}: ${currentOpen.name}`,
+				});
+
+				attachBtn.addEventListener("click", (e) => {
+					e.stopPropagation();
+					this.attachActiveFile(currentOpen);
+				});
+			} else {
+				this.contextChipEl.hide();
+			}
 		}
+	}
 
-		this.contextChipEl.show();
-
-		const iconSpan = this.contextChipEl.createSpan({ cls: "vault-code-context-chip-icon" });
-		setIcon(iconSpan, "file-code");
-
-		const nameSpan = this.contextChipEl.createSpan({
-			cls: "vault-code-context-chip-name",
-			text: activeFile.name,
-		});
-		nameSpan.title = activeFile.path;
-
-		// Pin button
-		this.contextPinBtnEl = this.contextChipEl.createEl("button", {
-			cls: `clickable-icon vault-code-context-chip-btn vault-code-context-pin-btn${this.isContextPinned ? " is-pinned" : ""}`,
-			attr: {
-				"aria-label": this.isContextPinned
-					? t("aiChatContextUnpin")
-					: t("aiChatContextPin"),
-			},
-		});
-		setIcon(this.contextPinBtnEl, "pin");
-		this.contextPinBtnEl.addEventListener("click", (e) => {
-			e.stopPropagation();
-			this.togglePinContext(activeFile);
-		});
-
-		// Remove button
-		const removeBtn = this.contextChipEl.createEl("button", {
-			cls: "clickable-icon vault-code-context-chip-btn vault-code-context-remove-btn",
-			attr: { "aria-label": t("aiChatContextRemove") },
-		});
-		setIcon(removeBtn, "x");
-		removeBtn.addEventListener("click", (e) => {
-			e.stopPropagation();
-			this.removeContext();
-		});
+	private attachActiveFile(file: TFile): void {
+		this.chatScope = "active-note";
+		this.contextExcluded = false;
+		this.isContextPinned = false;
+		this.pinnedContextFile = null;
+		this.updateScopeBtnLabel();
+		this.updateContextChip();
+		new Notice(t("aiChatContextAttachedNotice").replace("{0}", file.name));
 	}
 
 	private togglePinContext(file: TFile): void {
@@ -388,7 +418,7 @@ export class AIChatView extends ItemView {
 	}
 
 	private showModelMenu(event: MouseEvent): void {
-		const menu = new Menu();
+		const menu = createCustomMenu();
 
 		const modelsToUse =
 			this.availableModels.length > 0
@@ -417,7 +447,7 @@ export class AIChatView extends ItemView {
 	}
 
 	private showScopeMenu(event: MouseEvent): void {
-		const menu = new Menu();
+		const menu = createCustomMenu();
 
 		menu.addItem((item) => {
 			item.setTitle(t("aiChatScopeActiveNote"));
@@ -427,6 +457,7 @@ export class AIChatView extends ItemView {
 				this.chatScope = "active-note";
 				this.contextExcluded = false;
 				this.updateScopeBtnLabel();
+				this.updateContextChip();
 			});
 		});
 
@@ -437,6 +468,7 @@ export class AIChatView extends ItemView {
 			item.onClick(() => {
 				this.chatScope = "vault";
 				this.updateScopeBtnLabel();
+				this.updateContextChip();
 			});
 		});
 
@@ -444,7 +476,7 @@ export class AIChatView extends ItemView {
 	}
 
 	private showModeMenu(event: MouseEvent): void {
-		const menu = new Menu();
+		const menu = createCustomMenu();
 
 		menu.addItem((item) => {
 			item.setTitle(t("aiChatModeSafe"));
@@ -495,7 +527,8 @@ export class AIChatView extends ItemView {
 			this.mode = parsed.metadata.mode;
 			this.messages = parsed.messages;
 
-			this.headerTitleEl?.setText(`Agent · ${this.formatHeaderTitle(this.currentChatTitle)}`);
+			this.headerTitleEl?.setText(this.currentChatTitle);
+			this.headerTitleEl.title = this.currentChatTitle;
 			this.updateModelBtnLabel();
 			this.updateScopeBtnLabel();
 			this.updateModeBtnLabel();
@@ -540,6 +573,7 @@ export class AIChatView extends ItemView {
 		this.pinnedContextFile = null;
 		this.contextExcluded = false;
 		this.headerTitleEl?.setText(t("aiChatViewTitle"));
+		this.headerTitleEl?.removeAttribute("title");
 		this.openNoteBtnEl?.hide();
 		this.updateContextChip();
 		this.renderMessages();
@@ -732,7 +766,7 @@ export class AIChatView extends ItemView {
 		// Auto-create chat note on first turn if not yet saved
 		if (!this.currentChatFile) {
 			this.currentChatTitle = text.slice(0, 50);
-			const folder = this.plugin.settings.aiChatFolder || "Agent chats";
+			const folder = this.plugin.settings.aiChatFolder || "Agent-Chats";
 			try {
 				this.currentChatFile = await this.plugin.aiStorage.createChatNote(
 					folder,
@@ -745,7 +779,8 @@ export class AIChatView extends ItemView {
 						conversationId: this.conversationId,
 					},
 				);
-				this.headerTitleEl?.setText(`Agent · ${this.formatHeaderTitle(this.currentChatTitle)}`);
+				this.headerTitleEl?.setText(this.currentChatTitle);
+			this.headerTitleEl.title = this.currentChatTitle;
 				this.openNoteBtnEl?.show();
 			} catch (e) {
 				console.error("Vault Code: Failed to create chat note", e);

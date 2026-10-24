@@ -224,6 +224,8 @@ export const en = {
 	aiChatContextPin: "Pin context note",
 	aiChatContextUnpin: "Unpin context note",
 	aiChatContextRemove: "Remove note context",
+	aiChatAttachActiveNote: "Attach active note",
+	aiChatContextAttachedNotice: "Attached note '{0}'",
 	aiChatContextPinnedNotice: "Context pinned to '{0}'",
 	aiChatContextUnpinnedNotice: "Context unpinned",
 	aiChatContextRemovedNotice: "Note context removed (entire vault)",

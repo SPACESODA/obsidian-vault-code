@@ -1,4 +1,5 @@
 import { Platform, App, FileSystemAdapter, TFile } from "obsidian";
+import type VaultCodePlugin from "./main";
 
 export interface ChildProcessStream {
 	on(event: "data", listener: (chunk: Uint8Array | string) => void): this;
@@ -89,11 +90,13 @@ export const DEFAULT_AGY_MODELS: AgyModelInfo[] = [
 
 export class AIService {
 	private app: App;
+	private plugin?: VaultCodePlugin;
 	private cachedCp: NodeChildProcess | null = null;
 	private cachedAgyPath: string | null = null;
 
-	constructor(app: App) {
+	constructor(app: App, plugin?: VaultCodePlugin) {
 		this.app = app;
+		this.plugin = plugin;
 	}
 
 	public isAvailable(): boolean {
@@ -268,6 +271,44 @@ export class AIService {
 		});
 	}
 
+	public async getVaultIgnorePatterns(): Promise<string[]> {
+		const configDir = this.app.vault.configDir;
+		const patterns: string[] = [configDir, ".trash", ".git"].filter(Boolean);
+		try {
+			if (await this.app.vault.adapter.exists(".obsidianignore")) {
+				const content = await this.app.vault.adapter.read(".obsidianignore");
+				const lines = content
+					.split(/\r?\n/)
+					.map((l) => l.trim())
+					.filter((l) => l.length > 0 && !l.startsWith("#"));
+				for (const line of lines) {
+					if (!patterns.includes(line)) {
+						patterns.push(line);
+					}
+				}
+			}
+		} catch {
+			// ignore
+		}
+		try {
+			if (await this.app.vault.adapter.exists(".gitignore")) {
+				const content = await this.app.vault.adapter.read(".gitignore");
+				const lines = content
+					.split(/\r?\n/)
+					.map((l) => l.trim())
+					.filter((l) => l.length > 0 && !l.startsWith("#"));
+				for (const line of lines) {
+					if (!patterns.includes(line)) {
+						patterns.push(line);
+					}
+				}
+			}
+		} catch {
+			// ignore
+		}
+		return patterns;
+	}
+
 	public sendMessage(options: SendMessageOptions): AgyProcessHandle {
 		let isKilled = false;
 		let spawned: SpawnedProcess | null = null;
@@ -329,6 +370,17 @@ export class AIService {
 				}
 				contextHeader.push("--- User Question / Request ---", effectivePrompt);
 				effectivePrompt = contextHeader.join("\n");
+			} else if (options.scope === "vault") {
+				const ignorePatterns = await this.getVaultIgnorePatterns();
+				const ignoreListText = ignorePatterns.map((p) => `- ${p}`).join("\n");
+				const vaultHeader = [
+					"[Context: Entire Vault]",
+					"Strict Ignore Rule: You MUST strictly ignore and skip all files and folders matching the following patterns (do NOT read, search, index, list, or modify them under any circumstances):",
+					ignoreListText,
+					"--- User Question / Request ---",
+					effectivePrompt,
+				];
+				effectivePrompt = vaultHeader.join("\n");
 			}
 
 			const args: string[] = [
