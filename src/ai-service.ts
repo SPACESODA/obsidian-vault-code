@@ -53,9 +53,27 @@ export type ExecFileFn = (
 	) => void,
 ) => void;
 
+export type ExecFn = (
+	command: string,
+	options: {
+		cwd?: string;
+		timeout?: number;
+		maxBuffer?: number;
+		windowsHide?: boolean;
+		shell?: boolean | string;
+		env?: Record<string, string>;
+	},
+	callback: (
+		error: Error | null,
+		stdout: string | Uint8Array | null | undefined,
+		stderr: string | Uint8Array | null | undefined,
+	) => void,
+) => void;
+
 interface NodeChildProcess {
 	spawn: SpawnFn;
 	execFile: ExecFileFn;
+	exec?: ExecFn;
 }
 
 export type AIProvider =
@@ -232,15 +250,92 @@ export function supportsReasoningEffort(provider: AIProvider): boolean {
 	return provider === "codex" || provider === "aider";
 }
 
-export const ALL_AGENT_DEFS: Array<{
+export interface AgentDefinition {
 	id: AIProvider;
 	name: string;
 	binary: string;
+	fallbackBinaries?: string[];
 	icon: string;
 	versionArgs: string[];
 	defaultModel: string;
 	models: AgyModelInfo[];
-}> = [
+}
+
+export interface AgentInstallConfig {
+	installCmd?: string;
+	updateCmd?: string;
+	manualInstructionsKey?: string;
+	manualUrl?: string;
+}
+
+export const AGENT_INSTALL_CONFIGS: Record<AIProvider, AgentInstallConfig> = {
+	antigravity: {
+		installCmd: "npm install -g @google/antigravity",
+		updateCmd: "npm install -g @google/antigravity@latest",
+		manualUrl: "https://antigravity.google",
+	},
+	claude: {
+		installCmd: "npm install -g @anthropic-ai/claude-code",
+		updateCmd: "npm install -g @anthropic-ai/claude-code@latest",
+		manualUrl: "https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview",
+	},
+	codex: {
+		installCmd: "npm install -g @openai/codex",
+		updateCmd: "npm install -g @openai/codex@latest",
+		manualUrl: "https://github.com/openai/codex",
+	},
+	copilot: {
+		installCmd: "npm install -g @github/copilot-cli",
+		updateCmd: "npm install -g @github/copilot-cli@latest",
+		manualUrl: "https://docs.github.com/copilot",
+	},
+	cursor: {
+		manualInstructionsKey: "settingsAIAgentInstallManualCursor",
+		manualUrl: "https://cursor.com",
+	},
+	ollama: {
+		installCmd: Platform.isWin ? undefined : "brew install ollama",
+		updateCmd: Platform.isWin ? undefined : "brew upgrade ollama",
+		manualInstructionsKey: "settingsAIAgentInstallManualOllama",
+		manualUrl: "https://ollama.com/download",
+	},
+	opencode: {
+		installCmd: "npm install -g opencode-ai",
+		updateCmd: "npm install -g opencode-ai@latest",
+		manualUrl: "https://opencode.ai",
+	},
+	pi: {
+		installCmd: "npm install -g @mario/pi-ai",
+		updateCmd: "npm install -g @mario/pi-ai@latest",
+	},
+	kimi: {
+		installCmd: "python3 -m pip install -U kimi-cli",
+		updateCmd: "python3 -m pip install -U kimi-cli",
+	},
+	grok: {
+		installCmd: "npm install -g @xai/grok",
+		updateCmd: "npm install -g @xai/grok@latest",
+	},
+	mimo: {
+		installCmd: "python3 -m pip install -U mimo-cli",
+		updateCmd: "python3 -m pip install -U mimo-cli",
+	},
+	aider: {
+		installCmd: "python3 -m pip install -U aider-chat",
+		updateCmd: "python3 -m pip install -U aider-chat",
+		manualUrl: "https://aider.chat",
+	},
+	kiro: {
+		installCmd: "npm install -g kiro-ai",
+		updateCmd: "npm install -g kiro-ai@latest",
+	},
+	hermes: {
+		installCmd: "python3 -m pip install -U hermes-agent",
+		updateCmd: "python3 -m pip install -U hermes-agent",
+	},
+};
+
+export const ALL_AGENT_DEFS: AgentDefinition[] = [
 	{
 		id: "claude",
 		name: "Claude Code",
@@ -271,7 +366,8 @@ export const ALL_AGENT_DEFS: Array<{
 	{
 		id: "cursor",
 		name: "Cursor Agent",
-		binary: "agent",
+		binary: "cursor",
+		fallbackBinaries: ["agent", "cursor-agent"],
 		icon: "compass",
 		versionArgs: ["--version"],
 		defaultModel: "composer-2.5",
@@ -674,7 +770,16 @@ export class AIService {
 			if (def.id === "antigravity") customOverride = this.plugin?.settings.aiCustomPath;
 			if (def.id === "codex") customOverride = this.plugin?.settings.aiCodexPath;
 
-			const binPath = await this.detectBinaryPath(def.binary, customOverride);
+			const fallbacks = def.id === "cursor" ? [
+				"/Applications/Cursor.app/Contents/Resources/app/bin/cursor",
+			] : [];
+			let binPath = await this.detectBinaryPath(def.binary, customOverride, fallbacks);
+			if (!binPath && def.fallbackBinaries) {
+				for (const fb of def.fallbackBinaries) {
+					binPath = await this.detectBinaryPath(fb, undefined, fallbacks);
+					if (binPath) break;
+				}
+			}
 			let version = "";
 			let isInstalled = false;
 
@@ -714,6 +819,187 @@ export class AIService {
 	public refreshAgentsCache(): void {
 		this.detectedAgentsCache = null;
 		this.cachedPaths.clear();
+	}
+
+	public async installAgent(provider: AIProvider): Promise<{ success: boolean; message: string; command?: string }> {
+		const config = AGENT_INSTALL_CONFIGS[provider];
+		const def = ALL_AGENT_DEFS.find((d) => d.id === provider);
+		const name = def?.name || provider;
+
+		if (!config) {
+			return { success: false, message: t("settingsAIAgentInstallFailed", name) };
+		}
+
+		if (config.manualInstructionsKey && !config.installCmd) {
+			return {
+				success: false,
+				message: t(config.manualInstructionsKey as never),
+				command: config.manualUrl,
+			};
+		}
+
+		const cmd = config.installCmd;
+		if (!cmd) {
+			return {
+				success: false,
+				message: config.manualUrl ? `Please visit ${config.manualUrl} to install ${name}.` : t("settingsAIAgentInstallFailed", name),
+				command: config.manualUrl,
+			};
+		}
+
+		if (cmd.startsWith("npm ")) {
+			const npmPath = await this.detectBinaryPath("npm");
+			if (!npmPath) {
+				return {
+					success: false,
+					message: t("settingsAIAgentInstallNoNpm"),
+					command: cmd,
+				};
+			}
+		} else if (cmd.includes("pip ") || cmd.startsWith("python3 ")) {
+			const pyPath = (await this.detectBinaryPath("python3")) || (await this.detectBinaryPath("python"));
+			if (!pyPath) {
+				return {
+					success: false,
+					message: t("settingsAIAgentInstallNoPython"),
+					command: cmd,
+				};
+			}
+		} else if (cmd.startsWith("brew ")) {
+			const brewPath = await this.detectBinaryPath("brew");
+			if (!brewPath) {
+				return {
+					success: false,
+					message: t("settingsAIAgentInstallNoBrew"),
+					command: config.manualUrl || cmd,
+				};
+			}
+		}
+
+		const cp = await this.resolveChildProcess();
+		if (!cp) {
+			return { success: false, message: "Desktop child_process runtime not available", command: cmd };
+		}
+
+		const env = this.getEnv();
+		const execFn = (cp as unknown as { exec?: ExecFn }).exec;
+
+		return await new Promise<{ success: boolean; message: string; command?: string }>((resolve) => {
+			const handleDone = (err: Error | null, stdout: string | Uint8Array | null | undefined, stderr: string | Uint8Array | null | undefined) => {
+				if (!err) {
+					this.refreshAgentsCache();
+					resolve({ success: true, message: t("settingsAIAgentInstallSuccess", name) });
+				} else {
+					const errText = (stderr || stdout || err.message || "").toString();
+					let summary = errText.split("\n").filter(Boolean).slice(-2).join(" ") || err.message;
+					if (errText.includes("EACCES") || errText.includes("permission denied")) {
+						summary = "Permission denied (EACCES). Please run the command with administrator permissions in Terminal.";
+					}
+					resolve({
+						success: false,
+						message: `${t("settingsAIAgentInstallFailed", name)}: ${summary}`,
+						command: cmd,
+					});
+				}
+			};
+
+			if (typeof execFn === "function") {
+				execFn(cmd, { env, timeout: 180000 }, (err, stdout, stderr) => {
+					handleDone(err, stdout, stderr);
+				});
+			} else {
+				const parts = cmd.split(" ");
+				const bin = parts[0] || cmd;
+				cp.execFile(bin, parts.slice(1), { env, timeout: 180000, shell: true }, (err, stdout, stderr) => {
+					handleDone(err, stdout, stderr);
+				});
+			}
+		});
+	}
+
+	public async updateAgent(provider: AIProvider): Promise<{ success: boolean; message: string; command?: string }> {
+		const config = AGENT_INSTALL_CONFIGS[provider];
+		const def = ALL_AGENT_DEFS.find((d) => d.id === provider);
+		const name = def?.name || provider;
+
+		const cmd = config?.updateCmd || config?.installCmd;
+		if (!cmd) {
+			return { success: false, message: `No update command configured for ${name}.` };
+		}
+
+		const cp = await this.resolveChildProcess();
+		if (!cp) {
+			return { success: false, message: "Desktop child_process runtime not available", command: cmd };
+		}
+
+		const env = this.getEnv();
+		const execFn = (cp as unknown as { exec?: ExecFn }).exec;
+
+		return await new Promise<{ success: boolean; message: string; command?: string }>((resolve) => {
+			const handleDone = (err: Error | null, stdout: string | Uint8Array | null | undefined, stderr: string | Uint8Array | null | undefined) => {
+				if (!err) {
+					resolve({ success: true, message: `Updated ${name} successfully.` });
+				} else {
+					const errText = (stderr || stdout || err.message || "").toString();
+					const summary = errText.split("\n").filter(Boolean).slice(-2).join(" ") || err.message;
+					resolve({
+						success: false,
+						message: `${t("settingsAIUpdateFailed")}: ${summary}`,
+						command: cmd,
+					});
+				}
+			};
+
+			if (typeof execFn === "function") {
+				execFn(cmd, { env, timeout: 180000 }, (err, stdout, stderr) => {
+					handleDone(err, stdout, stderr);
+				});
+			} else {
+				const parts = cmd.split(" ");
+				const bin = parts[0] || cmd;
+				cp.execFile(bin, parts.slice(1), { env, timeout: 180000, shell: true }, (err, stdout, stderr) => {
+					handleDone(err, stdout, stderr);
+				});
+			}
+		});
+	}
+
+	public async updateAllConnectedAgents(): Promise<{
+		total: number;
+		updated: number;
+		failed: number;
+		results: Array<{ id: AIProvider; name: string; success: boolean; error?: string }>;
+	}> {
+		this.refreshAgentsCache();
+		const agents = await this.detectAllAgents();
+		const connected = agents.filter((a) => a.isInstalled);
+
+		if (connected.length === 0) {
+			return { total: 0, updated: 0, failed: 0, results: [] };
+		}
+
+		const results: Array<{ id: AIProvider; name: string; success: boolean; error?: string }> = [];
+		let updated = 0;
+		let failed = 0;
+
+		for (const agent of connected) {
+			const config = AGENT_INSTALL_CONFIGS[agent.id];
+			if (!config?.updateCmd) {
+				continue;
+			}
+
+			const res = await this.updateAgent(agent.id);
+			if (res.success) {
+				updated++;
+				results.push({ id: agent.id, name: agent.name, success: true });
+			} else {
+				failed++;
+				results.push({ id: agent.id, name: agent.name, success: false, error: res.message });
+			}
+		}
+
+		this.refreshAgentsCache();
+		return { total: connected.length, updated, failed, results };
 	}
 
 	public async getAvailableModels(customOverride?: string): Promise<AgyModelInfo[]> {
@@ -1049,15 +1335,20 @@ export class AIService {
 					args.push("--model", options.model.trim());
 				}
 			} else if (provider === "cursor") {
-				binPath = await this.detectBinaryPath("agent", undefined, [
-					"/Users/anthony/.local/bin/agent",
-					"/Users/anthony/.local/bin/cursor-agent",
+				binPath = await this.detectBinaryPath("cursor", undefined, [
+					"/Applications/Cursor.app/Contents/Resources/app/bin/cursor",
 				]);
+				if (!binPath) {
+					binPath = await this.detectBinaryPath("agent", undefined, [
+						"/Users/anthony/.local/bin/agent",
+						"/Users/anthony/.local/bin/cursor-agent",
+					]);
+				}
 				if (!binPath) {
 					binPath = await this.detectBinaryPath("cursor-agent");
 				}
 				if (!binPath) {
-					options.onError?.(new Error("Cursor Agent CLI (agent) not found on system"));
+					options.onError?.(new Error("Cursor Agent CLI not found on system"));
 					return;
 				}
 				args = [

@@ -8760,10 +8760,69 @@ class VaultCodeSettingTab extends PluginSettingTab {
 						: t("settingsAIAgentMissing");
 					textEl.createDiv({ cls: "vault-code-agent-card-version", text: versionText });
 
-					cardEl.createDiv({
-						cls: `vault-code-agent-card-badge is-${isInstalled ? "installed" : "missing"}`,
-						text: isInstalled ? t("settingsAIAgentInstalled") : t("settingsAIAgentMissing"),
-					});
+					const handleInstallAgent = async (
+						agentToInstall: { id: AIProvider; name: string },
+						btnEl: HTMLButtonElement,
+					) => {
+						if (btnEl.disabled) return;
+						btnEl.disabled = true;
+						btnEl.className = "vault-code-agent-card-badge is-installing";
+						btnEl.empty();
+						btnEl.createSpan({ cls: "vault-code-badge-spinner" });
+						btnEl.createSpan({ text: t("settingsAIAgentInstalling") });
+
+						try {
+							const res = await this.plugin.aiService.installAgent(agentToInstall.id);
+							if (res.success) {
+								new Notice(t("settingsAIAgentInstallSuccess", agentToInstall.name));
+								this.plugin.aiService.refreshAgentsCache();
+								const updatedAgents = await this.plugin.aiService.detectAllAgents();
+								renderCards(updatedAgents);
+							} else {
+								new Notice(res.message, 8000);
+								if (
+									res.command &&
+									(res.command.startsWith("npm ") ||
+										res.command.startsWith("python") ||
+										res.command.startsWith("brew "))
+								) {
+									try {
+										await navigator.clipboard.writeText(res.command);
+										new Notice(t("settingsAICommandCopied", res.command), 8000);
+									} catch {
+										// ignore
+									}
+								}
+								btnEl.disabled = false;
+								btnEl.className = "vault-code-agent-card-badge is-missing is-installable";
+								btnEl.empty();
+								btnEl.setText(t("settingsAIAgentInstallQuestion"));
+							}
+						} catch (err: unknown) {
+							const msg = err instanceof Error ? err.message : String(err);
+							new Notice(`${t("settingsAIAgentInstallFailed", agentToInstall.name)}: ${msg}`, 8000);
+							btnEl.disabled = false;
+							btnEl.className = "vault-code-agent-card-badge is-missing is-installable";
+							btnEl.empty();
+							btnEl.setText(t("settingsAIAgentInstallQuestion"));
+						}
+					};
+
+					if (isInstalled) {
+						cardEl.createDiv({
+							cls: "vault-code-agent-card-badge is-installed",
+							text: t("settingsAIAgentInstalled"),
+						});
+					} else {
+						const installBtn = cardEl.createEl("button", {
+							cls: "vault-code-agent-card-badge is-missing is-installable",
+							text: t("settingsAIAgentInstallQuestion"),
+						});
+						installBtn.addEventListener("click", (e) => {
+							e.stopPropagation();
+							void handleInstallAgent(agent, installBtn);
+						});
+					}
 
 					cardEl.addEventListener("click", () => {
 						this.plugin.settings.aiProvider = agent.id;
@@ -8788,7 +8847,46 @@ class VaultCodeSettingTab extends PluginSettingTab {
 				renderCards(agents);
 			});
 
-			const copyBtn = agentSection.createEl("button", {
+			const footerEl = agentSection.createDiv({ cls: "vault-code-agent-footer" });
+
+			const updateAllBtn = footerEl.createEl("button", {
+				cls: "vault-code-agent-footer-btn",
+			});
+			const updateIcon = updateAllBtn.createSpan({ cls: "vault-code-pill-icon" });
+			setIcon(updateIcon, "refresh-cw");
+			const updateText = updateAllBtn.createSpan({ text: t("settingsAIUpdateConnectedCLIs") });
+
+			updateAllBtn.addEventListener("click", () => {
+				if (updateAllBtn.disabled) return;
+				updateAllBtn.disabled = true;
+				updateIcon.addClass("vault-code-spin");
+				updateText.setText(t("settingsAIUpdatingCLIs"));
+
+				void (async () => {
+					try {
+						const result = await this.plugin.aiService.updateAllConnectedAgents();
+						if (result.total === 0) {
+							new Notice(t("settingsAINoConnectedCLIsToUpdate"));
+						} else if (result.failed === 0) {
+							new Notice(t("settingsAIUpdateAllSuccess", result.updated));
+						} else {
+							new Notice(t("settingsAIUpdatePartial", result.updated, result.failed));
+						}
+						this.plugin.aiService.refreshAgentsCache();
+						const fresh = await this.plugin.aiService.detectAllAgents();
+						renderCards(fresh);
+					} catch (err: unknown) {
+						const msg = err instanceof Error ? err.message : String(err);
+						new Notice(`${t("settingsAIUpdateFailed")}: ${msg}`);
+					} finally {
+						updateAllBtn.disabled = false;
+						updateIcon.removeClass("vault-code-spin");
+						updateText.setText(t("settingsAIUpdateConnectedCLIs"));
+					}
+				})();
+			});
+
+			const copyBtn = footerEl.createEl("button", {
 				cls: "mod-cta vault-code-agent-footer-btn",
 			});
 			const copyIcon = copyBtn.createSpan({ cls: "vault-code-pill-icon" });

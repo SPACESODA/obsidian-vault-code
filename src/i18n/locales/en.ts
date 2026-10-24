@@ -311,6 +311,22 @@ export const en = {
 	aiChatEffortMedium: "Medium",
 	aiChatEffortHigh: "High",
 	aiChatNoticeModelOffShelf: "Model was unavailable; switched to {0}.",
+	settingsAIAgentInstallQuestion: "Install?",
+	settingsAIAgentInstalling: "Installing...",
+	settingsAIAgentInstallSuccess: "Installed {0} successfully.",
+	settingsAIAgentInstallFailed: "Failed to install {0}",
+	settingsAIAgentInstallNoNpm: "Node.js (npm) is not installed. Please install Node.js first.",
+	settingsAIAgentInstallNoPython: "Python 3 (pip) is not installed; please install Python first.",
+	settingsAIAgentInstallNoBrew: "Homebrew is not installed; please install it or download the package directly.",
+	settingsAIAgentInstallManualCursor: "Install Cursor from the app via the command palette.",
+	settingsAIAgentInstallManualOllama: "Please download and install Ollama from ollama.com/download",
+	settingsAIUpdateConnectedCLIs: "Update connected CLIs",
+	settingsAIUpdatingCLIs: "Updating CLIs...",
+	settingsAINoConnectedCLIsToUpdate: "No connected CLIs found to update.",
+	settingsAIUpdateAllSuccess: "Updated {0} CLI providers successfully.",
+	settingsAIUpdatePartial: "Updated {0} providers ({1} failed).",
+	settingsAIUpdateFailed: "Failed to update CLIs",
+	settingsAICommandCopied: "Command copied to clipboard to run in Terminal: {0}",
 };
 
 export type TranslationSchema = typeof en;
