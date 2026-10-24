@@ -8934,7 +8934,10 @@ class VaultCodeSettingTab extends PluginSettingTab {
 					.setWarning()
 					.setTooltip(t("settingsTooltipResetAll"))
 					.onClick(async () => {
-						this.plugin.settings = Object.assign({}, DEFAULT_SETTINGS);
+						this.plugin.settings = {
+							...DEFAULT_SETTINGS,
+							aiProviderLastModel: { ...DEFAULT_SETTINGS.aiProviderLastModel },
+						};
 						setLanguage(this.plugin.settings.language);
 						await this.plugin.saveSettings();
 						this.plugin.applyShowAllFileTypes();
@@ -8946,6 +8949,34 @@ class VaultCodeSettingTab extends PluginSettingTab {
 							await this.plugin.disableHiddenFiles();
 						}
 						await this.plugin.applyGitIntegrationToggle(this.plugin.settings.enableGitIntegration);
+
+						// Re-apply editor preferences (line wrapping) across all open editor leaves
+						this.app.workspace.iterateAllLeaves((leaf) => {
+							const view = leaf.view;
+							if (view && "toggleLineWrapping" in view && typeof view.toggleLineWrapping === "function") {
+								(view as { toggleLineWrapping: (wrap: boolean) => void }).toggleLineWrapping(
+									this.plugin.settings.lineWrapping ?? true,
+								);
+							}
+						});
+
+						// Reset AI service cache, ribbon icon and views
+						this.plugin.aiService.clearCache();
+						if (this.plugin.settings.enableAIChat) {
+							this.plugin.addAIChatRibbon();
+							void this.plugin.initAIChatLeaf();
+						} else {
+							this.plugin.removeAIChatRibbon();
+							this.app.workspace.detachLeavesOfType(VIEW_TYPE_AI_CHAT);
+						}
+
+						// Reset any active chat view session to clean initial state
+						this.app.workspace.iterateAllLeaves((leaf) => {
+							if (leaf.view instanceof AIChatView) {
+								leaf.view.startNewChat();
+							}
+						});
+
 						this.display();
 						new Notice(t("noticeAllSettingsReset"));
 					}),

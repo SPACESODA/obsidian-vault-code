@@ -2048,7 +2048,7 @@ button.vault-code-ignore-btn:hover {
 }
 
 .vault-code-diff-stats-btn.is-active {
-	background-color: rgba(var(--interactive-accent-rgb, 120, 80, 255), 0.16);
+	background-color: color-mix(in srgb, var(--interactive-accent) 16%, transparent);
 	border-color: var(--interactive-accent);
 	color: var(--interactive-accent);
 	box-shadow: none;
@@ -2056,7 +2056,7 @@ button.vault-code-ignore-btn:hover {
 }
 
 .vault-code-diff-stats-btn.is-active:hover {
-	background-color: rgba(var(--interactive-accent-rgb, 120, 80, 255), 0.26);
+	background-color: color-mix(in srgb, var(--interactive-accent) 26%, transparent);
 	border-color: var(--interactive-accent);
 	color: var(--interactive-accent);
 	opacity: 1;
@@ -2099,7 +2099,7 @@ button.vault-code-ignore-btn:hover {
 }
 
 .theme-light .vault-code-diff-stats-btn.is-active {
-	background-color: rgba(var(--interactive-accent-rgb, 120, 80, 255), 0.14);
+	background-color: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
 	border-color: var(--interactive-accent);
 	color: var(--interactive-accent);
 }
