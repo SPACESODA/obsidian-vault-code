@@ -5,6 +5,7 @@ import {
 	MarkdownRenderer,
 	Notice,
 	TFile,
+	ToggleComponent,
 	debounce,
 } from "obsidian";
 import type VaultCodePlugin from "./main";
@@ -43,13 +44,16 @@ export class AIChatView extends ItemView {
 	private contextExcluded = false;
 
 	// UI Elements
+	private titleWrapperEl!: HTMLElement;
 	private headerTitleEl!: HTMLElement;
+	private isEditingTitle = false;
 	private messagesContainerEl!: HTMLElement;
 	private inputEl!: HTMLTextAreaElement;
 	private sendBtnEl!: HTMLElement;
 	private modelBtnEl!: HTMLElement;
-	private scopeBtnEl!: HTMLElement;
 	private modeBtnEl!: HTMLElement;
+	private vaultToggle: ToggleComponent | null = null;
+	private vaultToggleWrapper!: HTMLElement;
 	private contextChipEl!: HTMLElement;
 	private contextPinBtnEl!: HTMLElement;
 	private openNoteBtnEl!: HTMLElement;
@@ -120,10 +124,16 @@ export class AIChatView extends ItemView {
 	private buildHeader(container: HTMLElement): void {
 		const headerEl = container.createDiv({ cls: "vault-code-chat-header" });
 
-		const titleWrapper = headerEl.createDiv({ cls: "vault-code-chat-header-title" });
-		const iconEl = titleWrapper.createSpan({ cls: "vault-code-chat-header-icon" });
+		this.titleWrapperEl = headerEl.createDiv({ cls: "vault-code-chat-header-title" });
+		const iconEl = this.titleWrapperEl.createSpan({ cls: "vault-code-chat-header-icon" });
 		setIcon(iconEl, "sparkles");
-		this.headerTitleEl = titleWrapper.createSpan({ text: t("aiChatViewTitle") });
+		this.headerTitleEl = this.titleWrapperEl.createSpan({
+			cls: "vault-code-chat-header-title-text",
+			text: t("aiChatViewTitle"),
+		});
+		this.headerTitleEl.addEventListener("click", () => {
+			this.startEditingChatTitle();
+		});
 
 		const actionsEl = headerEl.createDiv({ cls: "vault-code-chat-header-actions" });
 
@@ -163,6 +173,59 @@ export class AIChatView extends ItemView {
 		});
 	}
 
+	private startEditingChatTitle(): void {
+		if (this.isEditingTitle || !this.currentChatFile) return;
+		this.isEditingTitle = true;
+
+		const currentTitle = this.currentChatTitle;
+		this.headerTitleEl.hide();
+
+		const input = this.titleWrapperEl.createEl("input", {
+			type: "text",
+			cls: "vault-code-chat-title-input",
+			value: currentTitle,
+		});
+
+		input.focus();
+		input.select();
+
+		let finished = false;
+		const finish = async (save: boolean) => {
+			if (finished) return;
+			finished = true;
+			this.isEditingTitle = false;
+
+			const newTitle = input.value.trim();
+			input.remove();
+			this.headerTitleEl.show();
+
+			if (save && newTitle && newTitle !== currentTitle && this.currentChatFile) {
+				this.currentChatTitle = newTitle;
+				this.headerTitleEl.setText(newTitle);
+				this.headerTitleEl.title = `${newTitle} (${t("aiChatRenameChat")})`;
+				try {
+					await this.plugin.aiStorage.updateChatTitle(this.currentChatFile, newTitle);
+				} catch (err) {
+					console.error("Vault Code: Failed to update chat title", err);
+				}
+			}
+		};
+
+		input.addEventListener("keydown", (e: KeyboardEvent) => {
+			if (e.key === "Enter") {
+				e.preventDefault();
+				void finish(true);
+			} else if (e.key === "Escape") {
+				e.preventDefault();
+				void finish(false);
+			}
+		});
+
+		input.addEventListener("blur", () => {
+			void finish(true);
+		});
+	}
+
 	private buildMessageList(container: HTMLElement): void {
 		this.messagesContainerEl = container.createDiv({
 			cls: "vault-code-chat-messages",
@@ -177,8 +240,10 @@ export class AIChatView extends ItemView {
 		// Context chip inside the card (top)
 		this.contextChipEl = inputCard.createDiv({ cls: "vault-code-chat-context-chip" });
 
-		// Textarea inside the card (middle)
-		this.inputEl = inputCard.createEl("textarea", {
+		// Message entry field row (middle) with send button at top-right corner
+		const inputRow = inputCard.createDiv({ cls: "vault-code-chat-input-row" });
+
+		this.inputEl = inputRow.createEl("textarea", {
 			cls: "vault-code-chat-input",
 			attr: {
 				placeholder: t("aiChatPlaceholder"),
@@ -201,33 +266,8 @@ export class AIChatView extends ItemView {
 			}, 50, true),
 		);
 
-		// Bottom controls inside the card
-		const cardBottom = inputCard.createDiv({ cls: "vault-code-chat-card-bottom" });
-		const pillsGroup = cardBottom.createDiv({ cls: "vault-code-chat-pills-group" });
-
-		// 1. Model Button
-		this.modelBtnEl = pillsGroup.createEl("button", {
-			cls: "vault-code-chat-pill vault-code-chat-pill-model",
-			attr: { "aria-label": t("settingsAIDefaultModelName") },
-		});
-		this.modelBtnEl.addEventListener("click", (e) => this.showModelMenu(e));
-
-		// 2. Scope Button
-		this.scopeBtnEl = pillsGroup.createEl("button", {
-			cls: "vault-code-chat-pill vault-code-chat-pill-scope",
-			attr: { "aria-label": t("settingsAIDefaultScopeName") },
-		});
-		this.scopeBtnEl.addEventListener("click", (e) => this.showScopeMenu(e));
-
-		// 3. Permission Mode Button
-		this.modeBtnEl = pillsGroup.createEl("button", {
-			cls: "vault-code-chat-pill vault-code-chat-pill-mode",
-			attr: { "aria-label": t("settingsAIDefaultModeName") },
-		});
-		this.modeBtnEl.addEventListener("click", (e) => this.showModeMenu(e));
-
-		// Send / Stop button
-		this.sendBtnEl = cardBottom.createEl("button", {
+		// Send / Stop button inside top-right corner of message entry field
+		this.sendBtnEl = inputRow.createEl("button", {
 			cls: "vault-code-chat-send-btn",
 			attr: { "aria-label": t("aiChatSend") },
 		});
@@ -240,10 +280,57 @@ export class AIChatView extends ItemView {
 			}
 		});
 
+		// Bottom controls inside the card
+		const cardBottom = inputCard.createDiv({ cls: "vault-code-chat-card-bottom" });
+
+		// Row 1: Model Selection
+		const topRow = cardBottom.createDiv({ cls: "vault-code-chat-bottom-row-top" });
+		this.modelBtnEl = topRow.createEl("button", {
+			cls: "vault-code-chat-pill vault-code-chat-pill-model",
+			attr: { "aria-label": t("settingsAIDefaultModelName") },
+		});
+		this.modelBtnEl.addEventListener("click", (e) => this.showModelMenu(e));
+
+		// Row 2: Mode pill and Entire Vault toggle
+		const bottomRow = cardBottom.createDiv({ cls: "vault-code-chat-bottom-row-bottom" });
+		this.modeBtnEl = bottomRow.createEl("button", {
+			cls: "vault-code-chat-pill vault-code-chat-pill-mode",
+			attr: { "aria-label": t("settingsAIDefaultModeName") },
+		});
+		this.modeBtnEl.addEventListener("click", (e) => this.showModeMenu(e));
+
+		// Entire Vault toggle (default off)
+		this.vaultToggleWrapper = bottomRow.createDiv({ cls: "vault-code-chat-toggle-vault" });
+		const toggleLabel = this.vaultToggleWrapper.createSpan({
+			cls: "vault-code-toggle-label",
+			text: "Entire Vault",
+		});
+		const toggle = new ToggleComponent(this.vaultToggleWrapper)
+			.setValue(this.chatScope === "vault")
+			.onChange((checked) => {
+				this.chatScope = checked ? "vault" : "active-note";
+				this.contextExcluded = false;
+				this.updateContextChip();
+			});
+		this.vaultToggle = toggle;
+		toggleLabel.addEventListener("click", () => {
+			const newVal = !toggle.getValue();
+			toggle.setValue(newVal);
+			this.chatScope = newVal ? "vault" : "active-note";
+			this.contextExcluded = false;
+			this.updateContextChip();
+		});
+
 		this.updateModelBtnLabel();
-		this.updateScopeBtnLabel();
 		this.updateModeBtnLabel();
+		this.updateVaultToggleState();
 		this.updateContextChip();
+	}
+
+	private updateVaultToggleState(): void {
+		if (this.vaultToggle !== null) {
+			this.vaultToggle.setValue(this.chatScope === "vault");
+		}
 	}
 
 	private autoResizeTextarea(): void {
@@ -265,27 +352,6 @@ export class AIChatView extends ItemView {
 
 		const chevronSpan = this.modelBtnEl.createSpan({ cls: "vault-code-pill-chevron" });
 		setIcon(chevronSpan, "chevron-down");
-	}
-
-	private updateScopeBtnLabel(): void {
-		if (!this.scopeBtnEl) return;
-		this.scopeBtnEl.empty();
-		const iconSpan = this.scopeBtnEl.createSpan({ cls: "vault-code-pill-icon" });
-
-		if (this.chatScope === "active-note") {
-			setIcon(iconSpan, "file-text");
-			this.scopeBtnEl.createSpan({ cls: "vault-code-pill-label", text: t("aiChatScopeActiveNote") });
-			this.scopeBtnEl.removeClass("is-vault-scope");
-		} else {
-			setIcon(iconSpan, "folder");
-			this.scopeBtnEl.createSpan({ cls: "vault-code-pill-label", text: t("aiChatScopeVault") });
-			this.scopeBtnEl.addClass("is-vault-scope");
-		}
-
-		const chevronSpan = this.scopeBtnEl.createSpan({ cls: "vault-code-pill-chevron" });
-		setIcon(chevronSpan, "chevron-down");
-
-		this.updateContextChip();
 	}
 
 	private updateModeBtnLabel(): void {
@@ -390,7 +456,7 @@ export class AIChatView extends ItemView {
 		this.contextExcluded = false;
 		this.isContextPinned = false;
 		this.pinnedContextFile = null;
-		this.updateScopeBtnLabel();
+		this.updateVaultToggleState();
 		this.updateContextChip();
 		new Notice(t("aiChatContextAttachedNotice").replace("{0}", file.name));
 	}
@@ -411,8 +477,6 @@ export class AIChatView extends ItemView {
 		this.contextExcluded = true;
 		this.isContextPinned = false;
 		this.pinnedContextFile = null;
-		this.chatScope = "vault";
-		this.updateScopeBtnLabel();
 		this.updateContextChip();
 		new Notice(t("aiChatContextRemovedNotice"));
 	}
@@ -442,35 +506,6 @@ export class AIChatView extends ItemView {
 				});
 			});
 		}
-
-		menu.showAtMouseEvent(event);
-	}
-
-	private showScopeMenu(event: MouseEvent): void {
-		const menu = createCustomMenu();
-
-		menu.addItem((item) => {
-			item.setTitle(t("aiChatScopeActiveNote"));
-			item.setIcon("file-text");
-			item.setChecked(this.chatScope === "active-note");
-			item.onClick(() => {
-				this.chatScope = "active-note";
-				this.contextExcluded = false;
-				this.updateScopeBtnLabel();
-				this.updateContextChip();
-			});
-		});
-
-		menu.addItem((item) => {
-			item.setTitle(t("aiChatScopeVault"));
-			item.setIcon("folder");
-			item.setChecked(this.chatScope === "vault");
-			item.onClick(() => {
-				this.chatScope = "vault";
-				this.updateScopeBtnLabel();
-				this.updateContextChip();
-			});
-		});
 
 		menu.showAtMouseEvent(event);
 	}
@@ -528,9 +563,10 @@ export class AIChatView extends ItemView {
 			this.messages = parsed.messages;
 
 			this.headerTitleEl?.setText(this.currentChatTitle);
-			this.headerTitleEl.title = this.currentChatTitle;
+			this.headerTitleEl.title = `${this.currentChatTitle} (${t("aiChatRenameChat")})`;
+			this.headerTitleEl.addClass("is-editable");
 			this.updateModelBtnLabel();
-			this.updateScopeBtnLabel();
+			this.updateVaultToggleState();
 			this.updateModeBtnLabel();
 			this.updateContextChip();
 			this.openNoteBtnEl?.show();
@@ -574,7 +610,10 @@ export class AIChatView extends ItemView {
 		this.contextExcluded = false;
 		this.headerTitleEl?.setText(t("aiChatViewTitle"));
 		this.headerTitleEl?.removeAttribute("title");
+		this.headerTitleEl?.removeClass("is-editable");
 		this.openNoteBtnEl?.hide();
+		this.chatScope = "active-note";
+		this.updateVaultToggleState();
 		this.updateContextChip();
 		this.renderMessages();
 		this.inputEl.focus();
@@ -780,7 +819,8 @@ export class AIChatView extends ItemView {
 					},
 				);
 				this.headerTitleEl?.setText(this.currentChatTitle);
-			this.headerTitleEl.title = this.currentChatTitle;
+				this.headerTitleEl.title = `${this.currentChatTitle} (${t("aiChatRenameChat")})`;
+				this.headerTitleEl.addClass("is-editable");
 				this.openNoteBtnEl?.show();
 			} catch (e) {
 				console.error("Vault Code: Failed to create chat note", e);

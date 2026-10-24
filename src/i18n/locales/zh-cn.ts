@@ -231,6 +231,7 @@ export const zhCn: TranslationSchema = {
 	aiChatContextPinnedNotice: "已将上下文固定到“{0}”",
 	aiChatContextUnpinnedNotice: "已取消固定上下文",
 	aiChatContextRemovedNotice: "已移除笔记上下文（整个仓库）",
+	aiChatRenameChat: "点击以重命名",
 	aiChatWelcomeTitle: "向 Agent 提问",
 	aiChatWelcomeSubtitle: "进行总结、查找关联、拓展想法或编写代码。",
 	aiChatCopy: "复制消息",

@@ -2202,6 +2202,31 @@ button.vault-code-ignore-btn:hover {
 	text-overflow: ellipsis;
 }
 
+.vault-code-chat-header-title-text.is-editable {
+	cursor: pointer;
+	border-radius: var(--radius-s, 4px);
+	padding: 1px 4px;
+	transition: background-color 0.15s ease;
+}
+
+.vault-code-chat-header-title-text.is-editable:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.vault-code-chat-title-input {
+	font-weight: 600;
+	font-size: var(--font-ui-medium, 14px);
+	color: var(--text-normal);
+	background: var(--background-modifier-form-field);
+	border: 1px solid var(--interactive-accent);
+	border-radius: var(--radius-s, 4px);
+	padding: 2px 6px;
+	outline: none;
+	height: 26px;
+	max-width: 240px;
+	flex: 1;
+}
+
 .vault-code-chat-header-icon svg {
 	width: 15px;
 	height: 15px;
@@ -2435,7 +2460,7 @@ button.vault-code-ignore-btn:hover {
 
 /* Modern Input Card */
 .vault-code-chat-footer {
-	padding: 8px 12px 28px 12px;
+	padding: 8px 12px 48px 12px;
 	background-color: var(--background-primary);
 	flex-shrink: 0;
 }
@@ -2446,15 +2471,15 @@ button.vault-code-ignore-btn:hover {
 	border-radius: var(--radius-l, 12px);
 	border: 1px solid var(--background-modifier-border);
 	background-color: var(--background-secondary);
-	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+	transition: border-color 0.15s ease;
 	overflow: hidden;
-	padding: 8px 10px 6px 10px;
-	gap: 4px;
+	padding: 8px 10px 8px 10px;
+	gap: 6px;
 }
 
 .vault-code-chat-input-card:focus-within {
-	border-color: var(--interactive-accent);
-	box-shadow: 0 0 0 1px var(--interactive-accent);
+	border-color: var(--background-modifier-border-hover);
+	box-shadow: none;
 }
 
 .vault-code-chat-context-chip {
@@ -2555,11 +2580,19 @@ button.vault-code-ignore-btn:hover {
 	display: block;
 }
 
+.vault-code-chat-input-row {
+	display: flex;
+	align-items: flex-start;
+	gap: 6px;
+	width: 100%;
+}
+
 .vault-code-chat-input,
 .vault-code-chat-input:focus,
 .vault-code-chat-input:focus-visible,
 .vault-code-chat-input:active {
-	width: 100%;
+	flex: 1;
+	min-width: 0;
 	height: var(--chat-input-height, 28px);
 	min-height: 28px;
 	max-height: 160px;
@@ -2576,21 +2609,66 @@ button.vault-code-ignore-btn:hover {
 	box-sizing: border-box;
 }
 
+.vault-code-chat-send-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 26px;
+	height: 26px;
+	border-radius: var(--radius-m, 6px);
+	padding: 0;
+	cursor: pointer;
+	flex-shrink: 0;
+	background: transparent;
+	border: none;
+	color: var(--text-muted);
+	margin-top: 2px;
+	transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.vault-code-chat-send-btn:hover {
+	color: var(--text-normal);
+	background-color: var(--background-modifier-hover);
+}
+
+.vault-code-chat-send-btn.has-input {
+	color: var(--text-on-accent, #ffffff);
+	background-color: var(--interactive-accent);
+}
+
+.vault-code-chat-send-btn.has-input:hover {
+	background-color: var(--interactive-accent-hover);
+}
+
+.vault-code-chat-send-btn.is-generating {
+	color: var(--text-error, #ef4444);
+	background-color: transparent;
+}
+
+.vault-code-chat-send-btn svg {
+	width: 14px;
+	height: 14px;
+	display: block;
+}
+
 .vault-code-chat-card-bottom {
 	display: flex;
-	align-items: flex-end;
-	justify-content: space-between;
-	padding-top: 2px;
+	flex-direction: column;
+	gap: 6px;
+	padding-top: 4px;
+}
+
+.vault-code-chat-bottom-row-top {
+	display: flex;
+	align-items: center;
 	gap: 6px;
 }
 
-.vault-code-chat-pills-group {
+.vault-code-chat-bottom-row-bottom {
 	display: flex;
 	align-items: center;
-	gap: 4px;
-	flex-wrap: wrap;
-	flex: 1;
-	min-width: 0;
+	justify-content: space-between;
+	gap: 8px;
 }
 
 .vault-code-chat-pill {
@@ -2635,50 +2713,32 @@ button.vault-code-ignore-btn:hover {
 	color: var(--text-warning, #f59e0b);
 }
 
-.vault-code-chat-pill-scope.is-vault-scope {
-	color: var(--text-accent);
-}
-
-.vault-code-chat-send-btn {
-	display: flex;
+.vault-code-chat-toggle-vault {
+	display: inline-flex;
 	align-items: center;
-	justify-content: center;
-	width: 26px;
-	height: 26px;
-	border-radius: var(--radius-m, 6px);
-	padding: 0;
+	gap: 6px;
 	cursor: pointer;
-	flex-shrink: 0;
-	background: transparent;
-	border: none;
+	user-select: none;
+}
+
+.vault-code-toggle-label {
+	font-size: var(--font-ui-smaller, 11px);
+	font-weight: 500;
 	color: var(--text-muted);
-	align-self: flex-end;
-	transition: background-color 0.15s ease, color 0.15s ease;
+	cursor: pointer;
+	white-space: nowrap;
+	line-height: 1;
 }
 
-.vault-code-chat-send-btn:hover {
+.vault-code-chat-toggle-vault:hover .vault-code-toggle-label {
 	color: var(--text-normal);
-	background-color: var(--background-modifier-hover);
 }
 
-.vault-code-chat-send-btn.has-input {
-	color: var(--text-on-accent, #ffffff);
-	background-color: var(--interactive-accent);
-}
-
-.vault-code-chat-send-btn.has-input:hover {
-	background-color: var(--interactive-accent-hover);
-}
-
-.vault-code-chat-send-btn.is-generating {
-	color: var(--text-error, #ef4444);
-	background-color: transparent;
-}
-
-.vault-code-chat-send-btn svg {
-	width: 14px;
-	height: 14px;
-	display: block;
+.vault-code-chat-toggle-vault .checkbox-container {
+	transform: scale(0.8);
+	transform-origin: center right;
+	margin: 0;
+	cursor: pointer;
 }
 
 /* AI Chat History Modal */

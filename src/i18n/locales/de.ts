@@ -231,6 +231,7 @@ export const de: TranslationSchema = {
 	aiChatContextPinnedNotice: "Kontext an '{0}' angeheftet",
 	aiChatContextUnpinnedNotice: "Kontext gelöst",
 	aiChatContextRemovedNotice: "Notizkontext entfernt (gesamter Vault)",
+	aiChatRenameChat: "Klicken zum Umbenennen",
 	aiChatWelcomeTitle: "Frage den Agenten",
 	aiChatWelcomeSubtitle: "Notizen zusammenfassen, Verbindungen finden oder Code generieren.",
 	aiChatCopy: "Nachricht kopieren",

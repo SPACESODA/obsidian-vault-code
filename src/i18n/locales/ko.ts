@@ -231,6 +231,7 @@ export const ko: TranslationSchema = {
 	aiChatContextPinnedNotice: "컨텍스트가 '{0}'(으)로 고정되었습니다",
 	aiChatContextUnpinnedNotice: "컨텍스트 고정이 해제되었습니다",
 	aiChatContextRemovedNotice: "노트 컨텍스트가 제거되었습니다 (보관함 전체)",
+	aiChatRenameChat: "클릭하여 이름 바꾸기",
 	aiChatWelcomeTitle: "Agent에게 질문하기",
 	aiChatWelcomeSubtitle: "노트 요약, 연관 정보 탐색, 코드 작성.",
 	aiChatCopy: "메시지 복사",

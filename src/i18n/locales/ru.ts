@@ -231,6 +231,7 @@ export const ru: TranslationSchema = {
 	aiChatContextPinnedNotice: "Контекст закреплен за '{0}'",
 	aiChatContextUnpinnedNotice: "Контекст откреплен",
 	aiChatContextRemovedNotice: "Контекст заметки удален (все хранилище)",
+	aiChatRenameChat: "Нажмите для переименования",
 	aiChatWelcomeTitle: "Спросить Agent",
 	aiChatWelcomeSubtitle: "Создавайте сводки заметок, находите связи или генерируйте код.",
 	aiChatCopy: "Копировать сообщение",

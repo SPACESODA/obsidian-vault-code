@@ -229,6 +229,7 @@ export const en = {
 	aiChatContextPinnedNotice: "Context pinned to '{0}'",
 	aiChatContextUnpinnedNotice: "Context unpinned",
 	aiChatContextRemovedNotice: "Note context removed (entire vault)",
+	aiChatRenameChat: "Click to rename",
 	aiChatWelcomeTitle: "Ask anything to Agent",
 	aiChatWelcomeSubtitle: "Summarize notes, explore connections, or generate code.",
 	aiChatCopy: "Copy message",
