@@ -519,7 +519,7 @@ export class AIChatView extends ItemView {
 			this.modeBtnEl.addClass("is-mode-safe");
 		} else {
 			setIcon(iconSpan, "zap");
-			this.modeBtnEl.createSpan({ cls: "vault-code-pill-label", text: isConnectionProvider(this.selectedProvider) ? "Review edits" : t("aiChatModeEdit") });
+			this.modeBtnEl.createSpan({ cls: "vault-code-pill-label", text: t("aiChatModeEdit") });
 			this.modeBtnEl.removeClass("is-mode-safe");
 			this.modeBtnEl.addClass("is-mode-edit");
 		}
@@ -770,7 +770,7 @@ export class AIChatView extends ItemView {
 		});
 
 		menu.addItem((item) => {
-			item.setTitle(isConnectionProvider(this.selectedProvider) ? "Review edits" : t("aiChatModeEdit"));
+			item.setTitle(t("aiChatModeEdit"));
 			item.setIcon("zap");
 			item.setChecked(this.mode === "edit");
 			item.onClick(() => {
