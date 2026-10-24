@@ -2476,6 +2476,221 @@ button.vault-code-ignore-btn:hover {
 	color: var(--text-on-accent);
 }
 
+.vault-code-chat-header-btn.mod-warning:hover {
+	color: var(--text-error, #ef4444);
+}
+
+/* AI Chat History Modal */
+.vault-code-history-modal {
+	padding: 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	max-height: 75vh;
+}
+
+.vault-code-history-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.vault-code-history-title {
+	margin: 0;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: var(--font-ui-medium, 14px);
+	font-weight: 600;
+	color: var(--text-normal);
+}
+
+.vault-code-history-title-icon {
+	display: flex;
+	align-items: center;
+	color: var(--text-accent);
+}
+
+.vault-code-history-title-icon svg {
+	width: 18px;
+	height: 18px;
+}
+
+.vault-code-history-search-wrapper {
+	position: relative;
+	display: flex;
+	align-items: center;
+	width: 100%;
+}
+
+.vault-code-history-search-icon {
+	position: absolute;
+	left: 10px;
+	display: flex;
+	align-items: center;
+	color: var(--text-muted);
+	pointer-events: none;
+}
+
+.vault-code-history-search-icon svg {
+	width: 14px;
+	height: 14px;
+}
+
+.vault-code-history-search-input {
+	width: 100%;
+	padding: 8px 12px 8px 32px;
+	border-radius: var(--radius-m, 6px);
+	background-color: var(--background-modifier-form-field);
+	border: 1px solid var(--background-modifier-border);
+	font-size: var(--font-ui-small, 13px);
+	color: var(--text-normal);
+}
+
+.vault-code-history-search-input:focus {
+	border-color: var(--interactive-accent);
+}
+
+.vault-code-history-list {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	overflow-y: auto;
+	max-height: 400px;
+	min-height: 120px;
+	padding-right: 4px;
+}
+
+.vault-code-history-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 40px 16px;
+	color: var(--text-muted);
+	gap: 8px;
+}
+
+.vault-code-history-empty-icon svg {
+	width: 32px;
+	height: 32px;
+	opacity: 0.6;
+}
+
+.vault-code-history-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 8px 12px;
+	border-radius: var(--radius-m, 6px);
+	background-color: var(--background-secondary);
+	transition: background-color 0.15s ease;
+	cursor: pointer;
+}
+
+.vault-code-history-item:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.vault-code-history-item-main {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.vault-code-history-item-title {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: var(--font-ui-small, 13px);
+	font-weight: 500;
+	color: var(--text-normal);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.vault-code-history-item-icon svg {
+	width: 14px;
+	height: 14px;
+	color: var(--text-muted);
+	flex-shrink: 0;
+}
+
+.vault-code-history-item-meta {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: var(--font-ui-smaller, 11px);
+	color: var(--text-muted);
+}
+
+.vault-code-history-item-actions {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	opacity: 0;
+	transition: opacity 0.15s ease;
+}
+
+.vault-code-history-item:hover .vault-code-history-item-actions {
+	opacity: 1;
+}
+
+.vault-code-history-action-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 4px;
+	border-radius: var(--radius-s, 4px);
+	color: var(--text-muted);
+	background: transparent;
+	border: none;
+	cursor: pointer;
+}
+
+.vault-code-history-action-btn:hover {
+	color: var(--text-normal);
+	background-color: var(--background-modifier-hover);
+}
+
+.vault-code-history-action-btn.mod-warning:hover {
+	color: var(--text-error, #ef4444);
+}
+
+.vault-code-history-action-btn svg {
+	width: 14px;
+	height: 14px;
+}
+
+.vault-code-history-footer {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding-top: 8px;
+	border-top: 1px solid var(--background-modifier-border);
+	font-size: var(--font-ui-smaller, 11px);
+	color: var(--text-muted);
+}
+
+.vault-code-history-cleanup-btn {
+	background: transparent;
+	border: none;
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller, 11px);
+	cursor: pointer;
+	padding: 4px 8px;
+	border-radius: var(--radius-s, 4px);
+}
+
+.vault-code-history-cleanup-btn:hover {
+	color: var(--text-normal);
+	background-color: var(--background-modifier-hover);
+}
+
+
 
 
 

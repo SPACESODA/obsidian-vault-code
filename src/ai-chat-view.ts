@@ -11,6 +11,7 @@ import {
 import type VaultCodePlugin from "./main";
 import { t } from "./i18n";
 import type { AgyModelInfo, AgyProcessHandle } from "./ai-service";
+import { AIChatHistoryModal } from "./ai-history-modal";
 
 export const VIEW_TYPE_AI_CHAT = "vault-code-ai-chat";
 
@@ -32,6 +33,10 @@ export class AIChatView extends ItemView {
 	private activeProcessHandle: AgyProcessHandle | null = null;
 	private availableModels: AgyModelInfo[] = [];
 
+	// Active chat file in vault
+	private currentChatFile: TFile | null = null;
+	private currentChatTitle = "Untitled Chat";
+
 	// UI Elements
 	private messagesContainerEl!: HTMLElement;
 	private inputEl!: HTMLTextAreaElement;
@@ -40,6 +45,7 @@ export class AIChatView extends ItemView {
 	private scopeBtnEl!: HTMLElement;
 	private modeBtnEl!: HTMLElement;
 	private contextBannerEl!: HTMLElement;
+	private openNoteBtnEl!: HTMLElement;
 
 	// Streaming render queue
 	private currentStreamingMsgEl: HTMLElement | null = null;
@@ -113,6 +119,24 @@ export class AIChatView extends ItemView {
 
 		const actionsEl = headerEl.createDiv({ cls: "vault-code-chat-header-actions" });
 
+		// 1. Open as Note button (hidden until note is created)
+		this.openNoteBtnEl = actionsEl.createEl("button", {
+			cls: "clickable-icon vault-code-chat-header-btn",
+			attr: { "aria-label": t("aiChatOpenAsNote") },
+		});
+		setIcon(this.openNoteBtnEl, "file-text");
+		this.openNoteBtnEl.addEventListener("click", () => this.openActiveChatAsNote());
+		this.openNoteBtnEl.hide();
+
+		// 2. History button
+		const historyBtn = actionsEl.createEl("button", {
+			cls: "clickable-icon vault-code-chat-header-btn",
+			attr: { "aria-label": t("aiChatHistoryTitle") },
+		});
+		setIcon(historyBtn, "history");
+		historyBtn.addEventListener("click", () => this.openHistoryModal());
+
+		// 3. New Chat button
 		const newChatBtn = actionsEl.createEl("button", {
 			cls: "clickable-icon vault-code-chat-header-btn",
 			attr: { "aria-label": t("aiChatNewChat") },
@@ -120,12 +144,15 @@ export class AIChatView extends ItemView {
 		setIcon(newChatBtn, "plus");
 		newChatBtn.addEventListener("click", () => this.startNewChat());
 
-		const clearBtn = actionsEl.createEl("button", {
-			cls: "clickable-icon vault-code-chat-header-btn",
-			attr: { "aria-label": t("aiChatClear") },
+		// 4. Delete Chat button
+		const deleteBtn = actionsEl.createEl("button", {
+			cls: "clickable-icon vault-code-chat-header-btn mod-warning",
+			attr: { "aria-label": t("aiChatDeleteChat") },
 		});
-		setIcon(clearBtn, "trash-2");
-		clearBtn.addEventListener("click", () => this.clearChat());
+		setIcon(deleteBtn, "trash-2");
+		deleteBtn.addEventListener("click", () => {
+			void this.confirmDeleteActiveChat();
+		});
 	}
 
 	private buildMessageList(container: HTMLElement): void {
@@ -302,7 +329,7 @@ export class AIChatView extends ItemView {
 						{ id: "gemini-3.8-flash-low", displayName: "Gemini 3.8 Flash (Low)" },
 						{ id: "claude-sonnet-4-6", displayName: "Claude Sonnet 4.6 (Thinking)" },
 						{ id: "claude-opus-4-6-thinking", displayName: "Claude Opus 4.6 (Thinking)" },
-						{ id: "gpt-oss-120b-medium", displayName: "GPT-OSS 120B (Medium)" },
+						{ id: "gpt-oss-120b-medium", displayName: "GPT-OSS 120b (medium)" },
 					];
 
 		for (const model of modelsToUse) {
@@ -371,10 +398,65 @@ export class AIChatView extends ItemView {
 		menu.showAtMouseEvent(event);
 	}
 
+	private openActiveChatAsNote(): void {
+		if (this.currentChatFile) {
+			const leaf = this.app.workspace.getLeaf(false);
+			void leaf.openFile(this.currentChatFile);
+		}
+	}
+
+	private openHistoryModal(): void {
+		new AIChatHistoryModal(this.app, this.plugin, (file) => {
+			void this.loadChatFromFile(file);
+		}).open();
+	}
+
+	public async loadChatFromFile(file: TFile): Promise<void> {
+		this.stopGenerating();
+		try {
+			const content = await this.app.vault.read(file);
+			const parsed = this.plugin.aiStorage.parseChat(content, this.selectedModel);
+			this.currentChatFile = file;
+			this.currentChatTitle = parsed.metadata.title;
+			this.conversationId = parsed.metadata.conversationId;
+			this.selectedModel = parsed.metadata.model;
+			this.chatScope = parsed.metadata.scope;
+			this.mode = parsed.metadata.mode;
+			this.messages = parsed.messages;
+
+			this.updateModelBtnLabel();
+			this.updateScopeBtnLabel();
+			this.updateModeBtnLabel();
+			this.openNoteBtnEl?.show();
+
+			this.renderMessages();
+			this.inputEl.focus();
+		} catch (e) {
+			console.error("Vault Code: Failed to load chat note", e);
+			new Notice(t("aiChatNoticeDeleteFailed"));
+		}
+	}
+
+	private async confirmDeleteActiveChat(): Promise<void> {
+		if (this.currentChatFile) {
+			const file = this.currentChatFile;
+			try {
+				await this.plugin.aiStorage.deleteChatNote(file);
+				new Notice(t("aiChatNoticeDeleted").replace("{0}", file.basename));
+			} catch (e) {
+				console.error("Vault Code: Failed to delete active chat note", e);
+			}
+		}
+		this.startNewChat();
+	}
+
 	public startNewChat(): void {
 		this.stopGenerating();
+		this.currentChatFile = null;
+		this.currentChatTitle = "Untitled Chat";
 		this.conversationId = undefined;
 		this.messages = [];
+		this.openNoteBtnEl?.hide();
 		this.renderMessages();
 		this.inputEl.focus();
 	}
@@ -545,6 +627,28 @@ export class AIChatView extends ItemView {
 			}
 		}
 
+		// Auto-create chat note on first turn if not yet saved
+		if (!this.currentChatFile) {
+			this.currentChatTitle = text.slice(0, 50);
+			const folder = this.plugin.settings.aiChatFolder || "AI Chats";
+			try {
+				this.currentChatFile = await this.plugin.aiStorage.createChatNote(
+					folder,
+					this.currentChatTitle,
+					this.messages,
+					{
+						model: this.selectedModel,
+						scope: this.chatScope,
+						mode: this.mode,
+						conversationId: this.conversationId,
+					},
+				);
+				this.openNoteBtnEl?.show();
+			} catch (e) {
+				console.error("Vault Code: Failed to create chat note", e);
+			}
+		}
+
 		this.activeProcessHandle = this.plugin.aiService.sendMessage({
 			prompt: text,
 			model: this.selectedModel,
@@ -576,6 +680,22 @@ export class AIChatView extends ItemView {
 					);
 				}
 				this.finishGenerating();
+
+				// Persist updated transcript to the Markdown chat note
+				if (this.currentChatFile) {
+					void this.plugin.aiStorage.updateChatNote(
+						this.currentChatFile,
+						{
+							title: this.currentChatTitle,
+							created: this.plugin.aiStorage.formatDateTime(),
+							model: this.selectedModel,
+							scope: this.chatScope,
+							mode: this.mode,
+							conversationId: this.conversationId,
+						},
+						this.messages,
+					);
+				}
 			},
 			onError: (err: Error) => {
 				assistantMsg.content = `> ⚠️ **Error**: ${err.message}`;
@@ -590,6 +710,21 @@ export class AIChatView extends ItemView {
 					);
 				}
 				this.finishGenerating();
+
+				if (this.currentChatFile) {
+					void this.plugin.aiStorage.updateChatNote(
+						this.currentChatFile,
+						{
+							title: this.currentChatTitle,
+							created: this.plugin.aiStorage.formatDateTime(),
+							model: this.selectedModel,
+							scope: this.chatScope,
+							mode: this.mode,
+							conversationId: this.conversationId,
+						},
+						this.messages,
+					);
+				}
 			},
 		});
 	}

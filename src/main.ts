@@ -109,6 +109,7 @@ import { t, setLanguage, SUPPORTED_LANGUAGES } from "./i18n";
 import { GitService } from "./git-service";
 import { AIService } from "./ai-service";
 import { AIChatView, VIEW_TYPE_AI_CHAT } from "./ai-chat-view";
+import { AIStorage } from "./ai-storage";
 
 /* ── View type constants ───────────────────────────────────── */
 
@@ -625,6 +626,8 @@ interface VaultCodeSettings {
 	aiScope: "active-note" | "vault";
 	aiMode: "safe" | "edit";
 	aiCustomPath: string;
+	aiChatFolder: string;
+	aiChatAutoClean: "never" | "7d" | "30d" | "90d";
 }
 
 const DEFAULT_EXTENSIONS =
@@ -665,6 +668,8 @@ const DEFAULT_SETTINGS: VaultCodeSettings = {
 	aiScope: "active-note",
 	aiMode: "safe",
 	aiCustomPath: "",
+	aiChatFolder: "AI Chats",
+	aiChatAutoClean: "never",
 };
 
 interface IgnoreRule {
@@ -4917,9 +4922,11 @@ export default class VaultCodePlugin extends Plugin {
 	cachedGitIgnoreRules: IgnoreRule[] = [];
 	settingsTab: VaultCodeSettingTab | null = null;
 	aiService!: AIService;
+	aiStorage!: AIStorage;
 
 	async onload() {
 		this.aiService = new AIService(this.app);
+		this.aiStorage = new AIStorage(this.app);
 
 		this.registerView(
 			VIEW_TYPE_DOTFILE,
@@ -5018,6 +5025,17 @@ export default class VaultCodePlugin extends Plugin {
 			// Seamlessly restore code editor leaves on launch or after plugin update/reload
 			await this.reloadCodeEditorLeaves();
 			this.updateAllLeafHeaderActions();
+
+			if (
+				Platform.isDesktop &&
+				this.settings.enableAIChat &&
+				this.settings.aiChatAutoClean !== "never"
+			) {
+				void this.aiStorage.runAutoCleanup(
+					this.settings.aiChatFolder,
+					this.settings.aiChatAutoClean,
+				);
+			}
 		});
 
 		if (this.app.workspace.layoutReady) {
@@ -8671,6 +8689,73 @@ class VaultCodeSettingTab extends PluginSettingTab {
 						.onChange(async (value) => {
 							this.plugin.settings.aiCustomPath = value.trim();
 							await this.plugin.saveSettings();
+						}),
+				);
+
+			new Setting(containerEl)
+				.setName(t("settingsAIChatFolderName"))
+				.setDesc(t("settingsAIChatFolderDesc"))
+				.addText((text) =>
+					text
+						.setPlaceholder("AI chats")
+						.setValue(this.plugin.settings.aiChatFolder)
+						.onChange(async (value) => {
+							this.plugin.settings.aiChatFolder = value.trim() || "AI Chats";
+							await this.plugin.saveSettings();
+						}),
+				);
+
+			new Setting(containerEl)
+				.setName(t("settingsAIAutoCleanName"))
+				.setDesc(t("settingsAIAutoCleanDesc"))
+				.addDropdown((dropdown) => {
+					dropdown
+						.addOption("never", t("settingsAIAutoCleanNever"))
+						.addOption("7d", t("settingsAIAutoClean7d"))
+						.addOption("30d", t("settingsAIAutoClean30d"))
+						.addOption("90d", t("settingsAIAutoClean90d"))
+						.setValue(this.plugin.settings.aiChatAutoClean)
+						.onChange(async (value: string) => {
+							this.plugin.settings.aiChatAutoClean = value as "never" | "7d" | "30d" | "90d";
+							await this.plugin.saveSettings();
+						});
+				});
+
+			new Setting(containerEl)
+				.setName(t("settingsAICleanupNowName"))
+				.setDesc(t("settingsAICleanupNowDesc"))
+				.addButton((button) =>
+					button
+						.setButtonText(t("settingsAICleanupNowBtn"))
+						.onClick((e) => {
+							const menu = new Menu();
+							menu.addItem((item) => {
+								item.setTitle(t("aiChatCleanupOlder7d"));
+								item.setIcon("calendar");
+								item.onClick(async () => {
+									const count = await this.plugin.aiStorage.cleanupOldChats(this.plugin.settings.aiChatFolder, "7d");
+									new Notice(t("aiChatNoticeCleanedCount").replace("{0}", String(count)));
+								});
+							});
+							menu.addItem((item) => {
+								item.setTitle(t("aiChatCleanupOlder30d"));
+								item.setIcon("calendar");
+								item.onClick(async () => {
+									const count = await this.plugin.aiStorage.cleanupOldChats(this.plugin.settings.aiChatFolder, "30d");
+									new Notice(t("aiChatNoticeCleanedCount").replace("{0}", String(count)));
+								});
+							});
+							menu.addSeparator();
+							menu.addItem((item) => {
+								item.setTitle(t("aiChatCleanupAll"));
+								item.setIcon("trash-2");
+								item.setWarning(true);
+								item.onClick(async () => {
+									const count = await this.plugin.aiStorage.cleanupOldChats(this.plugin.settings.aiChatFolder, "all");
+									new Notice(t("aiChatNoticeCleanedCount").replace("{0}", String(count)));
+								});
+							});
+							menu.showAtMouseEvent(e);
 						}),
 				);
 		}
