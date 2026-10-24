@@ -51,7 +51,7 @@ export type ExecFileFn = (
 		stdout: string | Uint8Array | null | undefined,
 		stderr: string | Uint8Array | null | undefined,
 	) => void,
-) => void;
+) => SpawnedProcess | void;
 
 export type ExecFn = (
 	command: string,
@@ -87,10 +87,7 @@ export type AIProvider =
 	| "pi"
 	| "kimi"
 	| "grok"
-	| "mimo"
-	| "aider"
-	| "kiro"
-	| "hermes";
+	| "aider";
 
 export type ReasoningEffort = "auto" | "low" | "medium" | "high";
 
@@ -135,115 +132,32 @@ export interface DetectedAgentInfo {
 	path: string | null;
 	defaultModel: string;
 	models: AgyModelInfo[];
+	connectionStatus?: string;
+	diagnostic?: string;
 }
-
-export const DEFAULT_AGY_MODELS: AgyModelInfo[] = [
-	{ id: "gemini-3.8-flash-high", displayName: "Gemini 3.8 Flash (High)" },
-	{ id: "gemini-3.8-flash-medium", displayName: "Gemini 3.8 Flash (Medium)" },
-	{ id: "gemini-3.8-flash-low", displayName: "Gemini 3.8 Flash (Low)" },
-	{ id: "claude-sonnet-4-6", displayName: "Claude Sonnet 4.6 (Thinking)" },
-	{ id: "claude-opus-4-6-thinking", displayName: "Claude Opus 4.6 (Thinking)" },
-	{ id: "gpt-oss-120b-medium", displayName: "GPT-OSS 120B (Medium)" },
-];
-
-export const DEFAULT_CODEX_MODELS: AgyModelInfo[] = [
-	{ id: "gpt-6.1-sol", displayName: "GPT-6.1-Sol" },
-	{ id: "gpt-6-astra", displayName: "GPT-6-Astra" },
-	{ id: "gpt-6-sol", displayName: "GPT-6-Sol" },
-	{ id: "gpt-6-luna", displayName: "GPT-6-Luna" },
-	{ id: "gpt-5.6-sol", displayName: "GPT-5.6-Sol" },
-	{ id: "gpt-5.6-terra", displayName: "GPT-5.6-Terra" },
-	{ id: "gpt-5.6-luna", displayName: "GPT-5.6-Luna" },
-];
-
-export const DEFAULT_CLAUDE_MODELS: AgyModelInfo[] = [
-	{ id: "claude-sonnet-4-6", displayName: "Claude Sonnet 4.6 (Thinking)" },
-	{ id: "claude-opus-4-6-thinking", displayName: "Claude Opus 4.6 (Thinking)" },
-	{ id: "claude-haiku-4-5", displayName: "Claude Haiku 4.5" },
-	{ id: "default", displayName: "Agent default" },
-];
-
-export const DEFAULT_COPILOT_MODELS: AgyModelInfo[] = [
-	{ id: "claude-3.7-sonnet", displayName: "Claude 3.7 Sonnet" },
-	{ id: "gpt-4o", displayName: "GPT-4o" },
-	{ id: "o3-mini", displayName: "o3-mini" },
-	{ id: "default", displayName: "Agent default" },
-];
-
-export const DEFAULT_CURSOR_MODELS: AgyModelInfo[] = [
-	{ id: "claude-sonnet-5-thinking-high", displayName: "Claude Sonnet 5 Thinking" },
-	{ id: "composer-2.5", displayName: "Composer 2.5" },
-	{ id: "gpt-5.4-high", displayName: "GPT-5.4 High" },
-	{ id: "gemini-3.7-flash-high", displayName: "Gemini 3.7 Flash" },
-	{ id: "cursor-fast", displayName: "Cursor Fast" },
-];
-
-export const DEFAULT_OLLAMA_MODELS: AgyModelInfo[] = [
-	{ id: "llama3.3", displayName: "Llama 3.3" },
-	{ id: "qwen2.5-coder", displayName: "Qwen 2.5 Coder" },
-	{ id: "deepseek-r1", displayName: "DeepSeek R1" },
-	{ id: "mistral", displayName: "Mistral" },
-	{ id: "default", displayName: "Agent default" },
-];
-
-export const DEFAULT_KIMI_MODELS: AgyModelInfo[] = [
-	{ id: "kimi-k3", displayName: "Kimi K3" },
-	{ id: "kimi-k2.7-code", displayName: "Kimi K2.7 Code" },
-	{ id: "default", displayName: "Agent default" },
-];
-
-export const DEFAULT_GROK_MODELS: AgyModelInfo[] = [
-	{ id: "grok-4.7", displayName: "Grok 4.7" },
-	{ id: "grok-4.6", displayName: "Grok 4.6" },
-	{ id: "default", displayName: "Agent default" },
-];
-
-export const DEFAULT_MIMO_MODELS: AgyModelInfo[] = [
-	{ id: "mimo-v2-flash", displayName: "MiMo V2 Flash" },
-	{ id: "mimo-v2.5", displayName: "MiMo V2.5" },
-	{ id: "default", displayName: "Agent default" },
-];
-
-export const DEFAULT_AIDER_MODELS: AgyModelInfo[] = [
-	{ id: "claude-3-7-sonnet", displayName: "Claude 3.7 Sonnet" },
-	{ id: "gpt-4o", displayName: "GPT-4o" },
-	{ id: "deepseek-r1", displayName: "DeepSeek R1" },
-	{ id: "default", displayName: "Agent default" },
-];
 
 export const DEFAULT_GENERIC_MODELS: AgyModelInfo[] = [
 	{ id: "default", displayName: "Agent default" },
 ];
 
-export function resolveOptimalModel(provider: AIProvider): string {
-	switch (provider) {
-		case "antigravity":
-			return "gemini-3.8-flash-medium";
-		case "claude":
-			return "claude-sonnet-4-6";
-		case "codex":
-			return "gpt-6.1-sol";
-		case "copilot":
-			return "claude-3.7-sonnet";
-		case "cursor":
-			return "composer-2.5";
-		case "ollama":
-			return "llama3.3";
-		case "kimi":
-			return "kimi-k3";
-		case "grok":
-			return "grok-4.7";
-		case "mimo":
-			return "mimo-v2-flash";
-		case "aider":
-			return "claude-3-7-sonnet";
-		case "opencode":
-		case "pi":
-		case "kiro":
-		case "hermes":
-		default:
-			return "default";
-	}
+export const DEFAULT_AGY_MODELS = DEFAULT_GENERIC_MODELS;
+export const DEFAULT_CODEX_MODELS = DEFAULT_GENERIC_MODELS;
+export const DEFAULT_CLAUDE_MODELS: AgyModelInfo[] = [
+	...DEFAULT_GENERIC_MODELS,
+	{ id: "sonnet", displayName: "Sonnet" },
+	{ id: "opus", displayName: "Opus" },
+	{ id: "haiku", displayName: "Haiku" },
+];
+export const DEFAULT_COPILOT_MODELS = DEFAULT_GENERIC_MODELS;
+export const DEFAULT_CURSOR_MODELS = DEFAULT_GENERIC_MODELS;
+export const DEFAULT_OLLAMA_MODELS: AgyModelInfo[] = [];
+export const DEFAULT_KIMI_MODELS = DEFAULT_GENERIC_MODELS;
+export const DEFAULT_GROK_MODELS = DEFAULT_GENERIC_MODELS;
+export const DEFAULT_AIDER_MODELS = DEFAULT_GENERIC_MODELS;
+
+export function resolveOptimalModel(_provider: AIProvider): string {
+	// Let the authenticated CLI choose its configured model instead of guessing an ID.
+	return "default";
 }
 
 export function supportsReasoningEffort(provider: AIProvider): boolean {
@@ -268,70 +182,62 @@ export interface AgentInstallConfig {
 	manualUrl?: string;
 }
 
+// Installation sources are vendor-owned. Do not substitute similarly named registry packages.
 export const AGENT_INSTALL_CONFIGS: Record<AIProvider, AgentInstallConfig> = {
 	antigravity: {
-		installCmd: "npm install -g @google/antigravity",
-		updateCmd: "npm install -g @google/antigravity@latest",
-		manualUrl: "https://antigravity.google",
+		installCmd: Platform.isWin ? undefined : "curl -fsSL https://antigravity.google/cli/install.sh | bash",
+		updateCmd: "agy update",
+		manualUrl: "https://antigravity.google/docs/cli/install/",
 	},
 	claude: {
-		installCmd: "npm install -g @anthropic-ai/claude-code",
-		updateCmd: "npm install -g @anthropic-ai/claude-code@latest",
-		manualUrl: "https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview",
+		installCmd: Platform.isWin ? undefined : "curl -fsSL https://claude.ai/install.sh | bash",
+		updateCmd: "claude update",
+		manualUrl: "https://code.claude.com/docs/en/setup",
 	},
 	codex: {
-		installCmd: "npm install -g @openai/codex",
+		installCmd: "npm install -g @openai/codex@latest",
 		updateCmd: "npm install -g @openai/codex@latest",
 		manualUrl: "https://github.com/openai/codex",
 	},
 	copilot: {
-		installCmd: "npm install -g @github/copilot-cli",
-		updateCmd: "npm install -g @github/copilot-cli@latest",
-		manualUrl: "https://docs.github.com/copilot",
+		installCmd: "npm install -g @github/copilot@latest",
+		updateCmd: "copilot update",
+		manualUrl: "https://docs.github.com/en/copilot/how-tos/set-up/install-copilot-cli",
 	},
 	cursor: {
-		manualInstructionsKey: "settingsAIAgentInstallManualCursor",
-		manualUrl: "https://cursor.com",
+		installCmd: Platform.isWin ? undefined : "curl -fsSL https://cursor.com/install | bash",
+		updateCmd: "cursor-agent update",
+		manualUrl: "https://cursor.com/docs/cli/installation",
 	},
 	ollama: {
-		installCmd: Platform.isWin ? undefined : "brew install ollama",
-		updateCmd: Platform.isWin ? undefined : "brew upgrade ollama",
-		manualInstructionsKey: "settingsAIAgentInstallManualOllama",
+		// The macOS app manages its own updates; only upgrade Homebrew-owned binaries.
+		installCmd: Platform.isMacOS ? "brew install ollama" : undefined,
 		manualUrl: "https://ollama.com/download",
 	},
 	opencode: {
-		installCmd: "npm install -g opencode-ai",
-		updateCmd: "npm install -g opencode-ai@latest",
-		manualUrl: "https://opencode.ai",
+		installCmd: "npm install -g opencode-ai@latest",
+		updateCmd: "opencode upgrade",
+		manualUrl: "https://opencode.ai/docs/cli/",
 	},
 	pi: {
-		installCmd: "npm install -g @mario/pi-ai",
-		updateCmd: "npm install -g @mario/pi-ai@latest",
+		installCmd: "npm install -g --ignore-scripts @earendil-works/pi-coding-agent@latest",
+		updateCmd: "pi update self",
+		manualUrl: "https://github.com/earendil-works/pi",
 	},
 	kimi: {
-		installCmd: "python3 -m pip install -U kimi-cli",
-		updateCmd: "python3 -m pip install -U kimi-cli",
+		installCmd: Platform.isWin ? undefined : "curl -fsSL https://code.kimi.com/kimi-code/install.sh | bash",
+		updateCmd: Platform.isWin ? undefined : "curl -fsSL https://code.kimi.com/kimi-code/install.sh | bash",
+		manualUrl: "https://github.com/MoonshotAI/kimi-code",
 	},
 	grok: {
-		installCmd: "npm install -g @xai/grok",
-		updateCmd: "npm install -g @xai/grok@latest",
-	},
-	mimo: {
-		installCmd: "python3 -m pip install -U mimo-cli",
-		updateCmd: "python3 -m pip install -U mimo-cli",
+		installCmd: Platform.isWin ? undefined : "curl -fsSL https://x.ai/cli/install.sh | bash",
+		updateCmd: "grok update",
+		manualUrl: "https://docs.x.ai/build/overview",
 	},
 	aider: {
-		installCmd: "python3 -m pip install -U aider-chat",
-		updateCmd: "python3 -m pip install -U aider-chat",
-		manualUrl: "https://aider.chat",
-	},
-	kiro: {
-		installCmd: "npm install -g kiro-ai",
-		updateCmd: "npm install -g kiro-ai@latest",
-	},
-	hermes: {
-		installCmd: "python3 -m pip install -U hermes-agent",
-		updateCmd: "python3 -m pip install -U hermes-agent",
+		installCmd: Platform.isWin ? undefined : "curl -LsSf https://aider.chat/install.sh | sh",
+		updateCmd: "uv tool upgrade aider-chat",
+		manualUrl: "https://aider.chat/docs/install.html",
 	},
 };
 
@@ -342,16 +248,16 @@ export const ALL_AGENT_DEFS: AgentDefinition[] = [
 		binary: "claude",
 		icon: "sun",
 		versionArgs: ["--version"],
-		defaultModel: "claude-sonnet-4-6",
+		defaultModel: "default",
 		models: DEFAULT_CLAUDE_MODELS,
 	},
 	{
 		id: "codex",
 		name: "Codex",
 		binary: "codex",
-		icon: "zap",
+		icon: "code-2",
 		versionArgs: ["--version"],
-		defaultModel: "gpt-6.1-sol",
+		defaultModel: "default",
 		models: DEFAULT_CODEX_MODELS,
 	},
 	{
@@ -360,17 +266,17 @@ export const ALL_AGENT_DEFS: AgentDefinition[] = [
 		binary: "copilot",
 		icon: "bot",
 		versionArgs: ["version"],
-		defaultModel: "claude-3.7-sonnet",
+		defaultModel: "default",
 		models: DEFAULT_COPILOT_MODELS,
 	},
 	{
 		id: "cursor",
 		name: "Cursor Agent",
-		binary: "cursor",
-		fallbackBinaries: ["agent", "cursor-agent"],
+		binary: "cursor-agent",
+		fallbackBinaries: ["agent"],
 		icon: "compass",
 		versionArgs: ["--version"],
-		defaultModel: "composer-2.5",
+		defaultModel: "default",
 		models: DEFAULT_CURSOR_MODELS,
 	},
 	{
@@ -379,7 +285,7 @@ export const ALL_AGENT_DEFS: AgentDefinition[] = [
 		binary: "ollama",
 		icon: "server",
 		versionArgs: ["--version"],
-		defaultModel: "llama3.3",
+		defaultModel: "default",
 		models: DEFAULT_OLLAMA_MODELS,
 	},
 	{
@@ -406,7 +312,7 @@ export const ALL_AGENT_DEFS: AgentDefinition[] = [
 		binary: "agy",
 		icon: "sparkles",
 		versionArgs: ["--version"],
-		defaultModel: "gemini-3.8-flash-medium",
+		defaultModel: "default",
 		models: DEFAULT_AGY_MODELS,
 	},
 	{
@@ -415,7 +321,7 @@ export const ALL_AGENT_DEFS: AgentDefinition[] = [
 		binary: "kimi",
 		icon: "moon",
 		versionArgs: ["--version"],
-		defaultModel: "kimi-k3",
+		defaultModel: "default",
 		models: DEFAULT_KIMI_MODELS,
 	},
 	{
@@ -424,17 +330,8 @@ export const ALL_AGENT_DEFS: AgentDefinition[] = [
 		binary: "grok",
 		icon: "zap",
 		versionArgs: ["--version"],
-		defaultModel: "grok-4.7",
+		defaultModel: "default",
 		models: DEFAULT_GROK_MODELS,
-	},
-	{
-		id: "mimo",
-		name: "Xiaomi MiMo",
-		binary: "mimo",
-		icon: "zap",
-		versionArgs: ["--version"],
-		defaultModel: "mimo-v2-flash",
-		models: DEFAULT_MIMO_MODELS,
 	},
 	{
 		id: "aider",
@@ -442,26 +339,8 @@ export const ALL_AGENT_DEFS: AgentDefinition[] = [
 		binary: "aider",
 		icon: "terminal",
 		versionArgs: ["--version"],
-		defaultModel: "claude-3-7-sonnet",
+		defaultModel: "default",
 		models: DEFAULT_AIDER_MODELS,
-	},
-	{
-		id: "kiro",
-		name: "Kiro",
-		binary: "kiro",
-		icon: "ghost",
-		versionArgs: ["--version"],
-		defaultModel: "default",
-		models: DEFAULT_GENERIC_MODELS,
-	},
-	{
-		id: "hermes",
-		name: "Hermes Agent",
-		binary: "hermes",
-		icon: "terminal",
-		versionArgs: ["--version"],
-		defaultModel: "default",
-		models: DEFAULT_GENERIC_MODELS,
 	},
 ];
 
@@ -487,14 +366,8 @@ export function getAgentDisplayName(provider: AIProvider): string {
 			return t("aiChatProviderKimi");
 		case "grok":
 			return t("aiChatProviderGrok");
-		case "mimo":
-			return t("aiChatProviderMiMo");
 		case "aider":
 			return t("aiChatProviderAider");
-		case "kiro":
-			return t("aiChatProviderKiro");
-		case "hermes":
-			return t("aiChatProviderHermes");
 		default:
 			return provider;
 	}
@@ -506,6 +379,8 @@ export class AIService {
 	private cachedCp: NodeChildProcess | null = null;
 	private cachedPaths = new Map<string, string | null>();
 	private detectedAgentsCache: DetectedAgentInfo[] | null = null;
+	private shellPath: string | null = null;
+	private shellPathPromise?: Promise<void>;
 
 	constructor(app: App, plugin?: VaultCodePlugin) {
 		this.app = app;
@@ -523,7 +398,10 @@ export class AIService {
 
 	private async resolveChildProcess(): Promise<NodeChildProcess | null> {
 		if (!Platform.isDesktop) return null;
-		if (this.cachedCp) return this.cachedCp;
+		if (this.cachedCp) {
+			await this.loadShellPath(this.cachedCp);
+			return this.cachedCp;
+		}
 
 		try {
 			const win = window as unknown as {
@@ -537,6 +415,7 @@ export class AIService {
 					typeof cpModule.execFile === "function"
 				) {
 					this.cachedCp = cpModule;
+					await this.loadShellPath(cpModule);
 					return this.cachedCp;
 				}
 			}
@@ -552,6 +431,7 @@ export class AIService {
 				typeof cpModule.execFile === "function"
 			) {
 				this.cachedCp = cpModule;
+				await this.loadShellPath(cpModule);
 				return this.cachedCp;
 			}
 		} catch {
@@ -561,6 +441,35 @@ export class AIService {
 		return null;
 	}
 
+	private async resolveFileSystem(): Promise<Pick<typeof import("fs"), "realpathSync" | "existsSync"> | null> {
+		if (!Platform.isDesktop) return null;
+		// Obsidian exposes Node through window.require. Bare dynamic imports can
+		// fail in its renderer even though the desktop Node APIs are available.
+		const win = window as unknown as { require?: (name: string) => unknown };
+		if (typeof win.require === "function") {
+			const fs = win.require("fs") as typeof import("fs");
+			if (typeof fs?.realpathSync === "function" && typeof fs.existsSync === "function") return fs;
+		}
+		return Platform.isDesktop ? await import("fs") : null;
+	}
+
+	private async loadShellPath(cp: NodeChildProcess): Promise<void> {
+		if (Platform.isWin) return;
+		if (!this.shellPathPromise) {
+			this.shellPathPromise = new Promise<void>((resolve) => {
+				const env = this.getEnv();
+				const shell = env.SHELL?.startsWith("/") ? env.SHELL : Platform.isMacOS ? "/bin/zsh" : "/bin/bash";
+				cp.execFile(shell, ["-ilc", "printf '\nVAULT_CODE_PATH=%s\n' \"$PATH\""],
+					{ env, timeout: 5000, maxBuffer: 1024 * 1024 }, (_err, stdout) => {
+						const match = stdout?.toString().match(/^VAULT_CODE_PATH=(.+)$/m);
+						if (match?.[1]) this.shellPath = match[1].trim();
+						resolve();
+					});
+			});
+		}
+		await this.shellPathPromise;
+	}
+
 	private getEnv(): Record<string, string> {
 		const proc = (
 			window as unknown as { process?: { env?: Record<string, string> } }
@@ -568,36 +477,34 @@ export class AIService {
 		const procEnv: Record<string, string> = proc?.env ?? {};
 		const home = procEnv.HOME || procEnv.USERPROFILE || "";
 		const pathSep = Platform.isWin ? ";" : ":";
-		const currentPath = procEnv.PATH ?? "";
+		const currentPath = [this.shellPath, procEnv.PATH].filter(Boolean).join(pathSep);
 		const extraPaths = currentPath.split(pathSep).filter(Boolean);
 
 		if (Platform.isWin) {
 			const appData = procEnv.APPDATA || (home ? `${home}\\AppData\\Roaming` : "");
 			const localAppData = procEnv.LOCALAPPDATA || (home ? `${home}\\AppData\\Local` : "");
 			if (appData) {
-				extraPaths.unshift(`${appData}\\npm`);
+				extraPaths.push(`${appData}\\npm`);
 			}
 			if (localAppData) {
-				extraPaths.unshift(
+				extraPaths.push(
 					`${localAppData}\\Programs\\OpenCode\\bin`,
 					`${localAppData}\\Programs\\Antigravity\\bin`,
 				);
 			}
 			if (home) {
-				extraPaths.unshift(`${home}\\.cargo\\bin`, `${home}\\bin`);
+				extraPaths.push(`${home}\\.cargo\\bin`, `${home}\\bin`);
 			}
 		} else {
 			if (home) {
-				extraPaths.unshift(
+				extraPaths.push(
 					`${home}/.local/bin`,
-					`${home}/.nvm/versions/node/v24.13.0/bin`,
-					`${home}/.nvm/versions/node/v20.20.0/bin`,
 					`${home}/.opencode/bin`,
 					`${home}/.cargo/bin`,
 					`${home}/bin`,
 				);
 			}
-			extraPaths.unshift(
+			extraPaths.push(
 				"/opt/homebrew/bin",
 				"/opt/homebrew/sbin",
 				"/usr/local/bin",
@@ -699,8 +606,6 @@ export class AIService {
 					if (home) {
 						allFallbacks.push(
 							`${home}/.local/bin/${binary}`,
-							`${home}/.nvm/versions/node/v24.13.0/bin/${binary}`,
-							`${home}/.nvm/versions/node/v20.20.0/bin/${binary}`,
 							`${home}/.opencode/bin/${binary}`,
 							`${home}/.cargo/bin/${binary}`,
 							`${home}/bin/${binary}`,
@@ -754,6 +659,41 @@ export class AIService {
 		]);
 	}
 
+	private async detectProviderPath(provider: AIProvider): Promise<string | null> {
+		if (provider === "antigravity") return this.detectAgyPath();
+		if (provider === "codex") return this.detectCodexPath();
+		const def = ALL_AGENT_DEFS.find((d) => d.id === provider);
+		if (!def) return null;
+		for (const binary of [def.binary, ...(def.fallbackBinaries || [])]) {
+			const path = await this.detectBinaryPath(binary);
+			if (path) return path;
+		}
+		return null;
+	}
+
+	private async checkConnection(provider: AIProvider, path: string): Promise<string> {
+		const commands: Partial<Record<AIProvider, string[]>> = {
+			claude: ["auth", "status"], codex: ["login", "status"], cursor: ["models"], ollama: ["list"],
+		};
+		const args = commands[provider];
+		const cp = await this.resolveChildProcess();
+		if (!args || !cp) return "Installed · sign-in not checked";
+		return new Promise((resolve) => {
+			cp.execFile(path, args, { env: this.getEnv(), timeout: 10000, maxBuffer: 1024 * 1024, shell: Platform.isWin }, (err, stdout, stderr) => {
+				const text = [stdout, stderr].filter(Boolean).join("\n");
+				if (provider === "ollama") {
+					resolve(err ? "Installed · start Ollama server" : /\S+\s+[a-f0-9]{12,}\s/i.test(text) ? "Local models available" : "Installed · pull a model first");
+				} else if (/not logged|not authenticated|authentication required|login required|"loggedIn"\s*:\s*false/i.test(text)) {
+					resolve("Installed · sign-in required");
+				} else if (!err && (provider === "cursor" || /logged in|"loggedIn"\s*:\s*true/i.test(text))) {
+					resolve("Signed in · model access not tested");
+				} else {
+					resolve("Installed · sign-in check unavailable");
+				}
+			});
+		});
+	}
+
 	public async detectAllAgents(): Promise<DetectedAgentInfo[]> {
 		if (this.plugin && !this.plugin.settings.enableAIChat) {
 			return [];
@@ -766,22 +706,10 @@ export class AIService {
 		const results: DetectedAgentInfo[] = [];
 
 		for (const def of ALL_AGENT_DEFS) {
-			let customOverride: string | undefined;
-			if (def.id === "antigravity") customOverride = this.plugin?.settings.aiCustomPath;
-			if (def.id === "codex") customOverride = this.plugin?.settings.aiCodexPath;
-
-			const fallbacks = def.id === "cursor" ? [
-				"/Applications/Cursor.app/Contents/Resources/app/bin/cursor",
-			] : [];
-			let binPath = await this.detectBinaryPath(def.binary, customOverride, fallbacks);
-			if (!binPath && def.fallbackBinaries) {
-				for (const fb of def.fallbackBinaries) {
-					binPath = await this.detectBinaryPath(fb, undefined, fallbacks);
-					if (binPath) break;
-				}
-			}
+			const binPath = await this.detectProviderPath(def.id);
 			let version = "";
 			let isInstalled = false;
+			let diagnostic: string | undefined;
 
 			if (binPath && cp) {
 				isInstalled = true;
@@ -793,12 +721,14 @@ export class AIService {
 						(err, stdout, stderr) => {
 							const text = (stdout || stderr || "").toString().trim();
 							const firstLine = text.split("\n")[0]?.trim() || "";
-							resolve(firstLine || "Installed");
+							if (err) diagnostic = firstLine || err.message;
+							resolve(err ? "Version check failed" : firstLine || "Installed");
 						},
 					);
 				});
 			}
 
+			const connectionStatus = binPath && !diagnostic ? await this.checkConnection(def.id, binPath) : undefined;
 			results.push({
 				id: def.id,
 				name: def.name,
@@ -809,6 +739,8 @@ export class AIService {
 				path: binPath,
 				defaultModel: def.defaultModel,
 				models: def.models,
+				diagnostic,
+				connectionStatus,
 			});
 		}
 
@@ -822,150 +754,100 @@ export class AIService {
 	}
 
 	public async installAgent(provider: AIProvider): Promise<{ success: boolean; message: string; command?: string }> {
-		const config = AGENT_INSTALL_CONFIGS[provider];
-		const def = ALL_AGENT_DEFS.find((d) => d.id === provider);
-		const name = def?.name || provider;
-
-		if (!config) {
-			return { success: false, message: t("settingsAIAgentInstallFailed", name) };
-		}
-
-		if (config.manualInstructionsKey && !config.installCmd) {
-			return {
-				success: false,
-				message: t(config.manualInstructionsKey as never),
-				command: config.manualUrl,
-			};
-		}
-
-		const cmd = config.installCmd;
-		if (!cmd) {
-			return {
-				success: false,
-				message: config.manualUrl ? `Please visit ${config.manualUrl} to install ${name}.` : t("settingsAIAgentInstallFailed", name),
-				command: config.manualUrl,
-			};
-		}
-
-		if (cmd.startsWith("npm ")) {
-			const npmPath = await this.detectBinaryPath("npm");
-			if (!npmPath) {
-				return {
-					success: false,
-					message: t("settingsAIAgentInstallNoNpm"),
-					command: cmd,
-				};
-			}
-		} else if (cmd.includes("pip ") || cmd.startsWith("python3 ")) {
-			const pyPath = (await this.detectBinaryPath("python3")) || (await this.detectBinaryPath("python"));
-			if (!pyPath) {
-				return {
-					success: false,
-					message: t("settingsAIAgentInstallNoPython"),
-					command: cmd,
-				};
-			}
-		} else if (cmd.startsWith("brew ")) {
-			const brewPath = await this.detectBinaryPath("brew");
-			if (!brewPath) {
-				return {
-					success: false,
-					message: t("settingsAIAgentInstallNoBrew"),
-					command: config.manualUrl || cmd,
-				};
-			}
-		}
-
-		const cp = await this.resolveChildProcess();
-		if (!cp) {
-			return { success: false, message: "Desktop child_process runtime not available", command: cmd };
-		}
-
-		const env = this.getEnv();
-		const execFn = (cp as unknown as { exec?: ExecFn }).exec;
-
-		return await new Promise<{ success: boolean; message: string; command?: string }>((resolve) => {
-			const handleDone = (err: Error | null, stdout: string | Uint8Array | null | undefined, stderr: string | Uint8Array | null | undefined) => {
-				if (!err) {
-					this.refreshAgentsCache();
-					resolve({ success: true, message: t("settingsAIAgentInstallSuccess", name) });
-				} else {
-					const errText = (stderr || stdout || err.message || "").toString();
-					let summary = errText.split("\n").filter(Boolean).slice(-2).join(" ") || err.message;
-					if (errText.includes("EACCES") || errText.includes("permission denied")) {
-						summary = "Permission denied (EACCES). Please run the command with administrator permissions in Terminal.";
-					}
-					resolve({
-						success: false,
-						message: `${t("settingsAIAgentInstallFailed", name)}: ${summary}`,
-						command: cmd,
-					});
-				}
-			};
-
-			if (typeof execFn === "function") {
-				execFn(cmd, { env, timeout: 180000 }, (err, stdout, stderr) => {
-					handleDone(err, stdout, stderr);
-				});
-			} else {
-				const parts = cmd.split(" ");
-				const bin = parts[0] || cmd;
-				cp.execFile(bin, parts.slice(1), { env, timeout: 180000, shell: true }, (err, stdout, stderr) => {
-					handleDone(err, stdout, stderr);
-				});
-			}
-		});
+		return this.maintainAgent(provider, false);
 	}
 
 	public async updateAgent(provider: AIProvider): Promise<{ success: boolean; message: string; command?: string }> {
+		return this.maintainAgent(provider, true);
+	}
+
+	private async maintainAgent(provider: AIProvider, update: boolean): Promise<{ success: boolean; message: string; command?: string }> {
 		const config = AGENT_INSTALL_CONFIGS[provider];
-		const def = ALL_AGENT_DEFS.find((d) => d.id === provider);
-		const name = def?.name || provider;
-
-		const cmd = config?.updateCmd || config?.installCmd;
-		if (!cmd) {
-			return { success: false, message: `No update command configured for ${name}.` };
-		}
-
+		const def = ALL_AGENT_DEFS.find((d) => d.id === provider)!;
+		if (!Platform.isDesktop) return { success: false, message: "CLI management requires desktop Obsidian" };
 		const cp = await this.resolveChildProcess();
-		if (!cp) {
-			return { success: false, message: "Desktop child_process runtime not available", command: cmd };
-		}
-
-		const env = this.getEnv();
-		const execFn = (cp as unknown as { exec?: ExecFn }).exec;
-
-		return await new Promise<{ success: boolean; message: string; command?: string }>((resolve) => {
-			const handleDone = (err: Error | null, stdout: string | Uint8Array | null | undefined, stderr: string | Uint8Array | null | undefined) => {
-				if (!err) {
-					resolve({ success: true, message: `Updated ${name} successfully.` });
-				} else {
-					const errText = (stderr || stdout || err.message || "").toString();
-					const summary = errText.split("\n").filter(Boolean).slice(-2).join(" ") || err.message;
-					resolve({
-						success: false,
-						message: `${t("settingsAIUpdateFailed")}: ${summary}`,
-						command: cmd,
-					});
+		if (!cp) return { success: false, message: "Desktop child_process runtime not available" };
+		const installedPath = update ? await this.detectProviderPath(provider) : null;
+		let command = update ? config.updateCmd : config.installCmd;
+		// Use the owning package manager rather than creating a second installation.
+		if (update && installedPath && !Platform.isWin) {
+			try {
+				const fs = await this.resolveFileSystem();
+				if (!fs) return { success: false, message: "CLI management requires desktop Obsidian" };
+				const realPath = fs.realpathSync(installedPath);
+				if (/\/(?:Cellar|Caskroom)\//.test(realPath)) {
+					const formula = { claude: "claude-code", codex: "codex", copilot: "copilot-cli", ollama: "ollama", opencode: "opencode" }[provider as string];
+					command = formula ? `brew upgrade ${formula}` : undefined;
+				} else if (realPath.includes("/node_modules/")) {
+					const pkg = { claude: "@anthropic-ai/claude-code", codex: "@openai/codex", copilot: "@github/copilot", opencode: "opencode-ai", kimi: "@moonshot-ai/kimi-code", pi: realPath.includes("@mariozechner/") ? "@mariozechner/pi-coding-agent" : "@earendil-works/pi-coding-agent" }[provider as string];
+					command = pkg ? `npm install -g ${pkg}@latest` : undefined;
+				} else if (provider === "codex") {
+					// App-bundled CLIs belong to the app's updater.
+					command = undefined;
 				}
-			};
-
-			if (typeof execFn === "function") {
-				execFn(cmd, { env, timeout: 180000 }, (err, stdout, stderr) => {
-					handleDone(err, stdout, stderr);
-				});
-			} else {
-				const parts = cmd.split(" ");
-				const bin = parts[0] || cmd;
-				cp.execFile(bin, parts.slice(1), { env, timeout: 180000, shell: true }, (err, stdout, stderr) => {
-					handleDone(err, stdout, stderr);
-				});
+			} catch (err: unknown) {
+				const reason = err instanceof Error ? err.message : String(err);
+				return { success: false, message: `Cannot inspect ${def.name} at ${installedPath}: ${reason}` };
 			}
+		}
+		if (!command) {
+			return {
+				success: false,
+				message: `Use the official guide to ${update ? "update" : "install"} ${def.name}: ${config.manualUrl}`,
+				command: config.manualUrl,
+			};
+		}
+		const env = this.getEnv();
+		if (installedPath) {
+			const dir = installedPath.slice(0, Math.max(installedPath.lastIndexOf("/"), installedPath.lastIndexOf("\\")));
+			env.PATH = `${dir}${Platform.isWin ? ";" : ":"}${env.PATH || ""}`;
+		}
+		let executable: string;
+		let args: string[];
+		if (command.includes(" | ")) {
+			executable = "/bin/bash";
+			args = ["-o", "pipefail", "-c", command];
+		} else {
+			const parts = command.split(" ");
+			const binary = parts.shift()!;
+			executable = installedPath && binary === def.binary ? installedPath :
+				(await this.detectBinaryPath(binary)) || "";
+			if (binary === "npm" && installedPath && !Platform.isWin) {
+				const sibling = `${installedPath.slice(0, installedPath.lastIndexOf("/"))}/npm`;
+				const fs = await this.resolveFileSystem();
+				if (!fs) return { success: false, message: "CLI management requires desktop Obsidian" };
+				if (fs.existsSync(sibling)) executable = sibling;
+			}
+			if (!executable) return { success: false, message: `${binary} is required. Follow ${config.manualUrl} to finish setup.`, command };
+			args = parts;
+		}
+		const result = await new Promise<{ success: boolean; message: string; command?: string }>((resolve) => {
+			const child = cp.execFile(executable, args, { env, timeout: 600000, maxBuffer: 4 * 1024 * 1024, windowsHide: true, shell: Platform.isWin }, (err, stdout, stderr) => {
+				const output = [stdout, stderr].filter(Boolean).join("\n").trim();
+				if (err) {
+					resolve({ success: false, message: `${def.name}: ${output || err.message}`, command });
+				} else {
+					resolve({ success: true, message: `${def.name} ${update ? "update" : "installation"} completed. Sign-in and model access must be configured separately.`, command });
+				}
+			});
+			child?.stdin?.end();
 		});
+		this.refreshAgentsCache();
+		this.shellPathPromise = undefined;
+		await this.loadShellPath(cp);
+		if (result.success) {
+			const path = await this.detectProviderPath(provider);
+			if (!path) return { success: false, message: `${def.name} installer finished but its executable was not found. Restart Obsidian or check the install output.`, command };
+			const error = await new Promise<string | null>((resolve) => cp.execFile(path, def.versionArgs,
+				{ env: this.getEnv(), timeout: 10000, shell: Platform.isWin }, (err, stdout, stderr) => resolve(err ? (stderr || stdout || err.message).toString() : null)));
+			if (error) return { success: false, message: `${def.name} was installed but cannot start: ${error}`, command };
+		}
+		return result;
 	}
 
 	public async updateAllConnectedAgents(
 		onItemUpdate?: (agent: DetectedAgentInfo, success: boolean, error?: string) => void,
+		onItemStart?: (agent: DetectedAgentInfo) => void,
 	): Promise<{
 		total: number;
 		updated: number;
@@ -985,20 +867,18 @@ export class AIService {
 		let failed = 0;
 
 		for (const agent of connected) {
-			const config = AGENT_INSTALL_CONFIGS[agent.id];
-			if (!config?.updateCmd) {
-				continue;
-			}
-
-			const res = await this.updateAgent(agent.id);
+			onItemStart?.(agent);
+			const res = await this.updateAgent(agent.id).catch((err: unknown) => ({
+				success: false, message: err instanceof Error ? err.message : String(err), command: undefined,
+			}));
 			if (res.success) {
 				updated++;
 				results.push({ id: agent.id, name: agent.name, success: true });
 				onItemUpdate?.(agent, true);
 			} else {
 				failed++;
-				results.push({ id: agent.id, name: agent.name, success: false, error: res.message });
-				onItemUpdate?.(agent, false, res.message);
+				results.push({ id: agent.id, name: agent.name, success: false, error: `${res.message}${res.command ? `\n${res.command}` : ""}` });
+				onItemUpdate?.(agent, false, `${res.message}${res.command ? `\n${res.command}` : ""}`);
 			}
 		}
 
@@ -1043,7 +923,7 @@ export class AIService {
 					}
 
 					if (parsed.length > 0) {
-						resolve(parsed);
+						resolve([...DEFAULT_GENERIC_MODELS, ...parsed]);
 					} else {
 						resolve(DEFAULT_AGY_MODELS);
 					}
@@ -1068,7 +948,8 @@ export class AIService {
 				if (typeof win.require === "function") {
 					const fs = win.require("fs");
 					const sep = Platform.isWin ? "\\" : "/";
-					const cacheFile = `${home}${sep}.codex${sep}models_cache.json`;
+					const codexHome = proc?.env?.CODEX_HOME || `${home}${sep}.codex`;
+					const cacheFile = `${codexHome}${sep}models_cache.json`;
 					if (fs?.existsSync?.(cacheFile) && fs?.readFileSync) {
 						const raw = fs.readFileSync(cacheFile, "utf8");
 						const data = JSON.parse(raw) as {
@@ -1085,7 +966,7 @@ export class AIService {
 									id: m.slug as string,
 									displayName: m.display_name || (m.slug as string),
 								}));
-							if (filtered.length > 0) return filtered;
+							if (filtered.length > 0) return [...DEFAULT_GENERIC_MODELS, ...filtered];
 						}
 					}
 				}
@@ -1105,6 +986,42 @@ export class AIService {
 		}
 		if (provider === "antigravity") {
 			return await this.getAvailableModels();
+		}
+		const discovery: Partial<Record<AIProvider, string[]>> = {
+			cursor: ["models"], ollama: ["list"], opencode: ["models"], pi: ["--list-models"],
+		};
+		const command = discovery[provider];
+		const cp = await this.resolveChildProcess();
+		const path = command ? await this.detectProviderPath(provider) : null;
+		if (cp && path && command) {
+			const models = await new Promise<AgyModelInfo[]>((resolve) => {
+				cp.execFile(path, command, { env: this.getEnv(), timeout: 15000, maxBuffer: 1024 * 1024, shell: Platform.isWin }, (err, stdout) => {
+					if (err || !stdout) { resolve([]); return; }
+					const models: AgyModelInfo[] = [];
+					for (const raw of stdout.toString().split("\n")) {
+						const line = raw.replace(new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g"), "").trim();
+						if (!line || /^(NAME|provider\s+model|Available models|Model\s)/i.test(line)) continue;
+						let id = "";
+						if (provider === "opencode") {
+							if (/^[\w.-]+\/[^\s]+$/.test(line)) id = line;
+						} else if (provider === "ollama") {
+							const match = line.match(/^(\S+)\s+[a-f0-9]{12,}\s/i);
+							id = match?.[1] || "";
+						} else if (provider === "pi") {
+							const match = line.match(/^([\w.-]+)\s+([\w./:-]+)\s+/);
+							if (match) id = `${match[1]}/${match[2]}`;
+						} else {
+							// Cursor prints model-id - display name (and may mark the default).
+							const match = line.match(/^([\w.:-]+)\s+-\s+(.+)$/);
+							id = match?.[1] || "";
+						}
+						if (id && !models.some((m) => m.id === id)) models.push({ id, displayName: id });
+					}
+					resolve(models);
+				});
+			});
+			if (provider === "ollama") return models;
+			if (models.length) return [...DEFAULT_GENERIC_MODELS, ...models];
 		}
 		const found = ALL_AGENT_DEFS.find((d) => d.id === provider);
 		return found ? found.models : DEFAULT_GENERIC_MODELS;
@@ -1189,6 +1106,8 @@ export class AIService {
 	}
 
 	public sendMessage(options: SendMessageOptions): AIProcessHandle {
+		const selectedModel = options.model?.trim();
+		options = { ...options, model: selectedModel === "default" || selectedModel === "auto" ? undefined : selectedModel };
 		let isKilled = false;
 		let spawned: SpawnedProcess | null = null;
 		let activeConversationId = options.conversationId;
@@ -1270,9 +1189,9 @@ export class AIService {
 				}
 				const isUuid = !!(options.conversationId && /^[0-9a-fA-F-]{36}$/.test(options.conversationId.trim()));
 				if (isUuid && options.conversationId) {
-					args.push("exec", "resume", options.conversationId.trim(), "--skip-git-repo-check", "--json", "-C", vaultPath);
+					args.push("-C", vaultPath, "exec", "resume", options.conversationId.trim(), "--skip-git-repo-check", "--json");
 				} else {
-					args.push("exec", "--skip-git-repo-check", "--json", "-C", vaultPath);
+					args.push("-C", vaultPath, "exec", "--skip-git-repo-check", "--json");
 				}
 				if (options.model && options.model.trim().length > 0) {
 					args.push("-m", options.model.trim());
@@ -1281,7 +1200,7 @@ export class AIService {
 					args.push("-c", `model_reasoning_effort="${options.reasoningEffort}"`);
 				}
 				if (options.mode === "safe") {
-					args.push("-s", "read-only");
+					args.unshift("-s", "read-only");
 				} else {
 					args.push("--dangerously-bypass-approvals-and-sandbox");
 				}
@@ -1309,6 +1228,8 @@ export class AIService {
 					return;
 				}
 				args = ["-p", effectivePrompt];
+				if (options.mode === "edit") args.push("--allow-all-tools");
+				else args.push("--deny-tool=write", "--deny-tool=shell");
 				if (options.model && options.model !== "default") {
 					args.push("--model", options.model.trim());
 				}
@@ -1320,7 +1241,7 @@ export class AIService {
 				}
 				args = ["run", effectivePrompt, "--dir", vaultPath];
 				if (options.mode === "edit") {
-					args.push("--auto");
+					// OpenCode run has no --auto option; its configured permissions apply.
 				}
 				if (options.model && options.model !== "default") {
 					args.push("-m", options.model.trim());
@@ -1339,18 +1260,7 @@ export class AIService {
 					args.push("--model", options.model.trim());
 				}
 			} else if (provider === "cursor") {
-				binPath = await this.detectBinaryPath("cursor", undefined, [
-					"/Applications/Cursor.app/Contents/Resources/app/bin/cursor",
-				]);
-				if (!binPath) {
-					binPath = await this.detectBinaryPath("agent", undefined, [
-						"/Users/anthony/.local/bin/agent",
-						"/Users/anthony/.local/bin/cursor-agent",
-					]);
-				}
-				if (!binPath) {
-					binPath = await this.detectBinaryPath("cursor-agent");
-				}
+				binPath = await this.detectProviderPath("cursor");
 				if (!binPath) {
 					options.onError?.(new Error("Cursor Agent CLI not found on system"));
 					return;
@@ -1360,7 +1270,6 @@ export class AIService {
 					effectivePrompt,
 					"--output-format",
 					"stream-json",
-					"--stream-partial-output",
 					"--workspace",
 					vaultPath,
 				];
@@ -1382,10 +1291,11 @@ export class AIService {
 					options.onError?.(new Error("Ollama CLI (ollama) not found on system"));
 					return;
 				}
-				const modelToUse =
-					!options.model || options.model === "auto" || options.model === "default"
-						? "llama3.3"
-						: options.model.trim();
+				const modelToUse = options.model || (await this.getModelsForProvider("ollama"))[0]?.id;
+				if (!modelToUse) {
+					options.onError?.(new Error("Ollama has no accessible local models. Start the Ollama app/server, then run `ollama pull <model>` in Terminal."));
+					return;
+				}
 				args = ["run", modelToUse, effectivePrompt, "--keepalive", "30m"];
 			} else if (provider === "kimi") {
 				binPath = await this.detectBinaryPath("kimi");
@@ -1407,13 +1317,6 @@ export class AIService {
 				if (options.model && options.model !== "auto" && options.model !== "default") {
 					args.push("--model", options.model.trim());
 				}
-			} else if (provider === "mimo") {
-				binPath = await this.detectBinaryPath("mimo");
-				if (!binPath) {
-					options.onError?.(new Error("Xiaomi MiMo CLI (mimo) not found on system"));
-					return;
-				}
-				args = ["-p", effectivePrompt];
 			} else if (provider === "aider") {
 				binPath = await this.detectBinaryPath("aider");
 				if (!binPath) {
@@ -1427,20 +1330,6 @@ export class AIService {
 				if (options.reasoningEffort && options.reasoningEffort !== "auto") {
 					args.push("--reasoning-effort", options.reasoningEffort);
 				}
-			} else if (provider === "kiro") {
-				binPath = await this.detectBinaryPath("kiro");
-				if (!binPath) {
-					options.onError?.(new Error("Kiro CLI not found on system"));
-					return;
-				}
-				args = ["-p", effectivePrompt];
-			} else if (provider === "hermes") {
-				binPath = await this.detectBinaryPath("hermes");
-				if (!binPath) {
-					options.onError?.(new Error("Hermes Agent CLI not found on system"));
-					return;
-				}
-				args = ["-p", effectivePrompt];
 			}
 
 			if (!binPath) {
@@ -1448,6 +1337,7 @@ export class AIService {
 				return;
 			}
 
+			if (isKilled) return;
 			try {
 				spawned = cp.spawn(binPath, args, {
 					cwd: vaultPath,
@@ -1462,6 +1352,13 @@ export class AIService {
 
 			let accumulatedText = "";
 			let lineBuffer = "";
+			let protocolError = "";
+			let finished = false;
+			const fail = (error: Error) => {
+				if (finished || isKilled) return;
+				finished = true;
+				options.onError?.(error);
+			};
 
 			const processLine = (rawLine: string) => {
 				const line = rawLine.trim();
@@ -1510,11 +1407,12 @@ export class AIService {
 							const delta = parsed.item.text;
 							accumulatedText += delta;
 							options.onDelta?.(delta);
-						} else if (parsed.type === "error" && parsed.message) {
+						} else if ((parsed.type === "error" || parsed.type === "turn.failed") && (parsed.message || parsed.error?.message)) {
+							protocolError = parsed.message || parsed.error?.message || "Codex request failed";
 							try {
-								const inner = JSON.parse(parsed.message) as { error?: { message?: string } };
+								const inner = JSON.parse(parsed.message || "") as { error?: { message?: string } };
 								if (inner.error?.message) {
-									options.onError?.(new Error(inner.error.message));
+									protocolError = inner.error.message;
 									return;
 								}
 							} catch {
@@ -1530,47 +1428,36 @@ export class AIService {
 				} else if (provider === "cursor") {
 					try {
 						const parsed = JSON.parse(line) as {
-							event?: string;
-							type?: string;
-							conversation_id?: string;
-							chatId?: string;
-							text_delta?: string;
-							delta?: string;
-							content?: string;
-							text?: string;
-							response?: string;
+							type?: string; subtype?: string; session_id?: string;
+							message?: { content?: Array<{ type?: string; text?: string }> };
+							result?: string; is_error?: boolean;
 						};
-						const cId = parsed.conversation_id || parsed.chatId;
-						if (cId) {
-							activeConversationId = cId;
-							options.onInit?.(cId);
+						if (parsed.session_id && parsed.session_id !== activeConversationId) {
+							activeConversationId = parsed.session_id;
+							options.onInit?.(parsed.session_id);
 						}
-						const delta =
-							parsed.text_delta ||
-							parsed.delta ||
-							parsed.text ||
-							parsed.content ||
-							parsed.response;
-						if (delta) {
-							accumulatedText += delta;
-							options.onDelta?.(delta);
+						if (parsed.is_error) protocolError = parsed.result || "Cursor request failed";
+						if (parsed.type === "assistant") {
+							const text = (parsed.message?.content || []).filter((c) => c.type === "text").map((c) => c.text || "").join("");
+							if (text) { accumulatedText += text; options.onDelta?.(text); }
+						} else if (parsed.type === "result" && !accumulatedText && !parsed.is_error && parsed.result) {
+							accumulatedText = parsed.result;
+							options.onDelta?.(parsed.result);
 						}
 					} catch {
-						if (!line.startsWith("{")) {
-							accumulatedText += line + "\n";
-							options.onDelta?.(line + "\n");
-						}
+						if (!line.startsWith("{")) { accumulatedText += line + "\n"; options.onDelta?.(line + "\n"); }
 					}
 				} else {
-					// Claude, Copilot, Ollama, OpenCode, Pi, Kimi, Grok, Kiro, Hermes text streaming
+					// Generic text streaming (Claude, Copilot, Ollama, OpenCode, Pi, Kimi, Grok, Aider)
 					accumulatedText += line + "\n";
 					options.onDelta?.(line + "\n");
 				}
 			};
 
+			const stdoutDecoder = new TextDecoder();
 			spawned.stdout?.on("data", (chunk: Uint8Array | string) => {
-				if (isKilled) return;
-				const str = typeof chunk === "string" ? chunk : new TextDecoder().decode(chunk);
+				if (isKilled || finished) return;
+				const str = typeof chunk === "string" ? chunk : stdoutDecoder.decode(chunk, { stream: true });
 				lineBuffer += str;
 
 				const lines = lineBuffer.split("\n");
@@ -1583,42 +1470,48 @@ export class AIService {
 
 			let stderrOutput = "";
 			spawned.stderr?.on("data", (chunk: Uint8Array | string) => {
-				if (isKilled) return;
+				if (isKilled || finished) return;
 				const str = typeof chunk === "string" ? chunk : new TextDecoder().decode(chunk);
 				stderrOutput += str;
 			});
 
 			spawned.on("close", (code) => {
-				if (isKilled) return;
+				if (isKilled || finished) return;
 
+				lineBuffer += stdoutDecoder.decode();
 				if (lineBuffer.trim().length > 0) {
 					processLine(lineBuffer);
 				}
 
-				if (code === 0 || accumulatedText.length > 0) {
+				if (code === 0 && !protocolError && accumulatedText.trim()) {
+					finished = true;
 					options.onDone?.(accumulatedText);
 				} else {
 					const def = ALL_AGENT_DEFS.find((d) => d.id === provider);
 					const agentName = def?.name || provider;
-					let errMsg = stderrOutput.trim();
+					let errMsg = protocolError || stderrOutput.trim() || accumulatedText.trim();
 					if (!errMsg) {
-						errMsg = `${agentName} exited with code ${code}. Please check that the agent is authenticated and up to date.`;
+						errMsg = code === 0 ? `${agentName} returned no response. Check sign-in, model access, and CLI configuration.` : `${agentName} exited with code ${code}. Please check that the agent is authenticated and up to date.`;
 					} else if (/rate.?limit|too many requests|429/i.test(errMsg)) {
 						errMsg += "\n\n> 💡 **Tip**: Rate limit reached. You can switch to another agent using the bottom bar or retry in a moment.";
 					} else if (/quota|credit|insufficient|balance|token limit|exceeded/i.test(errMsg)) {
 						errMsg += "\n\n> 💡 **Tip**: Quota or token limit exceeded for this provider. Switch to an alternate provider in the bottom bar.";
 					} else if (/auth|login|unauthorized|401|403|credential/i.test(errMsg)) {
-						errMsg += `\n\n> 💡 **Tip**: Authentication required. Run \`${def?.binary || provider} login\` in your terminal to re-authenticate.`;
+						errMsg += `\n\nAuthentication required. Open \`${def?.binary || provider}\` in Terminal and complete the provider’s sign-in/setup flow.`;
 					}
-					options.onError?.(new Error(errMsg));
+					fail(new Error(errMsg));
 				}
 			});
 
 			spawned.on("error", (err: Error) => {
 				if (isKilled) return;
-				options.onError?.(err);
+				fail(err);
 			});
-		})();
+			// Print-mode CLIs must see EOF; otherwise they can wait indefinitely for input.
+			spawned.stdin?.end();
+		})().catch((err: unknown) => {
+			if (!isKilled) options.onError?.(err instanceof Error ? err : new Error(String(err)));
+		});
 
 		return handle;
 	}

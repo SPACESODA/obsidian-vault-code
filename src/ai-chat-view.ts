@@ -7,6 +7,8 @@ import {
 	TFile,
 	ToggleComponent,
 	debounce,
+	SuggestModal,
+	App,
 } from "obsidian";
 import type VaultCodePlugin from "./main";
 import { t } from "./i18n";
@@ -28,6 +30,68 @@ export interface ChatMessage {
 	role: "user" | "assistant";
 	content: string;
 	timestamp: number;
+}
+
+export class ModelSuggestModal extends SuggestModal<AgyModelInfo> {
+	private models: AgyModelInfo[];
+	private selectedModelId: string;
+	private onSelect: (model: AgyModelInfo) => void;
+
+	constructor(
+		app: App,
+		models: AgyModelInfo[],
+		selectedModelId: string,
+		onSelect: (model: AgyModelInfo) => void,
+	) {
+		super(app);
+		this.models = models;
+		this.selectedModelId = selectedModelId;
+		this.onSelect = onSelect;
+		this.setPlaceholder(t("aiChatSearchModelPlaceholder"));
+	}
+
+	getSuggestions(query: string): AgyModelInfo[] {
+		const q = query.toLowerCase().trim();
+		if (!q) return this.models;
+		return this.models.filter(
+			(m) =>
+				m.displayName.toLowerCase().includes(q) ||
+				m.id.toLowerCase().includes(q),
+		);
+	}
+
+	renderSuggestion(model: AgyModelInfo, el: HTMLElement): void {
+		el.empty();
+		el.addClass("vault-code-model-suggest-item");
+
+		const isSelected = model.id === this.selectedModelId;
+		if (isSelected) {
+			el.addClass("is-selected");
+		}
+
+		const textWrapper = el.createDiv({ cls: "vault-code-model-suggest-text" });
+		const titleEl = textWrapper.createDiv({
+			cls: "vault-code-model-suggest-title",
+			text: model.displayName,
+		});
+		titleEl.setAttribute("title", model.displayName);
+
+		if (model.id !== model.displayName) {
+			textWrapper.createDiv({
+				cls: "vault-code-model-suggest-id",
+				text: model.id,
+			});
+		}
+
+		if (isSelected) {
+			const checkSpan = el.createSpan({ cls: "vault-code-model-suggest-check" });
+			setIcon(checkSpan, "check");
+		}
+	}
+
+	onChooseSuggestion(model: AgyModelInfo): void {
+		this.onSelect(model);
+	}
 }
 
 export class AIChatView extends ItemView {
@@ -129,19 +193,12 @@ export class AIChatView extends ItemView {
 
 	private async loadModelsForProvider(provider: AIProvider): Promise<void> {
 		const models = await this.plugin.aiService.getModelsForProvider(provider);
+		if (provider !== this.selectedProvider) return;
 		this.availableModels = models.filter((m) => m.id !== "auto");
-
-		const def = ALL_AGENT_DEFS.find((d) => d.id === provider);
-		const allKnown = [
-			...this.availableModels,
-			...(def?.models || []).filter((m) => m.id !== "auto"),
-		];
-		const isKnown = allKnown.some((m) => m.id === this.selectedModel);
-		if (!isKnown || this.selectedModel === "auto") {
-			this.selectedModel = resolveOptimalModel(provider);
-			if (!this.plugin.settings.aiProviderLastModel) {
-				this.plugin.settings.aiProviderLastModel = {};
-			}
+		if (!this.availableModels.some((m) => m.id === this.selectedModel)) {
+			this.selectedModel = this.availableModels.find((m) => m.id === "default")?.id
+				|| this.availableModels[0]?.id || resolveOptimalModel(provider);
+			if (!this.plugin.settings.aiProviderLastModel) this.plugin.settings.aiProviderLastModel = {};
 			this.plugin.settings.aiProviderLastModel[provider] = this.selectedModel;
 			void this.plugin.saveSettings();
 		}
@@ -408,6 +465,7 @@ export class AIChatView extends ItemView {
 			def?.models.find((m) => m.id === this.selectedModel);
 		const label = found ? found.displayName : this.selectedModel;
 		this.modelBtnEl.createSpan({ cls: "vault-code-pill-label", text: label });
+		this.modelBtnEl.setAttribute("title", label);
 
 		const chevronSpan = this.modelBtnEl.createSpan({ cls: "vault-code-pill-chevron" });
 		setIcon(chevronSpan, "chevron-down");
@@ -584,6 +642,8 @@ export class AIChatView extends ItemView {
 					if (!isInstalled) return;
 					if (this.selectedProvider !== def.id) {
 						this.selectedProvider = def.id;
+						this.conversationId = undefined;
+						this.availableModels = [];
 						this.plugin.settings.aiProvider = def.id;
 						const remembered = this.plugin.settings.aiProviderLastModel?.[def.id];
 						this.selectedModel =
@@ -604,8 +664,6 @@ export class AIChatView extends ItemView {
 	}
 
 	private showModelMenu(event: MouseEvent): void {
-		const menu = createCustomMenu();
-
 		const def = ALL_AGENT_DEFS.find((d) => d.id === this.selectedProvider);
 		const rawModels =
 			this.availableModels.length > 0
@@ -613,19 +671,34 @@ export class AIChatView extends ItemView {
 				: (def?.models || DEFAULT_AGY_MODELS);
 		const modelsToUse = rawModels.filter((m) => m.id !== "auto");
 
+		const selectModel = (modelId: string) => {
+			this.selectedModel = modelId;
+			if (!this.plugin.settings.aiProviderLastModel) {
+				this.plugin.settings.aiProviderLastModel = {};
+			}
+			this.plugin.settings.aiProviderLastModel[this.selectedProvider] = modelId;
+			void this.plugin.saveSettings();
+			this.updateModelBtnLabel();
+		};
+
+		// If list is large (> 8 models), open searchable SuggestModal directly
+		if (modelsToUse.length > 8) {
+			new ModelSuggestModal(
+				this.app,
+				modelsToUse,
+				this.selectedModel,
+				(selected) => selectModel(selected.id),
+			).open();
+			return;
+		}
+
+		// For short lists (<= 8 models), show compact dropdown menu
+		const menu = createCustomMenu();
 		for (const model of modelsToUse) {
 			menu.addItem((item) => {
 				item.setTitle(model.displayName);
 				item.setChecked(this.selectedModel === model.id);
-				item.onClick(() => {
-					this.selectedModel = model.id;
-					if (!this.plugin.settings.aiProviderLastModel) {
-						this.plugin.settings.aiProviderLastModel = {};
-					}
-					this.plugin.settings.aiProviderLastModel[this.selectedProvider] = this.selectedModel;
-					void this.plugin.saveSettings();
-					this.updateModelBtnLabel();
-				});
+				item.onClick(() => selectModel(model.id));
 			});
 		}
 

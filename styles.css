@@ -2736,6 +2736,16 @@ textarea.vault-code-chat-input:active {
 	background-color: var(--background-modifier-hover);
 }
 
+.vault-code-chat-pill-model .vault-code-pill-label,
+.vault-code-chat-pill-provider .vault-code-pill-label {
+	max-width: 140px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	display: inline-block;
+	vertical-align: middle;
+}
+
 .vault-code-pill-icon svg {
 	width: 12px;
 	height: 12px;
@@ -3238,7 +3248,169 @@ svg.vault-code-spin {
 	cursor: not-allowed;
 }
 
+.menu {
+	max-height: min(400px, 75vh);
+	overflow-y: auto;
+	overflow-x: hidden;
+}
+
+.menu-item-title {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	max-width: 280px;
+}
+
+.vault-code-model-suggest-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 6px 10px;
+}
+
+.vault-code-model-suggest-text {
+	min-width: 0;
+	flex: 1;
+}
+
+.vault-code-model-suggest-title {
+	font-size: var(--font-ui-small, 13px);
+	font-weight: 500;
+	color: var(--text-normal);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.vault-code-model-suggest-id {
+	font-size: var(--font-ui-smaller, 11px);
+	color: var(--text-muted);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.vault-code-model-suggest-check {
+	display: flex;
+	align-items: center;
+	color: var(--interactive-accent);
+	flex-shrink: 0;
+}
+
+.vault-code-model-suggest-check svg {
+	width: 14px;
+	height: 14px;
+}
 
 
 
 
+
+
+/* Keep provider settings inside the settings pane, including long CLI output. */
+.vault-code-agent-section,
+.vault-code-agent-section > *,
+.vault-code-agent-card {
+	min-width: 0;
+	max-width: 100%;
+}
+
+.vault-code-agent-grid {
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
+}
+
+.vault-code-agent-card {
+	gap: 8px;
+}
+
+.vault-code-agent-card-version {
+	white-space: normal;
+	overflow-wrap: anywhere;
+	line-height: 1.4;
+}
+
+.vault-code-cli-activity {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m, 8px);
+	background: var(--background-secondary);
+	overflow: hidden;
+	margin-top: 4px;
+}
+
+.vault-code-cli-activity[hidden],
+.vault-code-cli-log[hidden] {
+	display: none;
+}
+
+.vault-code-cli-activity-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: 10px;
+	padding: 12px 14px;
+}
+
+.vault-code-cli-activity-info {
+	min-width: 0;
+	flex: 1 1 180px;
+}
+
+.vault-code-cli-activity-title {
+	font-size: var(--font-ui-small);
+	font-weight: 600;
+	color: var(--text-normal);
+}
+
+.vault-code-cli-activity-summary {
+	margin-top: 3px;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	overflow-wrap: anywhere;
+}
+
+.vault-code-cli-activity-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.vault-code-cli-details-button {
+	font-size: var(--font-ui-smaller);
+	box-shadow: none;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+}
+
+.vault-code-cli-log {
+	max-height: 240px;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	border-top: 1px solid var(--background-modifier-border);
+	background: var(--background-primary);
+	padding: 0 14px;
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-smaller);
+	line-height: 1.6;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	word-break: break-word;
+}
+
+.vault-code-cli-log-entry {
+	padding: 10px 0;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.vault-code-cli-log-entry:last-child {
+	border-bottom: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.vault-code-badge-spinner,
+	.vault-code-spin svg,
+	svg.vault-code-spin {
+		animation: none;
+	}
+}

@@ -111,6 +111,7 @@ import {
 	AIService,
 	AIProvider,
 	ALL_AGENT_DEFS,
+	AGENT_INSTALL_CONFIGS,
 } from "./ai-service";
 import { AIChatView, VIEW_TYPE_AI_CHAT } from "./ai-chat-view";
 import { AIStorage } from "./ai-storage";
@@ -679,20 +680,17 @@ const DEFAULT_SETTINGS: VaultCodeSettings = {
 	aiCodexModel: "gpt-6.1-sol",
 	aiReasoningEffort: "auto",
 	aiProviderLastModel: {
-		antigravity: "gemini-3.8-flash-medium",
-		codex: "gpt-6.1-sol",
-		claude: "claude-sonnet-4-6",
-		copilot: "claude-3.7-sonnet",
-		cursor: "composer-2.5",
-		ollama: "llama3.3",
-		kimi: "kimi-k3",
-		grok: "grok-4.7",
-		mimo: "mimo-v2-flash",
-		aider: "claude-3-7-sonnet",
+		antigravity: "default",
+		codex: "default",
+		claude: "default",
+		copilot: "default",
+		cursor: "default",
+		ollama: "default",
+		kimi: "default",
+		grok: "default",
+		aider: "default",
 		opencode: "default",
 		pi: "default",
-		kiro: "default",
-		hermes: "default",
 	},
 	aiScope: "active-note",
 	aiMode: "edit",
@@ -8732,6 +8730,46 @@ class VaultCodeSettingTab extends PluginSettingTab {
 			});
 
 			const gridEl = agentSection.createDiv({ cls: "vault-code-agent-grid" });
+			const activityPanel = agentSection.createDiv({ cls: "vault-code-cli-activity" });
+			activityPanel.hidden = true;
+			const activityHeader = activityPanel.createDiv({ cls: "vault-code-cli-activity-header" });
+			const activityInfo = activityHeader.createDiv({ cls: "vault-code-cli-activity-info" });
+			activityInfo.createDiv({ cls: "vault-code-cli-activity-title", text: "CLI activity" });
+			const activitySummary = activityInfo.createDiv({ cls: "vault-code-cli-activity-summary", attr: { role: "status", "aria-live": "polite" } });
+			const activityActions = activityHeader.createDiv({ cls: "vault-code-cli-activity-actions" });
+			const detailsButton = activityActions.createEl("button", {
+				cls: "vault-code-cli-details-button", text: "Show details", attr: { "aria-expanded": "false" },
+			});
+			const copyResultsButton = activityActions.createEl("button", {
+				cls: "vault-code-cli-details-button", text: "Copy log",
+			});
+			const operationLog = activityPanel.createDiv({ cls: "vault-code-cli-log", attr: { role: "log", "aria-label": "CLI setup and update results" } });
+			operationLog.hidden = true;
+			detailsButton.addEventListener("click", () => {
+				operationLog.hidden = !operationLog.hidden;
+				detailsButton.setText(operationLog.hidden ? "Show details" : "Hide details");
+				detailsButton.setAttribute("aria-expanded", String(!operationLog.hidden));
+			});
+			copyResultsButton.addEventListener("click", () => {
+				void navigator.clipboard.writeText(operationLog.innerText).then(() => new Notice("CLI activity log copied"));
+			});
+			const logOperation = (message: string, summary?: string) => {
+				activityPanel.hidden = false;
+				if (summary) activitySummary.setText(summary);
+				operationLog.createDiv({ cls: "vault-code-cli-log-entry", text: message });
+			};
+			let maintenanceRunning = false;
+			const providerBadges = new Map<AIProvider, HTMLElement>();
+			const setAgentActivity = (id: AIProvider, state: "installing" | "updating" | "updated" | "failed") => {
+				const badge = providerBadges.get(id);
+				if (!badge) return;
+				badge.empty();
+				const busy = state === "installing" || state === "updating";
+				badge.className = `vault-code-agent-card-badge ${busy ? "is-installing" : state === "updated" ? "is-installed" : "is-missing"}`;
+				badge.setAttribute("aria-busy", String(busy));
+				if (busy) badge.createSpan({ cls: "vault-code-badge-spinner" });
+				badge.createSpan({ text: state === "installing" ? "Installing..." : state === "updating" ? "Updating..." : state === "updated" ? "Updated" : "Needs attention" });
+			};
 
 			const renderCards = (
 				agents: Array<{
@@ -8740,10 +8778,13 @@ class VaultCodeSettingTab extends PluginSettingTab {
 					icon: string;
 					isInstalled?: boolean;
 					version?: string;
+					diagnostic?: string;
+					connectionStatus?: string;
 				}>,
 				isChecking = false,
 			) => {
 				gridEl.empty();
+				providerBadges.clear();
 				for (const agent of agents) {
 					const isActive = (this.plugin.settings.aiProvider || "antigravity") === agent.id;
 					const cardEl = gridEl.createDiv({
@@ -8763,21 +8804,31 @@ class VaultCodeSettingTab extends PluginSettingTab {
 						: isInstalled
 							? (agent.version || t("settingsAIAgentNotDetected"))
 							: t("settingsAIAgentMissing");
-					textEl.createDiv({ cls: "vault-code-agent-card-version", text: versionText });
+					const versionEl = textEl.createDiv({ cls: "vault-code-agent-card-version", text: versionText });
+					if (agent.diagnostic) versionEl.setAttribute("title", agent.diagnostic);
+					if (agent.connectionStatus) textEl.createDiv({ cls: "vault-code-agent-card-version", text: agent.connectionStatus });
 
 					const handleInstallAgent = async (
 						agentToInstall: { id: AIProvider; name: string },
 						btnEl: HTMLButtonElement,
 					) => {
-						if (btnEl.disabled) return;
+						if (btnEl.disabled || maintenanceRunning) return;
+						const installConfig = AGENT_INSTALL_CONFIGS[agentToInstall.id];
+						if (!installConfig.installCmd && installConfig.manualUrl) {
+							logOperation(`${agentToInstall.name}: follow the official setup guide.\n${installConfig.manualUrl}`, `Setup guide for ${agentToInstall.name}`);
+							openInDefaultBrowser(installConfig.manualUrl);
+							return;
+						}
+						maintenanceRunning = true;
+						updateAllBtn.disabled = true;
 						btnEl.disabled = true;
-						btnEl.className = "vault-code-agent-card-badge is-installing";
-						btnEl.empty();
-						btnEl.createSpan({ cls: "vault-code-badge-spinner" });
-						btnEl.createSpan({ text: t("settingsAIAgentInstalling") });
+						setAgentActivity(agentToInstall.id, "installing");
 
 						try {
+							logOperation(`Installing ${agentToInstall.name}…`, `Installing ${agentToInstall.name}...`);
 							const res = await this.plugin.aiService.installAgent(agentToInstall.id);
+							logOperation(`${res.message}${res.command ? `\n${res.command}` : ""}`, res.success ? `${agentToInstall.name} installed` : `${agentToInstall.name} needs attention — see details`);
+							if (!res.success && res.command?.startsWith("https://")) openInDefaultBrowser(res.command);
 							if (res.success) {
 								new Notice(t("settingsAIAgentInstallSuccess", agentToInstall.name));
 								this.plugin.aiService.refreshAgentsCache();
@@ -8789,7 +8840,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 									res.command &&
 									(res.command.startsWith("npm ") ||
 										res.command.startsWith("python") ||
-										res.command.startsWith("brew "))
+										res.command.startsWith("brew ") || res.command.startsWith("uv ") || res.command.startsWith("curl "))
 								) {
 									try {
 										await navigator.clipboard.writeText(res.command);
@@ -8810,6 +8861,10 @@ class VaultCodeSettingTab extends PluginSettingTab {
 							btnEl.className = "vault-code-agent-card-badge is-missing is-installable";
 							btnEl.empty();
 							btnEl.setText(t("settingsAIAgentInstallQuestion"));
+							logOperation(msg, `${agentToInstall.name} installation failed — see details`);
+						} finally {
+							maintenanceRunning = false;
+							updateAllBtn.disabled = false;
 						}
 					};
 
@@ -8820,15 +8875,17 @@ class VaultCodeSettingTab extends PluginSettingTab {
 						checkingBadge.createSpan({ cls: "vault-code-badge-spinner" });
 						checkingBadge.createSpan({ text: t("settingsAIAgentChecking") });
 					} else if (isInstalled) {
-						cardEl.createDiv({
-							cls: "vault-code-agent-card-badge is-installed",
-							text: t("settingsAIAgentInstalled"),
+						const installedBadge = cardEl.createDiv({
+							cls: `vault-code-agent-card-badge ${agent.diagnostic ? "is-missing" : "is-installed"}`,
+							text: agent.diagnostic ? "Needs attention" : t("settingsAIAgentInstalled"),
 						});
+						providerBadges.set(agent.id, installedBadge);
 					} else {
 						const installBtn = cardEl.createEl("button", {
 							cls: "vault-code-agent-card-badge is-missing is-installable",
-							text: t("settingsAIAgentInstallQuestion"),
+							text: AGENT_INSTALL_CONFIGS[agent.id].installCmd ? t("settingsAIAgentInstallQuestion") : "Setup guide",
 						});
+						providerBadges.set(agent.id, installBtn);
 						installBtn.addEventListener("click", (e) => {
 							e.stopPropagation();
 							void handleInstallAgent(agent, installBtn);
@@ -8836,6 +8893,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 					}
 
 					cardEl.addEventListener("click", () => {
+						if (!isInstalled || isChecking || maintenanceRunning) return;
 						this.plugin.settings.aiProvider = agent.id;
 						void this.plugin.saveSettings().then(() => {
 							this.display();
@@ -8869,21 +8927,30 @@ class VaultCodeSettingTab extends PluginSettingTab {
 			const updateText = updateAllBtn.createSpan({ text: t("settingsAIUpdateConnectedCLIs") });
 
 			updateAllBtn.addEventListener("click", () => {
-				if (updateAllBtn.disabled) return;
+				if (updateAllBtn.disabled || maintenanceRunning) return;
+				maintenanceRunning = true;
 				updateAllBtn.disabled = true;
 				updateIcon.addClass("vault-code-spin");
-				updateText.setText(t("settingsAIUpdatingCLIs"));
+				updateText.setText("Updating...");
+				logOperation("Checking installed CLIs before updating…", "Updating installed CLIs...");
 
 				void (async () => {
 					try {
+						operationLog.empty();
 						const result = await this.plugin.aiService.updateAllConnectedAgents(
 							(agent, success, error) => {
+								setAgentActivity(agent.id, success ? "updated" : "failed");
+								logOperation(`${agent.name}: ${success ? "Updated and version check passed" : error || "Update failed"}`);
 								if (!success) {
-									const detail = error ? `: ${error}` : "";
-									new Notice(`${t("settingsAIAgentUpdateFailedSingle", agent.name)}${detail}`, 9000);
+									new Notice(`${agent.name} needs attention. See CLI activity details.`, 5000);
 								}
 							},
+							(agent) => {
+								setAgentActivity(agent.id, "updating");
+								activitySummary.setText(`Updating ${agent.name}...`);
+							},
 						);
+						logOperation(`${result.updated} updated, ${result.failed} failed or require manual setup (${result.total} installed).`, `${result.updated} updated · ${result.failed} need attention`);
 						if (result.total === 0) {
 							new Notice(t("settingsAINoConnectedCLIsToUpdate"));
 						} else if (result.failed === 0) {
@@ -8897,7 +8964,9 @@ class VaultCodeSettingTab extends PluginSettingTab {
 					} catch (err: unknown) {
 						const msg = err instanceof Error ? err.message : String(err);
 						new Notice(`${t("settingsAIUpdateFailed")}: ${msg}`);
+						logOperation(msg, "Update stopped — see details");
 					} finally {
+						maintenanceRunning = false;
 						updateAllBtn.disabled = false;
 						updateIcon.removeClass("vault-code-spin");
 						updateText.setText(t("settingsAIUpdateConnectedCLIs"));
