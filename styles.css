@@ -2581,7 +2581,7 @@ input[type="text"].vault-code-chat-title-input:focus-visible {
 
 /* Modern Input Card */
 .vault-code-chat-footer {
-	padding: 8px 12px 14px 12px;
+	padding: 8px 12px 36px 12px;
 	background-color: var(--background-primary);
 	flex-shrink: 0;
 }
