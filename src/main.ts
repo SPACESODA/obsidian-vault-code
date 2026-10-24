@@ -675,7 +675,7 @@ const DEFAULT_SETTINGS: VaultCodeSettings = {
 	enableGitIntegration: true,
 	enableAIChat: true,
 	aiProvider: "antigravity",
-	aiModel: "auto",
+	aiModel: "gemini-3.8-flash-medium",
 	aiCodexModel: "gpt-6.1-sol",
 	aiReasoningEffort: "auto",
 	aiProviderLastModel: {
@@ -683,12 +683,12 @@ const DEFAULT_SETTINGS: VaultCodeSettings = {
 		codex: "gpt-6.1-sol",
 		claude: "claude-sonnet-4-6",
 		copilot: "claude-3.7-sonnet",
-		cursor: "auto",
+		cursor: "composer-2.5",
 		ollama: "llama3.3",
 		kimi: "kimi-k3",
 		grok: "grok-4.7",
 		mimo: "mimo-v2-flash",
-		aider: "default",
+		aider: "claude-3-7-sonnet",
 		opencode: "default",
 		pi: "default",
 		kiro: "default",
@@ -4953,6 +4953,7 @@ export default class VaultCodePlugin extends Plugin {
 	settingsTab: VaultCodeSettingTab | null = null;
 	aiService!: AIService;
 	aiStorage!: AIStorage;
+	private aiChatRibbonIconEl: HTMLElement | null = null;
 
 	async onload() {
 		this.aiService = new AIService(this.app, this);
@@ -5056,15 +5057,18 @@ export default class VaultCodePlugin extends Plugin {
 			await this.reloadCodeEditorLeaves();
 			this.updateAllLeafHeaderActions();
 
-			if (
-				Platform.isDesktop &&
-				this.settings.enableAIChat &&
-				this.settings.aiChatAutoClean !== "never"
-			) {
-				void this.aiStorage.runAutoCleanup(
-					this.settings.aiChatFolder,
-					this.settings.aiChatAutoClean,
-				);
+			if (Platform.isDesktop) {
+				if (this.settings.enableAIChat) {
+					void this.initAIChatLeaf();
+					if (this.settings.aiChatAutoClean !== "never") {
+						void this.aiStorage.runAutoCleanup(
+							this.settings.aiChatFolder,
+							this.settings.aiChatAutoClean,
+						);
+					}
+				} else {
+					this.app.workspace.detachLeavesOfType(VIEW_TYPE_AI_CHAT);
+				}
 			}
 		});
 
@@ -5274,17 +5278,17 @@ export default class VaultCodePlugin extends Plugin {
 			new CreateFileModal(this.app, this, targetFolder).open();
 		});
 
-		if (Platform.isDesktop && this.settings.enableAIChat) {
-			this.addRibbonIcon("sparkles", t("ribbonAIChatTooltip"), () => {
-				void this.activateAIChatView();
-			});
-		}
+		this.addAIChatRibbon();
 
 		this.addCommand({
 			id: "open-ai-chat",
 			name: t("commandOpenAIChat"),
-			callback: () => {
-				void this.activateAIChatView();
+			checkCallback: (checking) => {
+				if (!Platform.isDesktop || !this.settings.enableAIChat) return false;
+				if (!checking) {
+					void this.activateAIChatView();
+				}
+				return true;
 			},
 		});
 
@@ -5693,7 +5697,38 @@ export default class VaultCodePlugin extends Plugin {
 			actionsEl?.querySelector(".vault-code-header-toggle-btn")?.remove();
 		});
 
+		this.removeAIChatRibbon();
+
 		DotfileView.clearCssCache();
+	}
+
+	public addAIChatRibbon(): void {
+		if (this.aiChatRibbonIconEl || !Platform.isDesktop || !this.settings.enableAIChat) return;
+		this.aiChatRibbonIconEl = this.addRibbonIcon("sparkles", t("ribbonAIChatTooltip"), () => {
+			void this.activateAIChatView();
+		});
+	}
+
+	public removeAIChatRibbon(): void {
+		if (this.aiChatRibbonIconEl) {
+			this.aiChatRibbonIconEl.remove();
+			this.aiChatRibbonIconEl = null;
+		}
+	}
+
+	async initAIChatLeaf(): Promise<void> {
+		if (!Platform.isDesktop || !this.settings.enableAIChat) return;
+		const { workspace } = this.app;
+		if (workspace.getLeavesOfType(VIEW_TYPE_AI_CHAT).length > 0) {
+			return;
+		}
+		const rightLeaf = workspace.getRightLeaf(false);
+		if (rightLeaf) {
+			await rightLeaf.setViewState({
+				type: VIEW_TYPE_AI_CHAT,
+				active: false,
+			});
+		}
 	}
 
 	async activateAIChatView(): Promise<void> {
@@ -8672,10 +8707,20 @@ class VaultCodeSettingTab extends PluginSettingTab {
 						.onChange(async (value) => {
 							this.plugin.settings.enableAIChat = value;
 							await this.plugin.saveSettings();
+							if (value) {
+								this.plugin.addAIChatRibbon();
+								void this.plugin.initAIChatLeaf();
+							} else {
+								this.plugin.removeAIChatRibbon();
+								this.plugin.aiService.clearCache();
+								this.app.workspace.detachLeavesOfType(VIEW_TYPE_AI_CHAT);
+							}
+							this.display();
 						}),
 				);
 
-			const agentSection = containerEl.createDiv({ cls: "vault-code-agent-section" });
+			if (this.plugin.settings.enableAIChat) {
+				const agentSection = containerEl.createDiv({ cls: "vault-code-agent-section" });
 			const sectionHeader = agentSection.createDiv({ cls: "vault-code-agent-section-header" });
 			sectionHeader.createDiv({
 				cls: "vault-code-agent-section-title",
@@ -8876,6 +8921,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 							menu.showAtMouseEvent(e);
 						}),
 				);
+			}
 		}
 
 		new Setting(containerEl)

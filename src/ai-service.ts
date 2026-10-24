@@ -120,7 +120,6 @@ export interface DetectedAgentInfo {
 }
 
 export const DEFAULT_AGY_MODELS: AgyModelInfo[] = [
-	{ id: "auto", displayName: "Auto (Recommended)" },
 	{ id: "gemini-3.8-flash-high", displayName: "Gemini 3.8 Flash (High)" },
 	{ id: "gemini-3.8-flash-medium", displayName: "Gemini 3.8 Flash (Medium)" },
 	{ id: "gemini-3.8-flash-low", displayName: "Gemini 3.8 Flash (Low)" },
@@ -130,7 +129,6 @@ export const DEFAULT_AGY_MODELS: AgyModelInfo[] = [
 ];
 
 export const DEFAULT_CODEX_MODELS: AgyModelInfo[] = [
-	{ id: "auto", displayName: "Auto (Recommended)" },
 	{ id: "gpt-6.1-sol", displayName: "GPT-6.1-Sol" },
 	{ id: "gpt-6-astra", displayName: "GPT-6-Astra" },
 	{ id: "gpt-6-sol", displayName: "GPT-6-Sol" },
@@ -141,7 +139,6 @@ export const DEFAULT_CODEX_MODELS: AgyModelInfo[] = [
 ];
 
 export const DEFAULT_CLAUDE_MODELS: AgyModelInfo[] = [
-	{ id: "auto", displayName: "Auto (Recommended)" },
 	{ id: "claude-sonnet-4-6", displayName: "Claude Sonnet 4.6 (Thinking)" },
 	{ id: "claude-opus-4-6-thinking", displayName: "Claude Opus 4.6 (Thinking)" },
 	{ id: "claude-haiku-4-5", displayName: "Claude Haiku 4.5" },
@@ -149,7 +146,6 @@ export const DEFAULT_CLAUDE_MODELS: AgyModelInfo[] = [
 ];
 
 export const DEFAULT_COPILOT_MODELS: AgyModelInfo[] = [
-	{ id: "auto", displayName: "Auto (Recommended)" },
 	{ id: "claude-3.7-sonnet", displayName: "Claude 3.7 Sonnet" },
 	{ id: "gpt-4o", displayName: "GPT-4o" },
 	{ id: "o3-mini", displayName: "o3-mini" },
@@ -157,7 +153,6 @@ export const DEFAULT_COPILOT_MODELS: AgyModelInfo[] = [
 ];
 
 export const DEFAULT_CURSOR_MODELS: AgyModelInfo[] = [
-	{ id: "auto", displayName: "Auto (Recommended)" },
 	{ id: "claude-sonnet-5-thinking-high", displayName: "Claude Sonnet 5 Thinking" },
 	{ id: "composer-2.5", displayName: "Composer 2.5" },
 	{ id: "gpt-5.4-high", displayName: "GPT-5.4 High" },
@@ -166,7 +161,6 @@ export const DEFAULT_CURSOR_MODELS: AgyModelInfo[] = [
 ];
 
 export const DEFAULT_OLLAMA_MODELS: AgyModelInfo[] = [
-	{ id: "auto", displayName: "Auto (Recommended)" },
 	{ id: "llama3.3", displayName: "Llama 3.3" },
 	{ id: "qwen2.5-coder", displayName: "Qwen 2.5 Coder" },
 	{ id: "deepseek-r1", displayName: "DeepSeek R1" },
@@ -175,28 +169,24 @@ export const DEFAULT_OLLAMA_MODELS: AgyModelInfo[] = [
 ];
 
 export const DEFAULT_KIMI_MODELS: AgyModelInfo[] = [
-	{ id: "auto", displayName: "Auto (Recommended)" },
 	{ id: "kimi-k3", displayName: "Kimi K3" },
 	{ id: "kimi-k2.7-code", displayName: "Kimi K2.7 Code" },
 	{ id: "default", displayName: "Agent default" },
 ];
 
 export const DEFAULT_GROK_MODELS: AgyModelInfo[] = [
-	{ id: "auto", displayName: "Auto (Recommended)" },
 	{ id: "grok-4.7", displayName: "Grok 4.7" },
 	{ id: "grok-4.6", displayName: "Grok 4.6" },
 	{ id: "default", displayName: "Agent default" },
 ];
 
 export const DEFAULT_MIMO_MODELS: AgyModelInfo[] = [
-	{ id: "auto", displayName: "Auto (Recommended)" },
 	{ id: "mimo-v2-flash", displayName: "MiMo V2 Flash" },
 	{ id: "mimo-v2.5", displayName: "MiMo V2.5" },
 	{ id: "default", displayName: "Agent default" },
 ];
 
 export const DEFAULT_AIDER_MODELS: AgyModelInfo[] = [
-	{ id: "auto", displayName: "Auto (Recommended)" },
 	{ id: "claude-3-7-sonnet", displayName: "Claude 3.7 Sonnet" },
 	{ id: "gpt-4o", displayName: "GPT-4o" },
 	{ id: "deepseek-r1", displayName: "DeepSeek R1" },
@@ -204,7 +194,6 @@ export const DEFAULT_AIDER_MODELS: AgyModelInfo[] = [
 ];
 
 export const DEFAULT_GENERIC_MODELS: AgyModelInfo[] = [
-	{ id: "auto", displayName: "Auto (Recommended)" },
 	{ id: "default", displayName: "Agent default" },
 ];
 
@@ -219,7 +208,7 @@ export function resolveOptimalModel(provider: AIProvider): string {
 		case "copilot":
 			return "claude-3.7-sonnet";
 		case "cursor":
-			return "auto";
+			return "composer-2.5";
 		case "ollama":
 			return "llama3.3";
 		case "kimi":
@@ -229,7 +218,7 @@ export function resolveOptimalModel(provider: AIProvider): string {
 		case "mimo":
 			return "mimo-v2-flash";
 		case "aider":
-			return "default";
+			return "claude-3-7-sonnet";
 		case "opencode":
 		case "pi":
 		case "kiro":
@@ -285,7 +274,7 @@ export const ALL_AGENT_DEFS: Array<{
 		binary: "agent",
 		icon: "compass",
 		versionArgs: ["--version"],
-		defaultModel: "auto",
+		defaultModel: "composer-2.5",
 		models: DEFAULT_CURSOR_MODELS,
 	},
 	{
@@ -294,7 +283,7 @@ export const ALL_AGENT_DEFS: Array<{
 		binary: "ollama",
 		icon: "server",
 		versionArgs: ["--version"],
-		defaultModel: "auto",
+		defaultModel: "llama3.3",
 		models: DEFAULT_OLLAMA_MODELS,
 	},
 	{
@@ -330,7 +319,7 @@ export const ALL_AGENT_DEFS: Array<{
 		binary: "kimi",
 		icon: "moon",
 		versionArgs: ["--version"],
-		defaultModel: "auto",
+		defaultModel: "kimi-k3",
 		models: DEFAULT_KIMI_MODELS,
 	},
 	{
@@ -339,7 +328,7 @@ export const ALL_AGENT_DEFS: Array<{
 		binary: "grok",
 		icon: "zap",
 		versionArgs: ["--version"],
-		defaultModel: "auto",
+		defaultModel: "grok-4.7",
 		models: DEFAULT_GROK_MODELS,
 	},
 	{
@@ -348,7 +337,7 @@ export const ALL_AGENT_DEFS: Array<{
 		binary: "mimo",
 		icon: "zap",
 		versionArgs: ["--version"],
-		defaultModel: "auto",
+		defaultModel: "mimo-v2-flash",
 		models: DEFAULT_MIMO_MODELS,
 	},
 	{
@@ -357,7 +346,7 @@ export const ALL_AGENT_DEFS: Array<{
 		binary: "aider",
 		icon: "terminal",
 		versionArgs: ["--version"],
-		defaultModel: "auto",
+		defaultModel: "claude-3-7-sonnet",
 		models: DEFAULT_AIDER_MODELS,
 	},
 	{
@@ -428,7 +417,12 @@ export class AIService {
 	}
 
 	public isAvailable(): boolean {
-		return Platform.isDesktop;
+		return Platform.isDesktop && (this.plugin?.settings.enableAIChat ?? true);
+	}
+
+	public clearCache(): void {
+		this.cachedPaths.clear();
+		this.detectedAgentsCache = null;
 	}
 
 	private async resolveChildProcess(): Promise<NodeChildProcess | null> {
@@ -565,6 +559,10 @@ export class AIService {
 		customOverride?: string,
 		fallbackCandidates: string[] = [],
 	): Promise<string | null> {
+		if (this.plugin && !this.plugin.settings.enableAIChat) {
+			return null;
+		}
+
 		if (customOverride && customOverride.trim().length > 0) {
 			return customOverride.trim();
 		}
@@ -661,6 +659,10 @@ export class AIService {
 	}
 
 	public async detectAllAgents(): Promise<DetectedAgentInfo[]> {
+		if (this.plugin && !this.plugin.settings.enableAIChat) {
+			return [];
+		}
+
 		if (this.detectedAgentsCache) return this.detectedAgentsCache;
 
 		const cp = await this.resolveChildProcess();
@@ -805,6 +807,9 @@ export class AIService {
 	}
 
 	public async getModelsForProvider(provider: AIProvider): Promise<AgyModelInfo[]> {
+		if (this.plugin && !this.plugin.settings.enableAIChat) {
+			return [];
+		}
 		if (provider === "codex") {
 			return await this.getCodexModels();
 		}

@@ -209,7 +209,7 @@ export const en = {
 	// AI / Agent Chat
 	ribbonAIChatTooltip: "Agent chat (Cmd+Shift+L)",
 	commandOpenAIChat: "Open Agent chat",
-	aiChatViewTitle: "Agent",
+	aiChatViewTitle: "Agent chat",
 	aiChatNewChat: "New chat",
 	aiChatClear: "Clear messages",
 	aiChatPlaceholder: "Ask Agent anything...",
@@ -252,8 +252,8 @@ export const en = {
 	aiChatCleanupOlder30d: "Delete chats older than 30 days",
 	aiChatCleanupAll: "Delete all chats",
 	aiChatNoticeCleanedCount: "Cleaned up {0} old chats",
-	settingsGroupAI: "AI Agent",
-	settingsEnableAIName: "Enable AI Agent chat",
+	settingsGroupAI: "Agent chat",
+	settingsEnableAIName: "Enable Agent chat",
 	settingsEnableAIDesc: "Show the AI Agent chat assistant in the sidebar powered by local Antigravity CLI.",
 	settingsAIDefaultModelName: "Default model",
 	settingsAIDefaultModelDesc: "The default AI Agent model for new chat sessions.",
@@ -285,7 +285,7 @@ export const en = {
 	aiChatProviderCodex: "Codex",
 	settingsAIDefaultTargetName: "Default AI target",
 	settingsAIDefaultTargetDesc: "The default local coding agent used for chat and vault editing.",
-	settingsAIAgentsTitle: "Identified local agents",
+	settingsAIAgentsTitle: "Identify AI Agent providers",
 	settingsAIAgentsDesc: "Local agents can use tools to inspect and edit the vault. Click a card to set the default agent.",
 	settingsAIAgentInstalled: "Installed",
 	settingsAIAgentMissing: "Missing",
@@ -310,6 +310,7 @@ export const en = {
 	aiChatEffortLow: "Low",
 	aiChatEffortMedium: "Medium",
 	aiChatEffortHigh: "High",
+	aiChatNoticeModelOffShelf: "Model was unavailable; switched to {0}.",
 };
 
 export type TranslationSchema = typeof en;

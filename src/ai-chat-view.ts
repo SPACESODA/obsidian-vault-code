@@ -129,7 +129,23 @@ export class AIChatView extends ItemView {
 
 	private async loadModelsForProvider(provider: AIProvider): Promise<void> {
 		const models = await this.plugin.aiService.getModelsForProvider(provider);
-		this.availableModels = models;
+		this.availableModels = models.filter((m) => m.id !== "auto");
+
+		const def = ALL_AGENT_DEFS.find((d) => d.id === provider);
+		const allKnown = [
+			...this.availableModels,
+			...(def?.models || []).filter((m) => m.id !== "auto"),
+		];
+		const isKnown = allKnown.some((m) => m.id === this.selectedModel);
+		if (!isKnown || this.selectedModel === "auto") {
+			this.selectedModel = resolveOptimalModel(provider);
+			if (!this.plugin.settings.aiProviderLastModel) {
+				this.plugin.settings.aiProviderLastModel = {};
+			}
+			this.plugin.settings.aiProviderLastModel[provider] = this.selectedModel;
+			void this.plugin.saveSettings();
+		}
+
 		this.updateModelBtnLabel();
 	}
 
@@ -592,18 +608,18 @@ export class AIChatView extends ItemView {
 		const menu = createCustomMenu();
 
 		const def = ALL_AGENT_DEFS.find((d) => d.id === this.selectedProvider);
-		const modelsToUse =
+		const rawModels =
 			this.availableModels.length > 0
 				? this.availableModels
 				: (def?.models || DEFAULT_AGY_MODELS);
+		const modelsToUse = rawModels.filter((m) => m.id !== "auto");
 
 		for (const model of modelsToUse) {
 			menu.addItem((item) => {
 				item.setTitle(model.displayName);
 				item.setChecked(this.selectedModel === model.id);
 				item.onClick(() => {
-					this.selectedModel =
-						model.id === "auto" ? resolveOptimalModel(this.selectedProvider) : model.id;
+					this.selectedModel = model.id;
 					if (!this.plugin.settings.aiProviderLastModel) {
 						this.plugin.settings.aiProviderLastModel = {};
 					}
@@ -1067,6 +1083,22 @@ export class AIChatView extends ItemView {
 					this.currentTypingIndicatorEl.remove();
 					this.currentTypingIndicatorEl = null;
 				}
+
+				const isModelError = /model.*(?:not found|unknown|deprecated|discontinued|invalid|does not exist|unsupported)/i.test(err.message);
+				if (isModelError) {
+					const fallback = resolveOptimalModel(this.selectedProvider);
+					if (this.selectedModel !== fallback) {
+						this.selectedModel = fallback;
+						if (!this.plugin.settings.aiProviderLastModel) {
+							this.plugin.settings.aiProviderLastModel = {};
+						}
+						this.plugin.settings.aiProviderLastModel[this.selectedProvider] = fallback;
+						void this.plugin.saveSettings();
+						this.updateModelBtnLabel();
+						new Notice(t("aiChatNoticeModelOffShelf", fallback));
+					}
+				}
+
 				assistantMsg.content = `> ⚠️ **Error**: ${err.message}`;
 				if (asstBodyEl) {
 					asstBodyEl.empty();
