@@ -266,7 +266,12 @@ export class AIChatView extends ItemView {
 		const input = this.titleWrapperEl.createEl("input", {
 			type: "text",
 			cls: "vault-code-chat-title-input",
-			value: currentTitle,
+			value: currentTitle.slice(0, 70),
+			attr: {
+				maxlength: "70",
+				spellcheck: "false",
+				autocomplete: "off",
+			},
 		});
 
 		input.focus();
@@ -278,7 +283,7 @@ export class AIChatView extends ItemView {
 			finished = true;
 			this.isEditingTitle = false;
 
-			const newTitle = input.value.trim();
+			const newTitle = input.value.trim().slice(0, 70);
 			input.remove();
 			this.headerTitleEl.show();
 
