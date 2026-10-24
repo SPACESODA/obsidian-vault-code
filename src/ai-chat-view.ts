@@ -295,7 +295,9 @@ export class AIChatView extends ItemView {
 			cls: "vault-code-chat-pill vault-code-chat-pill-provider",
 			attr: { "aria-label": t("aiChatProviderSelect") },
 		});
-		this.providerBtnEl.addEventListener("click", (e) => this.showProviderMenu(e));
+		this.providerBtnEl.addEventListener("click", (e) => {
+			void this.showProviderMenu(e);
+		});
 
 		this.modelBtnEl = topRow.createEl("button", {
 			cls: "vault-code-chat-pill vault-code-chat-pill-model",
@@ -507,16 +509,28 @@ export class AIChatView extends ItemView {
 		this.updateContextChip();
 	}
 
-	private showProviderMenu(event: MouseEvent): void {
+	private async showProviderMenu(event: MouseEvent): Promise<void> {
 		const menu = createCustomMenu();
+		const agents = await this.plugin.aiService.detectAllAgents();
+		const installedMap = new Map<string, boolean>();
+		for (const a of agents) {
+			installedMap.set(a.id, a.isInstalled);
+		}
 
 		for (const def of ALL_AGENT_DEFS) {
 			const label = getAgentDisplayName(def.id);
+			const isInstalled = installedMap.get(def.id) ?? false;
+			const title = isInstalled ? label : `${label} (${t("settingsAIAgentMissing")})`;
+
 			menu.addItem((item) => {
-				item.setTitle(label);
+				item.setTitle(title);
 				item.setIcon(def.icon);
 				item.setChecked(this.selectedProvider === def.id);
+				if (!isInstalled) {
+					item.setDisabled(true);
+				}
 				item.onClick(() => {
+					if (!isInstalled) return;
 					if (this.selectedProvider !== def.id) {
 						this.selectedProvider = def.id;
 						this.plugin.settings.aiProvider = def.id;
@@ -700,9 +714,29 @@ export class AIChatView extends ItemView {
 			text: t("aiChatWelcomeTitle"),
 		});
 
-		welcomeEl.createEl("p", {
+		const subtitleEl = welcomeEl.createEl("p", {
 			cls: "vault-code-chat-welcome-subtitle",
 			text: t("aiChatWelcomeSubtitle"),
+		});
+
+		void this.plugin.aiService.detectAllAgents().then((agents) => {
+			const anyInstalled = agents.some((a) => a.isInstalled);
+			if (!anyInstalled) {
+				subtitleEl.setText(
+					"No local AI coding agent detected on this computer. Please install an agent (such as Antigravity, Claude Code, Ollama, or Codex) or configure its path in settings to start.",
+				);
+				const btn = welcomeEl.createEl("button", {
+					cls: "mod-cta vault-code-welcome-settings-btn",
+					text: "Open settings",
+				});
+				btn.addEventListener("click", () => {
+					const appWithSetting = this.app as unknown as {
+						setting?: { open: () => void; openTabById: (id: string) => void };
+					};
+					appWithSetting.setting?.open?.();
+					appWithSetting.setting?.openTabById?.("vault-code");
+				});
+			}
 		});
 	}
 

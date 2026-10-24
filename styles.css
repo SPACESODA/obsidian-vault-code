@@ -865,6 +865,21 @@ body .hidden-files-editor-wrapper .cm-searchMatch-selected {
 	outline: none;
 }
 
+.vault-code-heading-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	margin-right: 8px;
+	vertical-align: -2px;
+	color: var(--text-accent);
+}
+
+.vault-code-heading-icon svg {
+	width: 18px;
+	height: 18px;
+	display: inline-block;
+}
+
 /* Warning box when auto-save is enabled (switch is off) */
 .hidden-files-auto-save-warning {
 	color: #cf222e;
@@ -3133,6 +3148,18 @@ textarea.vault-code-chat-input:active {
 	gap: 6px;
 	align-self: flex-start;
 	margin-top: 6px;
+}
+
+.vault-code-welcome-settings-btn {
+	margin-top: 10px;
+	font-size: var(--font-ui-smaller, 12px);
+	padding: 4px 12px;
+}
+
+.menu-item.is-disabled {
+	opacity: 0.5;
+	filter: grayscale(0.8);
+	cursor: not-allowed;
 }
 
 

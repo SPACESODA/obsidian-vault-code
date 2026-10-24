@@ -69,6 +69,8 @@ export type AIProvider =
 	| "pi"
 	| "kimi"
 	| "grok"
+	| "mimo"
+	| "aider"
 	| "kiro"
 	| "hermes";
 
@@ -183,6 +185,21 @@ export const DEFAULT_GROK_MODELS: AgyModelInfo[] = [
 	{ id: "default", displayName: "Agent default" },
 ];
 
+export const DEFAULT_MIMO_MODELS: AgyModelInfo[] = [
+	{ id: "auto", displayName: "Auto (Recommended)" },
+	{ id: "mimo-v2-flash", displayName: "MiMo V2 Flash" },
+	{ id: "mimo-v2.5", displayName: "MiMo V2.5" },
+	{ id: "default", displayName: "Agent default" },
+];
+
+export const DEFAULT_AIDER_MODELS: AgyModelInfo[] = [
+	{ id: "auto", displayName: "Auto (Recommended)" },
+	{ id: "claude-3-7-sonnet", displayName: "Claude 3.7 Sonnet" },
+	{ id: "gpt-4o", displayName: "GPT-4o" },
+	{ id: "deepseek-r1", displayName: "DeepSeek R1" },
+	{ id: "default", displayName: "Agent default" },
+];
+
 export const DEFAULT_GENERIC_MODELS: AgyModelInfo[] = [
 	{ id: "auto", displayName: "Auto (Recommended)" },
 	{ id: "default", displayName: "Agent default" },
@@ -191,7 +208,7 @@ export const DEFAULT_GENERIC_MODELS: AgyModelInfo[] = [
 export function resolveOptimalModel(provider: AIProvider): string {
 	switch (provider) {
 		case "antigravity":
-			return "gemini-3.8-flash-high";
+			return "gemini-3.8-flash-medium";
 		case "claude":
 			return "claude-sonnet-4-6";
 		case "codex":
@@ -206,6 +223,10 @@ export function resolveOptimalModel(provider: AIProvider): string {
 			return "kimi-k3";
 		case "grok":
 			return "grok-4.7";
+		case "mimo":
+			return "mimo-v2-flash";
+		case "aider":
+			return "default";
 		case "opencode":
 		case "pi":
 		case "kiro":
@@ -293,7 +314,7 @@ export const ALL_AGENT_DEFS: Array<{
 		binary: "agy",
 		icon: "sparkles",
 		versionArgs: ["--version"],
-		defaultModel: "gemini-3.8-flash-high",
+		defaultModel: "gemini-3.8-flash-medium",
 		models: DEFAULT_AGY_MODELS,
 	},
 	{
@@ -313,6 +334,24 @@ export const ALL_AGENT_DEFS: Array<{
 		versionArgs: ["--version"],
 		defaultModel: "auto",
 		models: DEFAULT_GROK_MODELS,
+	},
+	{
+		id: "mimo",
+		name: "Xiaomi MiMo",
+		binary: "mimo",
+		icon: "zap",
+		versionArgs: ["--version"],
+		defaultModel: "auto",
+		models: DEFAULT_MIMO_MODELS,
+	},
+	{
+		id: "aider",
+		name: "Aider",
+		binary: "aider",
+		icon: "terminal",
+		versionArgs: ["--version"],
+		defaultModel: "auto",
+		models: DEFAULT_AIDER_MODELS,
 	},
 	{
 		id: "kiro",
@@ -356,6 +395,10 @@ export function getAgentDisplayName(provider: AIProvider): string {
 			return t("aiChatProviderKimi");
 		case "grok":
 			return t("aiChatProviderGrok");
+		case "mimo":
+			return t("aiChatProviderMiMo");
+		case "aider":
+			return t("aiChatProviderAider");
 		case "kiro":
 			return t("aiChatProviderKiro");
 		case "hermes":
@@ -1054,6 +1097,20 @@ export class AIService {
 				if (options.model && options.model !== "auto" && options.model !== "default") {
 					args.push("--model", options.model.trim());
 				}
+			} else if (provider === "mimo") {
+				binPath = await this.detectBinaryPath("mimo");
+				if (!binPath) {
+					options.onError?.(new Error("Xiaomi MiMo CLI (mimo) not found on system"));
+					return;
+				}
+				args = ["-p", effectivePrompt];
+			} else if (provider === "aider") {
+				binPath = await this.detectBinaryPath("aider");
+				if (!binPath) {
+					options.onError?.(new Error("Aider CLI (aider) not found on system"));
+					return;
+				}
+				args = ["--message", effectivePrompt, "--no-git", "--yes"];
 			} else if (provider === "kiro") {
 				binPath = await this.detectBinaryPath("kiro");
 				if (!binPath) {

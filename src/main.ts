@@ -678,7 +678,7 @@ const DEFAULT_SETTINGS: VaultCodeSettings = {
 	aiModel: "auto",
 	aiCodexModel: "gpt-6.1-sol",
 	aiProviderLastModel: {
-		antigravity: "gemini-3.8-flash-high",
+		antigravity: "gemini-3.8-flash-medium",
 		codex: "gpt-6.1-sol",
 		claude: "claude-sonnet-4-6",
 		copilot: "claude-3.7-sonnet",
@@ -686,6 +686,8 @@ const DEFAULT_SETTINGS: VaultCodeSettings = {
 		ollama: "llama3.3",
 		kimi: "kimi-k3",
 		grok: "grok-4.7",
+		mimo: "mimo-v2-flash",
+		aider: "default",
 		opencode: "default",
 		pi: "default",
 		kiro: "default",
@@ -8253,7 +8255,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 					});
 			});
 
-		const createSectionHeading = (title: string): Setting => {
+		const createSectionHeading = (title: string, iconName?: string): Setting => {
 			const heading = new Setting(containerEl)
 				.setName(title)
 				.setHeading();
@@ -8262,11 +8264,16 @@ class VaultCodeSettingTab extends PluginSettingTab {
 			heading.settingEl.addEventListener("focus", () => {
 				heading.settingEl.blur();
 			});
+			if (iconName) {
+				const iconSpan = createSpan({ cls: "vault-code-heading-icon" });
+				setIcon(iconSpan, iconName);
+				heading.nameEl.prepend(iconSpan);
+			}
 			return heading;
 		};
 
 		// Group 1: File explorer
-		createSectionHeading(t("settingsGroupFileExplorer"));
+		createSectionHeading(t("settingsGroupFileExplorer"), "folder");
 
 		new Setting(containerEl)
 			.setName(t("settingsShowHiddenDotfilesName"))
@@ -8454,7 +8461,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 			);
 
 		// Group 2: Code editor
-		createSectionHeading(t("settingsGroupCodeEditor"));
+		createSectionHeading(t("settingsGroupCodeEditor"), "code-xml");
 
 		const allowEditSetting = new Setting(containerEl)
 			.setName(t("settingsAllowEditDotfilesName"));
@@ -8618,7 +8625,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 
 		// Group 3: Git (Desktop only)
 		if (Platform.isDesktop) {
-			createSectionHeading(t("settingsGroupGit"));
+			createSectionHeading(t("settingsGroupGit"), "git-branch");
 
 			const gitSetting = new Setting(containerEl)
 				.setName(t("settingsGitName"));
@@ -8653,7 +8660,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 
 		// Group: AI Chat (Antigravity CLI)
 		if (Platform.isDesktop) {
-			createSectionHeading(t("settingsGroupAI"));
+			createSectionHeading(t("settingsGroupAI"), "sparkles");
 
 			new Setting(containerEl)
 				.setName(t("settingsEnableAIName"))

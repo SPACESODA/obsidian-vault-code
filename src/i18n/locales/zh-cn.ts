@@ -305,4 +305,6 @@ export const zhCn: TranslationSchema = {
 	aiChatProviderOllama: "Ollama",
 	aiChatProviderKimi: "Kimi Code",
 	aiChatProviderGrok: "Grok Build",
+	aiChatProviderMiMo: "Xiaomi MiMo",
+	aiChatProviderAider: "Aider",
 };

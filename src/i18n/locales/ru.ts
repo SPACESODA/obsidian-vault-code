@@ -305,4 +305,6 @@ export const ru: TranslationSchema = {
 	aiChatProviderOllama: "Ollama",
 	aiChatProviderKimi: "Kimi Code",
 	aiChatProviderGrok: "Grok Build",
+	aiChatProviderMiMo: "Xiaomi MiMo",
+	aiChatProviderAider: "Aider",
 };
