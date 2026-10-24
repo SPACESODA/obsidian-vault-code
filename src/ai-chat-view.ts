@@ -15,6 +15,7 @@ import {
 	DEFAULT_AGY_MODELS,
 	ALL_AGENT_DEFS,
 	getAgentDisplayName,
+	resolveOptimalModel,
 } from "./ai-service";
 import { AIChatHistoryModal } from "./ai-history-modal";
 import { createCustomMenu } from "./custom-menu";
@@ -74,14 +75,11 @@ export class AIChatView extends ItemView {
 		super(leaf);
 		this.plugin = plugin;
 		this.selectedProvider = plugin.settings.aiProvider || "antigravity";
-		const def = ALL_AGENT_DEFS.find((d) => d.id === this.selectedProvider);
-		if (this.selectedProvider === "codex") {
-			this.selectedModel = plugin.settings.aiCodexModel || "gpt-6.1-sol";
-		} else if (this.selectedProvider === "antigravity") {
-			this.selectedModel = plugin.settings.aiModel || "gemini-3.8-flash-high";
-		} else {
-			this.selectedModel = def?.defaultModel || "default";
-		}
+		const remembered = plugin.settings.aiProviderLastModel?.[this.selectedProvider];
+		this.selectedModel =
+			remembered && remembered !== "auto"
+				? remembered
+				: resolveOptimalModel(this.selectedProvider);
 		this.chatScope = plugin.settings.aiScope || "active-note";
 		this.mode = plugin.settings.aiMode || "edit";
 	}
@@ -521,14 +519,15 @@ export class AIChatView extends ItemView {
 				item.onClick(() => {
 					if (this.selectedProvider !== def.id) {
 						this.selectedProvider = def.id;
-						if (def.id === "codex") {
-							this.selectedModel = this.plugin.settings.aiCodexModel || def.defaultModel;
-						} else if (def.id === "antigravity") {
-							this.selectedModel = this.plugin.settings.aiModel || def.defaultModel;
-						} else {
-							this.selectedModel = def.defaultModel;
-						}
+						this.plugin.settings.aiProvider = def.id;
+						const remembered = this.plugin.settings.aiProviderLastModel?.[def.id];
+						this.selectedModel =
+							remembered && remembered !== "auto"
+								? remembered
+								: resolveOptimalModel(def.id);
+						void this.plugin.saveSettings();
 						this.updateProviderBtnLabel();
+						this.updateModelBtnLabel();
 						void this.loadModelsForProvider(def.id);
 					}
 				});
@@ -552,7 +551,13 @@ export class AIChatView extends ItemView {
 				item.setTitle(model.displayName);
 				item.setChecked(this.selectedModel === model.id);
 				item.onClick(() => {
-					this.selectedModel = model.id;
+					this.selectedModel =
+						model.id === "auto" ? resolveOptimalModel(this.selectedProvider) : model.id;
+					if (!this.plugin.settings.aiProviderLastModel) {
+						this.plugin.settings.aiProviderLastModel = {};
+					}
+					this.plugin.settings.aiProviderLastModel[this.selectedProvider] = this.selectedModel;
+					void this.plugin.saveSettings();
 					this.updateModelBtnLabel();
 				});
 			});
@@ -650,14 +655,11 @@ export class AIChatView extends ItemView {
 		this.openNoteBtnEl?.hide();
 		this.chatScope = "active-note";
 		this.selectedProvider = this.plugin.settings.aiProvider || "antigravity";
-		const def = ALL_AGENT_DEFS.find((d) => d.id === this.selectedProvider);
-		if (this.selectedProvider === "codex") {
-			this.selectedModel = this.plugin.settings.aiCodexModel || "gpt-6.1-sol";
-		} else if (this.selectedProvider === "antigravity") {
-			this.selectedModel = this.plugin.settings.aiModel || "gemini-3.8-flash-high";
-		} else {
-			this.selectedModel = def?.defaultModel || "default";
-		}
+		const remembered = this.plugin.settings.aiProviderLastModel?.[this.selectedProvider];
+		this.selectedModel =
+			remembered && remembered !== "auto"
+				? remembered
+				: resolveOptimalModel(this.selectedProvider);
 		this.updateProviderBtnLabel();
 		void this.loadModelsForProvider(this.selectedProvider);
 		this.updateVaultToggleState();

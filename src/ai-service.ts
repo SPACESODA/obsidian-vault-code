@@ -63,8 +63,12 @@ export type AIProvider =
 	| "codex"
 	| "claude"
 	| "copilot"
+	| "cursor"
+	| "ollama"
 	| "opencode"
 	| "pi"
+	| "kimi"
+	| "grok"
 	| "kiro"
 	| "hermes";
 
@@ -111,6 +115,7 @@ export interface DetectedAgentInfo {
 }
 
 export const DEFAULT_AGY_MODELS: AgyModelInfo[] = [
+	{ id: "auto", displayName: "Auto (Recommended)" },
 	{ id: "gemini-3.8-flash-high", displayName: "Gemini 3.8 Flash (High)" },
 	{ id: "gemini-3.8-flash-medium", displayName: "Gemini 3.8 Flash (Medium)" },
 	{ id: "gemini-3.8-flash-low", displayName: "Gemini 3.8 Flash (Low)" },
@@ -120,6 +125,7 @@ export const DEFAULT_AGY_MODELS: AgyModelInfo[] = [
 ];
 
 export const DEFAULT_CODEX_MODELS: AgyModelInfo[] = [
+	{ id: "auto", displayName: "Auto (Recommended)" },
 	{ id: "gpt-6.1-sol", displayName: "GPT-6.1-Sol" },
 	{ id: "gpt-6-astra", displayName: "GPT-6-Astra" },
 	{ id: "gpt-6-sol", displayName: "GPT-6-Sol" },
@@ -130,6 +136,7 @@ export const DEFAULT_CODEX_MODELS: AgyModelInfo[] = [
 ];
 
 export const DEFAULT_CLAUDE_MODELS: AgyModelInfo[] = [
+	{ id: "auto", displayName: "Auto (Recommended)" },
 	{ id: "claude-sonnet-4-6", displayName: "Claude Sonnet 4.6 (Thinking)" },
 	{ id: "claude-opus-4-6-thinking", displayName: "Claude Opus 4.6 (Thinking)" },
 	{ id: "claude-haiku-4-5", displayName: "Claude Haiku 4.5" },
@@ -137,15 +144,76 @@ export const DEFAULT_CLAUDE_MODELS: AgyModelInfo[] = [
 ];
 
 export const DEFAULT_COPILOT_MODELS: AgyModelInfo[] = [
+	{ id: "auto", displayName: "Auto (Recommended)" },
 	{ id: "claude-3.7-sonnet", displayName: "Claude 3.7 Sonnet" },
 	{ id: "gpt-4o", displayName: "GPT-4o" },
 	{ id: "o3-mini", displayName: "o3-mini" },
 	{ id: "default", displayName: "Agent default" },
 ];
 
-export const DEFAULT_GENERIC_MODELS: AgyModelInfo[] = [
+export const DEFAULT_CURSOR_MODELS: AgyModelInfo[] = [
+	{ id: "auto", displayName: "Auto (Recommended)" },
+	{ id: "claude-sonnet-5-thinking-high", displayName: "Claude Sonnet 5 Thinking" },
+	{ id: "composer-2.5", displayName: "Composer 2.5" },
+	{ id: "gpt-5.4-high", displayName: "GPT-5.4 High" },
+	{ id: "gemini-3.7-flash-high", displayName: "Gemini 3.7 Flash" },
+	{ id: "cursor-fast", displayName: "Cursor Fast" },
+];
+
+export const DEFAULT_OLLAMA_MODELS: AgyModelInfo[] = [
+	{ id: "auto", displayName: "Auto (Recommended)" },
+	{ id: "llama3.3", displayName: "Llama 3.3" },
+	{ id: "qwen2.5-coder", displayName: "Qwen 2.5 Coder" },
+	{ id: "deepseek-r1", displayName: "DeepSeek R1" },
+	{ id: "mistral", displayName: "Mistral" },
 	{ id: "default", displayName: "Agent default" },
 ];
+
+export const DEFAULT_KIMI_MODELS: AgyModelInfo[] = [
+	{ id: "auto", displayName: "Auto (Recommended)" },
+	{ id: "kimi-k3", displayName: "Kimi K3" },
+	{ id: "kimi-k2.7-code", displayName: "Kimi K2.7 Code" },
+	{ id: "default", displayName: "Agent default" },
+];
+
+export const DEFAULT_GROK_MODELS: AgyModelInfo[] = [
+	{ id: "auto", displayName: "Auto (Recommended)" },
+	{ id: "grok-4.7", displayName: "Grok 4.7" },
+	{ id: "grok-4.6", displayName: "Grok 4.6" },
+	{ id: "default", displayName: "Agent default" },
+];
+
+export const DEFAULT_GENERIC_MODELS: AgyModelInfo[] = [
+	{ id: "auto", displayName: "Auto (Recommended)" },
+	{ id: "default", displayName: "Agent default" },
+];
+
+export function resolveOptimalModel(provider: AIProvider): string {
+	switch (provider) {
+		case "antigravity":
+			return "gemini-3.8-flash-high";
+		case "claude":
+			return "claude-sonnet-4-6";
+		case "codex":
+			return "gpt-6.1-sol";
+		case "copilot":
+			return "claude-3.7-sonnet";
+		case "cursor":
+			return "auto";
+		case "ollama":
+			return "llama3.3";
+		case "kimi":
+			return "kimi-k3";
+		case "grok":
+			return "grok-4.7";
+		case "opencode":
+		case "pi":
+		case "kiro":
+		case "hermes":
+		default:
+			return "default";
+	}
+}
 
 export const ALL_AGENT_DEFS: Array<{
 	id: AIProvider;
@@ -184,6 +252,24 @@ export const ALL_AGENT_DEFS: Array<{
 		models: DEFAULT_COPILOT_MODELS,
 	},
 	{
+		id: "cursor",
+		name: "Cursor Agent",
+		binary: "agent",
+		icon: "compass",
+		versionArgs: ["--version"],
+		defaultModel: "auto",
+		models: DEFAULT_CURSOR_MODELS,
+	},
+	{
+		id: "ollama",
+		name: "Ollama",
+		binary: "ollama",
+		icon: "server",
+		versionArgs: ["--version"],
+		defaultModel: "auto",
+		models: DEFAULT_OLLAMA_MODELS,
+	},
+	{
 		id: "opencode",
 		name: "OpenCode",
 		binary: "opencode",
@@ -209,6 +295,24 @@ export const ALL_AGENT_DEFS: Array<{
 		versionArgs: ["--version"],
 		defaultModel: "gemini-3.8-flash-high",
 		models: DEFAULT_AGY_MODELS,
+	},
+	{
+		id: "kimi",
+		name: "Kimi Code",
+		binary: "kimi",
+		icon: "moon",
+		versionArgs: ["--version"],
+		defaultModel: "auto",
+		models: DEFAULT_KIMI_MODELS,
+	},
+	{
+		id: "grok",
+		name: "Grok Build",
+		binary: "grok",
+		icon: "zap",
+		versionArgs: ["--version"],
+		defaultModel: "auto",
+		models: DEFAULT_GROK_MODELS,
 	},
 	{
 		id: "kiro",
@@ -240,10 +344,18 @@ export function getAgentDisplayName(provider: AIProvider): string {
 			return t("aiChatProviderClaude");
 		case "copilot":
 			return t("aiChatProviderCopilot");
+		case "cursor":
+			return t("aiChatProviderCursor");
+		case "ollama":
+			return t("aiChatProviderOllama");
 		case "opencode":
 			return t("aiChatProviderOpenCode");
 		case "pi":
 			return t("aiChatProviderPi");
+		case "kimi":
+			return t("aiChatProviderKimi");
+		case "grok":
+			return t("aiChatProviderGrok");
 		case "kiro":
 			return t("aiChatProviderKiro");
 		case "hermes":
@@ -878,6 +990,70 @@ export class AIService {
 				if (options.model && options.model !== "default") {
 					args.push("--model", options.model.trim());
 				}
+			} else if (provider === "cursor") {
+				binPath = await this.detectBinaryPath("agent", undefined, [
+					"/Users/anthony/.local/bin/agent",
+					"/Users/anthony/.local/bin/cursor-agent",
+				]);
+				if (!binPath) {
+					binPath = await this.detectBinaryPath("cursor-agent");
+				}
+				if (!binPath) {
+					options.onError?.(new Error("Cursor Agent CLI (agent) not found on system"));
+					return;
+				}
+				args = [
+					"-p",
+					effectivePrompt,
+					"--output-format",
+					"stream-json",
+					"--stream-partial-output",
+					"--workspace",
+					vaultPath,
+				];
+				if (options.mode === "safe") {
+					args.push("--mode", "ask");
+				} else {
+					args.push("--force");
+				}
+				const modelVal = options.model === "auto" ? "auto" : options.model;
+				if (modelVal && modelVal !== "default") {
+					args.push("--model", modelVal.trim());
+				}
+				if (options.conversationId && options.conversationId.trim()) {
+					args.push("--resume", options.conversationId.trim());
+				}
+			} else if (provider === "ollama") {
+				binPath = await this.detectBinaryPath("ollama", undefined, ["/usr/local/bin/ollama"]);
+				if (!binPath) {
+					options.onError?.(new Error("Ollama CLI (ollama) not found on system"));
+					return;
+				}
+				const modelToUse =
+					!options.model || options.model === "auto" || options.model === "default"
+						? "llama3.3"
+						: options.model.trim();
+				args = ["run", modelToUse, effectivePrompt, "--keepalive", "30m"];
+			} else if (provider === "kimi") {
+				binPath = await this.detectBinaryPath("kimi");
+				if (!binPath) {
+					options.onError?.(new Error("Kimi Code CLI (kimi) not found on system"));
+					return;
+				}
+				args = ["-p", effectivePrompt];
+				if (options.model && options.model !== "auto" && options.model !== "default") {
+					args.push("--model", options.model.trim());
+				}
+			} else if (provider === "grok") {
+				binPath = await this.detectBinaryPath("grok");
+				if (!binPath) {
+					options.onError?.(new Error("Grok Build CLI (grok) not found on system"));
+					return;
+				}
+				args = ["-p", effectivePrompt];
+				if (options.model && options.model !== "auto" && options.model !== "default") {
+					args.push("--model", options.model.trim());
+				}
 			} else if (provider === "kiro") {
 				binPath = await this.detectBinaryPath("kiro");
 				if (!binPath) {
@@ -978,8 +1154,42 @@ export class AIService {
 							options.onDelta?.(line + "\n");
 						}
 					}
+				} else if (provider === "cursor") {
+					try {
+						const parsed = JSON.parse(line) as {
+							event?: string;
+							type?: string;
+							conversation_id?: string;
+							chatId?: string;
+							text_delta?: string;
+							delta?: string;
+							content?: string;
+							text?: string;
+							response?: string;
+						};
+						const cId = parsed.conversation_id || parsed.chatId;
+						if (cId) {
+							activeConversationId = cId;
+							options.onInit?.(cId);
+						}
+						const delta =
+							parsed.text_delta ||
+							parsed.delta ||
+							parsed.text ||
+							parsed.content ||
+							parsed.response;
+						if (delta) {
+							accumulatedText += delta;
+							options.onDelta?.(delta);
+						}
+					} catch {
+						if (!line.startsWith("{")) {
+							accumulatedText += line + "\n";
+							options.onDelta?.(line + "\n");
+						}
+					}
 				} else {
-					// Claude, Copilot, OpenCode, Pi, Kiro, Hermes text streaming
+					// Claude, Copilot, Ollama, OpenCode, Pi, Kimi, Grok, Kiro, Hermes text streaming
 					accumulatedText += line + "\n";
 					options.onDelta?.(line + "\n");
 				}

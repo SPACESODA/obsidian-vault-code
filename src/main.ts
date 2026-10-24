@@ -112,7 +112,6 @@ import {
 	AIProvider,
 	ALL_AGENT_DEFS,
 	DEFAULT_AGY_MODELS,
-	getAgentDisplayName,
 } from "./ai-service";
 import { AIChatView, VIEW_TYPE_AI_CHAT } from "./ai-chat-view";
 import { AIStorage } from "./ai-storage";
@@ -629,17 +628,10 @@ interface VaultCodeSettings {
 	lineWrapping: boolean;
 	enableGitIntegration: boolean;
 	enableAIChat: boolean;
-	aiProvider:
-		| "antigravity"
-		| "codex"
-		| "claude"
-		| "copilot"
-		| "opencode"
-		| "pi"
-		| "kiro"
-		| "hermes";
+	aiProvider: AIProvider;
 	aiModel: string;
 	aiCodexModel: string;
+	aiProviderLastModel?: Record<string, string>;
 	aiScope: "active-note" | "vault";
 	aiMode: "safe" | "edit";
 	aiCustomPath: string;
@@ -683,8 +675,22 @@ const DEFAULT_SETTINGS: VaultCodeSettings = {
 	enableGitIntegration: true,
 	enableAIChat: true,
 	aiProvider: "antigravity",
-	aiModel: "gemini-3.8-flash-high",
+	aiModel: "auto",
 	aiCodexModel: "gpt-6.1-sol",
+	aiProviderLastModel: {
+		antigravity: "gemini-3.8-flash-high",
+		codex: "gpt-6.1-sol",
+		claude: "claude-sonnet-4-6",
+		copilot: "claude-3.7-sonnet",
+		cursor: "auto",
+		ollama: "llama3.3",
+		kimi: "kimi-k3",
+		grok: "grok-4.7",
+		opencode: "default",
+		pi: "default",
+		kiro: "default",
+		hermes: "default",
+	},
 	aiScope: "active-note",
 	aiMode: "edit",
 	aiCustomPath: "",
@@ -8661,22 +8667,6 @@ class VaultCodeSettingTab extends PluginSettingTab {
 						}),
 				);
 
-			new Setting(containerEl)
-				.setName(t("settingsAIDefaultTargetName"))
-				.setDesc(t("settingsAIDefaultTargetDesc"))
-				.addDropdown((dropdown) => {
-					for (const def of ALL_AGENT_DEFS) {
-						dropdown.addOption(def.id, getAgentDisplayName(def.id));
-					}
-					dropdown
-						.setValue(this.plugin.settings.aiProvider || "antigravity")
-						.onChange(async (val) => {
-							this.plugin.settings.aiProvider = val as AIProvider;
-							await this.plugin.saveSettings();
-							this.display();
-						});
-				});
-
 			const agentSection = containerEl.createDiv({ cls: "vault-code-agent-section" });
 			const sectionHeader = agentSection.createDiv({ cls: "vault-code-agent-section-header" });
 			sectionHeader.createDiv({
@@ -8766,20 +8756,22 @@ class VaultCodeSettingTab extends PluginSettingTab {
 				.setName(t("settingsAIDefaultModelName"))
 				.setDesc(t("settingsAIDefaultModelDesc"))
 				.addDropdown((dropdown) => {
+					dropdown.addOption("auto", t("settingsAIModelAuto"));
 					for (const m of models) {
-						dropdown.addOption(m.id, m.displayName);
+						if (m.id !== "auto") {
+							dropdown.addOption(m.id, m.displayName);
+						}
 					}
-					const currentVal = currentProvider === "codex"
-						? (this.plugin.settings.aiCodexModel || "gpt-6.1-sol")
-						: (this.plugin.settings.aiModel || agentDef?.defaultModel || "gemini-3.8-flash-high");
+					const remembered = this.plugin.settings.aiProviderLastModel?.[currentProvider];
+					const currentVal = remembered || this.plugin.settings.aiModel || "auto";
 					dropdown
 						.setValue(currentVal)
 						.onChange(async (value) => {
-							if (currentProvider === "codex") {
-								this.plugin.settings.aiCodexModel = value;
-							} else {
-								this.plugin.settings.aiModel = value;
+							this.plugin.settings.aiModel = value;
+							if (!this.plugin.settings.aiProviderLastModel) {
+								this.plugin.settings.aiProviderLastModel = {};
 							}
+							this.plugin.settings.aiProviderLastModel[currentProvider] = value;
 							await this.plugin.saveSettings();
 						});
 				});
