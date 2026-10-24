@@ -16,7 +16,13 @@ export default tseslint.config(
 			"obsidianmd/ui/sentence-case-locale-module": [
 				"warn",
 				{
-					ignoreWords: ["Aa"],
+					ignoreWords: ["Aa", "Antigravity", "CLI"],
+				},
+			],
+			"obsidianmd/ui/sentence-case": [
+				"warn",
+				{
+					ignoreWords: ["Aa", "Antigravity", "CLI", "GPT-OSS", "120b"],
 				},
 			],
 		},

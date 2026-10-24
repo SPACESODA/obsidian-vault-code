@@ -107,6 +107,8 @@ import {
 import mjml2html from "mjml-browser";
 import { t, setLanguage, SUPPORTED_LANGUAGES } from "./i18n";
 import { GitService } from "./git-service";
+import { AIService } from "./ai-service";
+import { AIChatView, VIEW_TYPE_AI_CHAT } from "./ai-chat-view";
 
 /* ── View type constants ───────────────────────────────────── */
 
@@ -618,6 +620,11 @@ interface VaultCodeSettings {
 	indentWithTabs: string;
 	lineWrapping: boolean;
 	enableGitIntegration: boolean;
+	enableAIChat: boolean;
+	aiModel: string;
+	aiScope: "active-note" | "vault";
+	aiMode: "safe" | "edit";
+	aiCustomPath: string;
 }
 
 const DEFAULT_EXTENSIONS =
@@ -653,6 +660,11 @@ const DEFAULT_SETTINGS: VaultCodeSettings = {
 	indentWithTabs: "auto",
 	lineWrapping: true,
 	enableGitIntegration: true,
+	enableAIChat: true,
+	aiModel: "gemini-3.8-flash-high",
+	aiScope: "active-note",
+	aiMode: "safe",
+	aiCustomPath: "",
 };
 
 interface IgnoreRule {
@@ -4904,11 +4916,18 @@ export default class VaultCodePlugin extends Plugin {
 	cachedObsidianIgnoreRules: IgnoreRule[] = [];
 	cachedGitIgnoreRules: IgnoreRule[] = [];
 	settingsTab: VaultCodeSettingTab | null = null;
+	aiService!: AIService;
 
 	async onload() {
+		this.aiService = new AIService(this.app);
+
 		this.registerView(
 			VIEW_TYPE_DOTFILE,
 			(leaf) => new DotfileView(leaf, this),
+		);
+		this.registerView(
+			VIEW_TYPE_AI_CHAT,
+			(leaf) => new AIChatView(leaf, this),
 		);
 
 		await this.loadSettings();
@@ -5205,6 +5224,20 @@ export default class VaultCodePlugin extends Plugin {
 		this.addRibbonIcon("file-plus", t("ribbonNewFileTooltip"), () => {
 			const targetFolder = this.getActiveOrSelectedFolder();
 			new CreateFileModal(this.app, this, targetFolder).open();
+		});
+
+		if (Platform.isDesktop && this.settings.enableAIChat) {
+			this.addRibbonIcon("sparkles", t("ribbonAIChatTooltip"), () => {
+				void this.activateAIChatView();
+			});
+		}
+
+		this.addCommand({
+			id: "open-ai-chat",
+			name: t("commandOpenAIChat"),
+			callback: () => {
+				void this.activateAIChatView();
+			},
 		});
 
 		this.addSettingTab(new VaultCodeSettingTab(this.app, this));
@@ -5613,6 +5646,24 @@ export default class VaultCodePlugin extends Plugin {
 		});
 
 		DotfileView.clearCssCache();
+	}
+
+	async activateAIChatView(): Promise<void> {
+		const { workspace } = this.app;
+		let leaf = workspace.getLeavesOfType(VIEW_TYPE_AI_CHAT)[0];
+		if (!leaf) {
+			const rightLeaf = workspace.getRightLeaf(false);
+			if (rightLeaf) {
+				leaf = rightLeaf;
+				await leaf.setViewState({
+					type: VIEW_TYPE_AI_CHAT,
+					active: true,
+				});
+			}
+		}
+		if (leaf) {
+			this.app.workspace.setActiveLeaf(leaf, { focus: true });
+		}
 	}
 
 	/* ── Git integration ───────────────────────────────────────── */
@@ -8546,6 +8597,82 @@ class VaultCodeSettingTab extends PluginSettingTab {
 						await this.plugin.applyGitIntegrationToggle(value);
 					}),
 			);
+		}
+
+		// Group: AI Chat (Antigravity CLI)
+		if (Platform.isDesktop) {
+			createSectionHeading(t("settingsGroupAI"));
+
+			new Setting(containerEl)
+				.setName(t("settingsEnableAIName"))
+				.setDesc(t("settingsEnableAIDesc"))
+				.addToggle((toggle) =>
+					toggle
+						.setValue(this.plugin.settings.enableAIChat)
+						.onChange(async (value) => {
+							this.plugin.settings.enableAIChat = value;
+							await this.plugin.saveSettings();
+						}),
+				);
+
+			new Setting(containerEl)
+				.setName(t("settingsAIDefaultModelName"))
+				.setDesc(t("settingsAIDefaultModelDesc"))
+				.addDropdown((dropdown) => {
+					dropdown
+						.addOption("gemini-3.8-flash-high", "Gemini 3.8 Flash (High)")
+						.addOption("gemini-3.8-flash-medium", "Gemini 3.8 Flash (Medium)")
+						.addOption("gemini-3.8-flash-low", "Gemini 3.8 Flash (Low)")
+						.addOption("claude-sonnet-4-6", "Claude Sonnet 4.6 (Thinking)")
+						.addOption("claude-opus-4-6-thinking", "Claude Opus 4.6 (Thinking)")
+						.addOption("gpt-oss-120b-medium", "GPT-OSS 120b (medium)")
+						.setValue(this.plugin.settings.aiModel)
+						.onChange(async (value) => {
+							this.plugin.settings.aiModel = value;
+							await this.plugin.saveSettings();
+						});
+				});
+
+			new Setting(containerEl)
+				.setName(t("settingsAIDefaultScopeName"))
+				.setDesc(t("settingsAIDefaultScopeDesc"))
+				.addDropdown((dropdown) => {
+					dropdown
+						.addOption("active-note", t("aiChatScopeActiveNote"))
+						.addOption("vault", t("aiChatScopeVault"))
+						.setValue(this.plugin.settings.aiScope)
+						.onChange(async (value: string) => {
+							this.plugin.settings.aiScope = value as "active-note" | "vault";
+							await this.plugin.saveSettings();
+						});
+				});
+
+			new Setting(containerEl)
+				.setName(t("settingsAIDefaultModeName"))
+				.setDesc(t("settingsAIDefaultModeDesc"))
+				.addDropdown((dropdown) => {
+					dropdown
+						.addOption("safe", t("aiChatModeSafe"))
+						.addOption("edit", t("aiChatModeEdit"))
+						.setValue(this.plugin.settings.aiMode)
+						.onChange(async (value: string) => {
+							this.plugin.settings.aiMode = value as "safe" | "edit";
+							await this.plugin.saveSettings();
+						});
+				});
+
+			new Setting(containerEl)
+				.setName(t("settingsAICustomPathName"))
+				.setDesc(t("settingsAICustomPathDesc"))
+				.addText((text) =>
+					text
+						.setPlaceholder("/opt/homebrew/bin/agy")
+						.setValue(this.plugin.settings.aiCustomPath)
+						.onChange(async (value) => {
+							this.plugin.settings.aiCustomPath = value.trim();
+							await this.plugin.saveSettings();
+						}),
+				);
 		}
 
 		new Setting(containerEl)
