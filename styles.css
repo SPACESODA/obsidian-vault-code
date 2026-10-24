@@ -3426,3 +3426,21 @@ svg.vault-code-spin {
 		animation: none;
 	}
 }
+
+.vault-code-agent-title-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	min-width: 0;
+}
+
+.vault-code-agent-refresh {
+	flex-shrink: 0;
+	color: var(--text-muted);
+}
+
+.vault-code-agent-refresh:disabled {
+	opacity: 0.5;
+	cursor: default;
+}

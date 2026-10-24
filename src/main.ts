@@ -8720,10 +8720,16 @@ class VaultCodeSettingTab extends PluginSettingTab {
 			if (this.plugin.settings.enableAIChat) {
 				const agentSection = containerEl.createDiv({ cls: "vault-code-agent-section" });
 			const sectionHeader = agentSection.createDiv({ cls: "vault-code-agent-section-header" });
-			sectionHeader.createDiv({
+			const titleRow = sectionHeader.createDiv({ cls: "vault-code-agent-title-row" });
+			titleRow.createDiv({
 				cls: "vault-code-agent-section-title",
 				text: t("settingsAIAgentsTitle"),
 			});
+			const refreshProvidersButton = titleRow.createEl("button", {
+				cls: "clickable-icon vault-code-agent-refresh",
+				attr: { type: "button", "aria-label": "Refresh providers", title: "Refresh providers" },
+			});
+			setIcon(refreshProvidersButton, "refresh-cw");
 			sectionHeader.createDiv({
 				cls: "vault-code-agent-section-desc",
 				text: t("settingsAIAgentsDesc"),
@@ -8759,6 +8765,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 				operationLog.createDiv({ cls: "vault-code-cli-log-entry", text: message });
 			};
 			let maintenanceRunning = false;
+			let refreshingProviders = false;
 			const providerBadges = new Map<AIProvider, HTMLElement>();
 			const setAgentActivity = (id: AIProvider, state: "installing" | "updating" | "updated" | "failed") => {
 				const badge = providerBadges.get(id);
@@ -8799,20 +8806,20 @@ class VaultCodeSettingTab extends PluginSettingTab {
 					textEl.createDiv({ cls: "vault-code-agent-card-name", text: agent.name });
 
 					const isInstalled = !!agent.isInstalled;
-					const versionText = isChecking
-						? t("settingsAIAgentChecking")
-						: isInstalled
+					if (!isChecking) {
+						const versionText = isInstalled
 							? (agent.version || t("settingsAIAgentNotDetected"))
 							: t("settingsAIAgentMissing");
-					const versionEl = textEl.createDiv({ cls: "vault-code-agent-card-version", text: versionText });
-					if (agent.diagnostic) versionEl.setAttribute("title", agent.diagnostic);
-					if (agent.connectionStatus) textEl.createDiv({ cls: "vault-code-agent-card-version", text: agent.connectionStatus });
+						const versionEl = textEl.createDiv({ cls: "vault-code-agent-card-version", text: versionText });
+						if (agent.diagnostic) versionEl.setAttribute("title", agent.diagnostic);
+						if (agent.connectionStatus) textEl.createDiv({ cls: "vault-code-agent-card-version", text: agent.connectionStatus });
+					}
 
 					const handleInstallAgent = async (
 						agentToInstall: { id: AIProvider; name: string },
 						btnEl: HTMLButtonElement,
 					) => {
-						if (btnEl.disabled || maintenanceRunning) return;
+						if (btnEl.disabled || maintenanceRunning || refreshingProviders) return;
 						const installConfig = AGENT_INSTALL_CONFIGS[agentToInstall.id];
 						if (!installConfig.installCmd && installConfig.manualUrl) {
 							logOperation(`${agentToInstall.name}: follow the official setup guide.\n${installConfig.manualUrl}`, `Setup guide for ${agentToInstall.name}`);
@@ -8820,6 +8827,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 							return;
 						}
 						maintenanceRunning = true;
+						refreshProvidersButton.disabled = true;
 						updateAllBtn.disabled = true;
 						btnEl.disabled = true;
 						setAgentActivity(agentToInstall.id, "installing");
@@ -8833,6 +8841,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 								new Notice(t("settingsAIAgentInstallSuccess", agentToInstall.name));
 								this.plugin.aiService.refreshAgentsCache();
 								const updatedAgents = await this.plugin.aiService.detectAllAgents();
+								currentAgents = updatedAgents;
 								renderCards(updatedAgents, false);
 							} else {
 								new Notice(res.message, 8000);
@@ -8864,6 +8873,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 							logOperation(msg, `${agentToInstall.name} installation failed — see details`);
 						} finally {
 							maintenanceRunning = false;
+							refreshProvidersButton.disabled = false;
 							updateAllBtn.disabled = false;
 						}
 					};
@@ -8893,7 +8903,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 					}
 
 					cardEl.addEventListener("click", () => {
-						if (!isInstalled || isChecking || maintenanceRunning) return;
+						if (!isInstalled || isChecking || maintenanceRunning || refreshingProviders) return;
 						this.plugin.settings.aiProvider = agent.id;
 						void this.plugin.saveSettings().then(() => {
 							this.display();
@@ -8902,20 +8912,9 @@ class VaultCodeSettingTab extends PluginSettingTab {
 				}
 			};
 
-			renderCards(
-				ALL_AGENT_DEFS.map((d) => ({
-					id: d.id,
-					name: d.name,
-					icon: d.icon,
-					isInstalled: false,
-					version: t("settingsAIAgentChecking"),
-				})),
-				true,
-			);
-
-			void this.plugin.aiService.detectAllAgents().then((agents) => {
-				renderCards(agents, false);
-			});
+			let currentAgents: Parameters<typeof renderCards>[0] = ALL_AGENT_DEFS.map((d) => ({
+				id: d.id, name: d.name, icon: d.icon, isInstalled: false,
+			}));
 
 			const footerEl = agentSection.createDiv({ cls: "vault-code-agent-footer" });
 
@@ -8926,9 +8925,35 @@ class VaultCodeSettingTab extends PluginSettingTab {
 			setIcon(updateIcon, "refresh-cw");
 			const updateText = updateAllBtn.createSpan({ text: t("settingsAIUpdateConnectedCLIs") });
 
+			const refreshProviders = async (clearCache = true) => {
+				if (maintenanceRunning || refreshingProviders) return;
+				refreshingProviders = true;
+				refreshProvidersButton.disabled = true;
+				refreshProvidersButton.setAttribute("aria-busy", "true");
+				refreshProvidersButton.addClass("vault-code-spin");
+				updateAllBtn.disabled = true;
+				renderCards(currentAgents, true);
+				try {
+					if (clearCache) this.plugin.aiService.refreshAgentsCache();
+					currentAgents = await this.plugin.aiService.detectAllAgents();
+				} catch {
+					new Notice("Could not refresh providers. Try again.");
+				} finally {
+					renderCards(currentAgents, false);
+					refreshingProviders = false;
+					refreshProvidersButton.disabled = false;
+					refreshProvidersButton.setAttribute("aria-busy", "false");
+					refreshProvidersButton.removeClass("vault-code-spin");
+					updateAllBtn.disabled = false;
+				}
+			};
+			refreshProvidersButton.addEventListener("click", () => { void refreshProviders(); });
+			void refreshProviders(false);
+
 			updateAllBtn.addEventListener("click", () => {
-				if (updateAllBtn.disabled || maintenanceRunning) return;
+				if (updateAllBtn.disabled || maintenanceRunning || refreshingProviders) return;
 				maintenanceRunning = true;
+				refreshProvidersButton.disabled = true;
 				updateAllBtn.disabled = true;
 				updateIcon.addClass("vault-code-spin");
 				updateText.setText("Updating...");
@@ -8960,6 +8985,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 						}
 						this.plugin.aiService.refreshAgentsCache();
 						const fresh = await this.plugin.aiService.detectAllAgents();
+						currentAgents = fresh;
 						renderCards(fresh, false);
 					} catch (err: unknown) {
 						const msg = err instanceof Error ? err.message : String(err);
@@ -8967,6 +8993,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 						logOperation(msg, "Update stopped — see details");
 					} finally {
 						maintenanceRunning = false;
+						refreshProvidersButton.disabled = false;
 						updateAllBtn.disabled = false;
 						updateIcon.removeClass("vault-code-spin");
 						updateText.setText(t("settingsAIUpdateConnectedCLIs"));

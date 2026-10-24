@@ -197,9 +197,9 @@ test('sign-in checks distinguish installed from authenticated', async () => {
     if (a[0] === 'models') return { error:new Error('auth'), stderr:'Authentication required' };
   } });
   const agents = await h.service.detectAllAgents();
-  assert.match(agents.find(a=>a.id==='claude').connectionStatus, /Signed in/);
-  assert.match(agents.find(a=>a.id==='codex').connectionStatus, /Signed in/);
-  assert.match(agents.find(a=>a.id==='cursor').connectionStatus, /sign-in required/);
+  assert.equal(agents.find(a=>a.id==='claude').connectionStatus, 'Signed in');
+  assert.equal(agents.find(a=>a.id==='codex').connectionStatus, 'Signed in');
+  assert.equal(agents.find(a=>a.id==='cursor').connectionStatus, 'Sign-in required');
 });
 
 test('an installer is successful only after executable version verification', async () => {
@@ -263,4 +263,27 @@ test('desktop updates use Obsidian window.require for filesystem access', async 
 test('Cursor prefers its unique binary when another provider owns agent', async () => {
   const h = harness({ bins: {agent:'/fake/grok/agent','cursor-agent':'/fake/cursor-agent'} });
   assert.equal((await h.service.detectAllAgents()).find(a => a.id === 'cursor').path, '/fake/cursor-agent');
+});
+
+
+test('providers without an authentication check have no connection subtitle', async () => {
+  const h = harness({bins:{pi:'/fake/pi',agy:'/fake/agy',opencode:'/fake/opencode'}});
+  const agents = await h.service.detectAllAgents();
+  for (const id of ['pi','antigravity','opencode']) assert.equal(agents.find(a=>a.id===id).connectionStatus,undefined);
+});
+
+test('failed sign-in checks do not produce unverified status text', async () => {
+  const h = harness({bins:{claude:'/fake/claude'},execute:(f,a)=>a[0]==='auth'?{error:new Error('timeout'),stderr:'request timed out'}:null});
+  assert.equal((await h.service.detectAllAgents()).find(a=>a.id==='claude').connectionStatus,undefined);
+});
+
+test('Ollama status only shows confirmed service or model information', async () => {
+  for (const [answer, expected] of [
+    [{stdout:'NAME ID SIZE MODIFIED\n'},'Download a model'],
+    [{error:new Error('unavailable'),stderr:'connection refused'},'Start Ollama'],
+    [{error:new Error('denied'),stderr:'operation not permitted'},undefined],
+  ]) {
+    const h = harness({bins:{ollama:'/fake/ollama'},execute:(f,a)=>a[0]==='list'?answer:null});
+    assert.equal((await h.service.detectAllAgents()).find(a=>a.id==='ollama').connectionStatus,expected);
+  }
 });

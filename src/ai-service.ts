@@ -671,24 +671,29 @@ export class AIService {
 		return null;
 	}
 
-	private async checkConnection(provider: AIProvider, path: string): Promise<string> {
+	private async checkConnection(provider: AIProvider, path: string): Promise<string | undefined> {
 		const commands: Partial<Record<AIProvider, string[]>> = {
 			claude: ["auth", "status"], codex: ["login", "status"], cursor: ["models"], ollama: ["list"],
 		};
 		const args = commands[provider];
+		if (!args) return undefined;
 		const cp = await this.resolveChildProcess();
-		if (!args || !cp) return "Installed · sign-in not checked";
+		if (!cp) return undefined;
 		return new Promise((resolve) => {
 			cp.execFile(path, args, { env: this.getEnv(), timeout: 10000, maxBuffer: 1024 * 1024, shell: Platform.isWin }, (err, stdout, stderr) => {
 				const text = [stdout, stderr].filter(Boolean).join("\n");
 				if (provider === "ollama") {
-					resolve(err ? "Installed · start Ollama server" : /\S+\s+[a-f0-9]{12,}\s/i.test(text) ? "Local models available" : "Installed · pull a model first");
+					if (err) {
+						resolve(/connection refused|could not connect|server not responding/i.test(text) ? "Start Ollama" : undefined);
+					} else {
+						resolve(/\S+\s+[a-f0-9]{12,}\s/i.test(text) ? "Local models available" : "Download a model");
+					}
 				} else if (/not logged|not authenticated|authentication required|login required|"loggedIn"\s*:\s*false/i.test(text)) {
-					resolve("Installed · sign-in required");
+					resolve("Sign-in required");
 				} else if (!err && (provider === "cursor" || /logged in|"loggedIn"\s*:\s*true/i.test(text))) {
-					resolve("Signed in · model access not tested");
+					resolve("Signed in");
 				} else {
-					resolve("Installed · sign-in check unavailable");
+					resolve(undefined);
 				}
 			});
 		});
@@ -749,6 +754,7 @@ export class AIService {
 	}
 
 	public refreshAgentsCache(): void {
+		this.shellPathPromise = undefined;
 		this.detectedAgentsCache = null;
 		this.cachedPaths.clear();
 	}

@@ -286,7 +286,7 @@ export const en = {
 	settingsAIDefaultTargetName: "Default AI target",
 	settingsAIDefaultTargetDesc: "The default local coding agent used for chat and vault editing.",
 	settingsAIAgentsTitle: "Identify AI Agent providers",
-	settingsAIAgentsDesc: "Installed means the executable was found. Sign-in, model access, and local model downloads are separate. Click a card to set the default agent.",
+	settingsAIAgentsDesc: "Click a card to set the default agent. Some providers require a paid subscription or API credits.",
 	settingsAIAgentInstalled: "Installed",
 	settingsAIAgentMissing: "Missing",
 	settingsAIAgentNotDetected: "No version detected",
