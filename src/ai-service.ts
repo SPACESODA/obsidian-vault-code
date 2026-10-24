@@ -1020,6 +1020,12 @@ export class AIService {
 					let errMsg = stderrOutput.trim();
 					if (!errMsg) {
 						errMsg = `${agentName} exited with code ${code}. Please check that the agent is authenticated and up to date.`;
+					} else if (/rate.?limit|too many requests|429/i.test(errMsg)) {
+						errMsg += "\n\n> 💡 **Tip**: Rate limit reached. You can switch to another agent using the bottom bar or retry in a moment.";
+					} else if (/quota|credit|insufficient|balance|token limit|exceeded/i.test(errMsg)) {
+						errMsg += "\n\n> 💡 **Tip**: Quota or token limit exceeded for this provider. Switch to an alternate provider in the bottom bar.";
+					} else if (/auth|login|unauthorized|401|403|credential/i.test(errMsg)) {
+						errMsg += `\n\n> 💡 **Tip**: Authentication required. Run \`${def?.binary || provider} login\` in your terminal to re-authenticate.`;
 					}
 					options.onError?.(new Error(errMsg));
 				}
