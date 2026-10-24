@@ -74,10 +74,13 @@ export type AIProvider =
 	| "kiro"
 	| "hermes";
 
+export type ReasoningEffort = "auto" | "low" | "medium" | "high";
+
 export interface SendMessageOptions {
 	prompt: string;
 	provider?: AIProvider;
 	model?: string;
+	reasoningEffort?: ReasoningEffort;
 	scope: "active-note" | "vault";
 	mode: "safe" | "edit";
 	conversationId?: string;
@@ -234,6 +237,10 @@ export function resolveOptimalModel(provider: AIProvider): string {
 		default:
 			return "default";
 	}
+}
+
+export function supportsReasoningEffort(provider: AIProvider): boolean {
+	return provider === "codex" || provider === "aider";
 }
 
 export const ALL_AGENT_DEFS: Array<{
@@ -975,6 +982,9 @@ export class AIService {
 				if (options.model && options.model.trim().length > 0) {
 					args.push("-m", options.model.trim());
 				}
+				if (options.reasoningEffort && options.reasoningEffort !== "auto") {
+					args.push("-c", `model_reasoning_effort="${options.reasoningEffort}"`);
+				}
 				if (options.mode === "safe") {
 					args.push("-s", "read-only");
 				} else {
@@ -1111,6 +1121,12 @@ export class AIService {
 					return;
 				}
 				args = ["--message", effectivePrompt, "--no-git", "--yes"];
+				if (options.model && options.model !== "auto" && options.model !== "default") {
+					args.push("--model", options.model.trim());
+				}
+				if (options.reasoningEffort && options.reasoningEffort !== "auto") {
+					args.push("--reasoning-effort", options.reasoningEffort);
+				}
 			} else if (provider === "kiro") {
 				binPath = await this.detectBinaryPath("kiro");
 				if (!binPath) {

@@ -111,7 +111,6 @@ import {
 	AIService,
 	AIProvider,
 	ALL_AGENT_DEFS,
-	DEFAULT_AGY_MODELS,
 } from "./ai-service";
 import { AIChatView, VIEW_TYPE_AI_CHAT } from "./ai-chat-view";
 import { AIStorage } from "./ai-storage";
@@ -631,6 +630,7 @@ interface VaultCodeSettings {
 	aiProvider: AIProvider;
 	aiModel: string;
 	aiCodexModel: string;
+	aiReasoningEffort: "auto" | "low" | "medium" | "high";
 	aiProviderLastModel?: Record<string, string>;
 	aiScope: "active-note" | "vault";
 	aiMode: "safe" | "edit";
@@ -677,6 +677,7 @@ const DEFAULT_SETTINGS: VaultCodeSettings = {
 	aiProvider: "antigravity",
 	aiModel: "auto",
 	aiCodexModel: "gpt-6.1-sol",
+	aiReasoningEffort: "auto",
 	aiProviderLastModel: {
 		antigravity: "gemini-3.8-flash-medium",
 		codex: "gpt-6.1-sol",
@@ -8754,34 +8755,6 @@ class VaultCodeSettingTab extends PluginSettingTab {
 					new Notice(t("settingsAICopiedMCPConfig"));
 				});
 			});
-
-			const currentProvider = this.plugin.settings.aiProvider || "antigravity";
-			const agentDef = ALL_AGENT_DEFS.find((d) => d.id === currentProvider);
-			const models = agentDef?.models || DEFAULT_AGY_MODELS;
-
-			new Setting(containerEl)
-				.setName(t("settingsAIDefaultModelName"))
-				.setDesc(t("settingsAIDefaultModelDesc"))
-				.addDropdown((dropdown) => {
-					dropdown.addOption("auto", t("settingsAIModelAuto"));
-					for (const m of models) {
-						if (m.id !== "auto") {
-							dropdown.addOption(m.id, m.displayName);
-						}
-					}
-					const remembered = this.plugin.settings.aiProviderLastModel?.[currentProvider];
-					const currentVal = remembered || this.plugin.settings.aiModel || "auto";
-					dropdown
-						.setValue(currentVal)
-						.onChange(async (value) => {
-							this.plugin.settings.aiModel = value;
-							if (!this.plugin.settings.aiProviderLastModel) {
-								this.plugin.settings.aiProviderLastModel = {};
-							}
-							this.plugin.settings.aiProviderLastModel[currentProvider] = value;
-							await this.plugin.saveSettings();
-						});
-				});
 
 			new Setting(containerEl)
 				.setName(t("settingsAIDefaultScopeName"))

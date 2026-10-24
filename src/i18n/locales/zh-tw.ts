@@ -307,4 +307,9 @@ export const zhTw: TranslationSchema = {
 	aiChatProviderGrok: "Grok Build",
 	aiChatProviderMiMo: "Xiaomi MiMo",
 	aiChatProviderAider: "Aider",
+	aiChatReasoningEffort: "推理算力",
+	aiChatEffortAuto: "自動",
+	aiChatEffortLow: "低",
+	aiChatEffortMedium: "中",
+	aiChatEffortHigh: "高",
 };

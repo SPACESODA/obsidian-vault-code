@@ -307,4 +307,9 @@ export const de: TranslationSchema = {
 	aiChatProviderGrok: "Grok Build",
 	aiChatProviderMiMo: "Xiaomi MiMo",
 	aiChatProviderAider: "Aider",
+	aiChatReasoningEffort: "Denkaufwand",
+	aiChatEffortAuto: "Automatisch",
+	aiChatEffortLow: "Niedrig",
+	aiChatEffortMedium: "Mittel",
+	aiChatEffortHigh: "Hoch",
 };

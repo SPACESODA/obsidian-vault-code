@@ -10,12 +10,13 @@ import {
 } from "obsidian";
 import type VaultCodePlugin from "./main";
 import { t } from "./i18n";
-import type { AgyModelInfo, AIProcessHandle, AIProvider } from "./ai-service";
+import type { AgyModelInfo, AIProcessHandle, AIProvider, ReasoningEffort } from "./ai-service";
 import {
 	DEFAULT_AGY_MODELS,
 	ALL_AGENT_DEFS,
 	getAgentDisplayName,
 	resolveOptimalModel,
+	supportsReasoningEffort,
 } from "./ai-service";
 import { AIChatHistoryModal } from "./ai-history-modal";
 import { createCustomMenu } from "./custom-menu";
@@ -35,6 +36,7 @@ export class AIChatView extends ItemView {
 	private conversationId?: string;
 	private selectedProvider: AIProvider;
 	private selectedModel: string;
+	private selectedReasoningEffort: ReasoningEffort = "auto";
 	private chatScope: "active-note" | "vault";
 	private mode: "safe" | "edit";
 	private isGenerating = false;
@@ -59,6 +61,7 @@ export class AIChatView extends ItemView {
 	private sendBtnEl!: HTMLElement;
 	private providerBtnEl!: HTMLElement;
 	private modelBtnEl!: HTMLElement;
+	private effortBtnEl!: HTMLElement;
 	private modeBtnEl!: HTMLElement;
 	private vaultToggle: ToggleComponent | null = null;
 	private vaultToggleWrapper!: HTMLElement;
@@ -80,6 +83,7 @@ export class AIChatView extends ItemView {
 			remembered && remembered !== "auto"
 				? remembered
 				: resolveOptimalModel(this.selectedProvider);
+		this.selectedReasoningEffort = plugin.settings.aiReasoningEffort || "auto";
 		this.chatScope = plugin.settings.aiScope || "active-note";
 		this.mode = plugin.settings.aiMode || "edit";
 	}
@@ -305,6 +309,12 @@ export class AIChatView extends ItemView {
 		});
 		this.modelBtnEl.addEventListener("click", (e) => this.showModelMenu(e));
 
+		this.effortBtnEl = topRow.createEl("button", {
+			cls: "vault-code-chat-pill vault-code-chat-pill-effort",
+			attr: { "aria-label": t("aiChatReasoningEffort") },
+		});
+		this.effortBtnEl.addEventListener("click", (e) => this.showEffortMenu(e));
+
 		// Row 2: Mode pill and Entire Vault toggle
 		const bottomRow = cardBottom.createDiv({ cls: "vault-code-chat-bottom-row-bottom" });
 		this.modeBtnEl = bottomRow.createEl("button", {
@@ -337,6 +347,7 @@ export class AIChatView extends ItemView {
 
 		this.updateProviderBtnLabel();
 		this.updateModelBtnLabel();
+		this.updateEffortBtn();
 		this.updateModeBtnLabel();
 		this.updateVaultToggleState();
 		this.updateContextChip();
@@ -383,6 +394,31 @@ export class AIChatView extends ItemView {
 		this.modelBtnEl.createSpan({ cls: "vault-code-pill-label", text: label });
 
 		const chevronSpan = this.modelBtnEl.createSpan({ cls: "vault-code-pill-chevron" });
+		setIcon(chevronSpan, "chevron-down");
+	}
+
+	private updateEffortBtn(): void {
+		if (!this.effortBtnEl) return;
+		if (!supportsReasoningEffort(this.selectedProvider)) {
+			this.effortBtnEl.hide();
+			return;
+		}
+		this.effortBtnEl.show();
+		this.effortBtnEl.empty();
+		const iconSpan = this.effortBtnEl.createSpan({ cls: "vault-code-pill-icon" });
+		setIcon(iconSpan, "brain");
+
+		let labelText = t("aiChatEffortAuto");
+		if (this.selectedReasoningEffort === "low") {
+			labelText = t("aiChatEffortLow");
+		} else if (this.selectedReasoningEffort === "medium") {
+			labelText = t("aiChatEffortMedium");
+		} else if (this.selectedReasoningEffort === "high") {
+			labelText = t("aiChatEffortHigh");
+		}
+
+		this.effortBtnEl.createSpan({ cls: "vault-code-pill-label", text: labelText });
+		const chevronSpan = this.effortBtnEl.createSpan({ cls: "vault-code-pill-chevron" });
 		setIcon(chevronSpan, "chevron-down");
 	}
 
@@ -542,6 +578,7 @@ export class AIChatView extends ItemView {
 						void this.plugin.saveSettings();
 						this.updateProviderBtnLabel();
 						this.updateModelBtnLabel();
+						this.updateEffortBtn();
 						void this.loadModelsForProvider(def.id);
 					}
 				});
@@ -573,6 +610,37 @@ export class AIChatView extends ItemView {
 					this.plugin.settings.aiProviderLastModel[this.selectedProvider] = this.selectedModel;
 					void this.plugin.saveSettings();
 					this.updateModelBtnLabel();
+				});
+			});
+		}
+
+		menu.showAtMouseEvent(event);
+	}
+
+	private showEffortMenu(event: MouseEvent): void {
+		const menu = createCustomMenu();
+
+		const options: Array<{
+			id: ReasoningEffort;
+			title: string;
+			icon: string;
+		}> = [
+			{ id: "auto", title: t("aiChatEffortAuto"), icon: "sparkles" },
+			{ id: "low", title: t("aiChatEffortLow"), icon: "zap" },
+			{ id: "medium", title: t("aiChatEffortMedium"), icon: "sliders" },
+			{ id: "high", title: t("aiChatEffortHigh"), icon: "brain" },
+		];
+
+		for (const opt of options) {
+			menu.addItem((item) => {
+				item.setTitle(opt.title);
+				item.setIcon(opt.icon);
+				item.setChecked(this.selectedReasoningEffort === opt.id);
+				item.onClick(() => {
+					this.selectedReasoningEffort = opt.id;
+					this.plugin.settings.aiReasoningEffort = opt.id;
+					void this.plugin.saveSettings();
+					this.updateEffortBtn();
 				});
 			});
 		}
@@ -631,6 +699,9 @@ export class AIChatView extends ItemView {
 				this.selectedProvider = parsed.metadata.provider;
 			}
 			this.selectedModel = parsed.metadata.model;
+			if (parsed.metadata.reasoning_effort) {
+				this.selectedReasoningEffort = parsed.metadata.reasoning_effort as ReasoningEffort;
+			}
 			this.chatScope = parsed.metadata.scope;
 			this.mode = parsed.metadata.mode;
 			this.messages = parsed.messages;
@@ -640,6 +711,7 @@ export class AIChatView extends ItemView {
 			this.headerTitleEl.addClass("is-editable");
 			this.updateProviderBtnLabel();
 			this.updateModelBtnLabel();
+			this.updateEffortBtn();
 			void this.loadModelsForProvider(this.selectedProvider);
 			this.updateVaultToggleState();
 			this.updateModeBtnLabel();
@@ -674,7 +746,10 @@ export class AIChatView extends ItemView {
 			remembered && remembered !== "auto"
 				? remembered
 				: resolveOptimalModel(this.selectedProvider);
+		this.selectedReasoningEffort = this.plugin.settings.aiReasoningEffort || "auto";
 		this.updateProviderBtnLabel();
+		this.updateModelBtnLabel();
+		this.updateEffortBtn();
 		void this.loadModelsForProvider(this.selectedProvider);
 		this.updateVaultToggleState();
 		this.updateContextChip();
@@ -897,6 +972,7 @@ export class AIChatView extends ItemView {
 					{
 						provider: this.selectedProvider,
 						model: this.selectedModel,
+						reasoning_effort: this.selectedReasoningEffort,
 						scope: this.chatScope,
 						mode: this.mode,
 						conversationId: this.conversationId,
@@ -915,6 +991,7 @@ export class AIChatView extends ItemView {
 			prompt: text,
 			provider: this.selectedProvider,
 			model: this.selectedModel,
+			reasoningEffort: this.selectedReasoningEffort,
 			scope: this.chatScope,
 			mode: this.mode,
 			conversationId: this.conversationId,
@@ -976,6 +1053,7 @@ export class AIChatView extends ItemView {
 							created: this.plugin.aiStorage.formatDateTime(),
 							provider: this.selectedProvider,
 							model: this.selectedModel,
+							reasoning_effort: this.selectedReasoningEffort,
 							scope: this.chatScope,
 							mode: this.mode,
 							conversationId: this.conversationId,
@@ -1010,6 +1088,7 @@ export class AIChatView extends ItemView {
 							created: this.plugin.aiStorage.formatDateTime(),
 							provider: this.selectedProvider,
 							model: this.selectedModel,
+							reasoning_effort: this.selectedReasoningEffort,
 							scope: this.chatScope,
 							mode: this.mode,
 							conversationId: this.conversationId,

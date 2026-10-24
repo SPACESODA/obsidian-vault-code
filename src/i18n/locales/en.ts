@@ -305,6 +305,11 @@ export const en = {
 	aiChatProviderGrok: "Grok Build",
 	aiChatProviderMiMo: "Xiaomi MiMo",
 	aiChatProviderAider: "Aider",
+	aiChatReasoningEffort: "Reasoning effort",
+	aiChatEffortAuto: "Auto",
+	aiChatEffortLow: "Low",
+	aiChatEffortMedium: "Medium",
+	aiChatEffortHigh: "High",
 };
 
 export type TranslationSchema = typeof en;

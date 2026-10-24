@@ -8,6 +8,7 @@ export interface ChatMetadata {
 	last_chat?: string;
 	provider?: AIProvider;
 	model: string;
+	reasoning_effort?: string;
 	scope: "active-note" | "vault";
 	mode: "safe" | "edit";
 	conversationId?: string;
@@ -121,6 +122,14 @@ export class AIStorage {
 			yamlLines.push(`provider: ${JSON.stringify(metadata.provider)}`);
 		}
 
+		if (metadata.model) {
+			yamlLines.push(`model: ${JSON.stringify(metadata.model)}`);
+		}
+
+		if (metadata.reasoning_effort && metadata.reasoning_effort !== "auto") {
+			yamlLines.push(`reasoning_effort: ${JSON.stringify(metadata.reasoning_effort)}`);
+		}
+
 		if (metadata.conversationId) {
 			yamlLines.push(`conversation_id: ${JSON.stringify(metadata.conversationId)}`);
 		}
@@ -177,6 +186,9 @@ export class AIStorage {
 
 			const modelMatch = fmBlock.match(/model:\s*"?([^"\n\r]+)"?/);
 			if (modelMatch && modelMatch[1]) metadata.model = modelMatch[1].trim();
+
+			const effortMatch = fmBlock.match(/reasoning_effort:\s*"?([^"\n\r]+)"?/);
+			if (effortMatch && effortMatch[1]) metadata.reasoning_effort = effortMatch[1].trim();
 
 			const scopeMatch = fmBlock.match(/scope:\s*"?([^"\n\r]+)"?/);
 			if (scopeMatch && scopeMatch[1] && (scopeMatch[1] === "active-note" || scopeMatch[1] === "vault")) {

@@ -307,4 +307,9 @@ export const ko: TranslationSchema = {
 	aiChatProviderGrok: "Grok Build",
 	aiChatProviderMiMo: "Xiaomi MiMo",
 	aiChatProviderAider: "Aider",
+	aiChatReasoningEffort: "추론 노력 수준",
+	aiChatEffortAuto: "자동",
+	aiChatEffortLow: "낮음",
+	aiChatEffortMedium: "중간",
+	aiChatEffortHigh: "높음",
 };
