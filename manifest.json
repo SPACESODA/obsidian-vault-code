@@ -1,7 +1,7 @@
 {
 	"id": "vault-code",
 	"name": "Vault Code",
-	"version": "2.0.9",
+	"version": "2.1.0",
 	"minAppVersion": "1.6.6",
 	"description": "Turn your vault into a lightweight IDE and code editor. Reveal hidden dotfiles, edit code across most programming languages, live-preview HTML, SVG, and MJML, and search and replace with zero bloat.",
 	"author": "SPACESODA",
