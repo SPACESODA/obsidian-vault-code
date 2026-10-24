@@ -210,8 +210,7 @@ export const ko: TranslationSchema = {
 	gitChangedFilesModalPlaceholder: "변경된 파일 검색...",
 
 	// Agent 채팅
-	ribbonAIChatTooltip: "Agent 채팅 (Cmd+Shift+L)",
-	commandOpenAIChat: "Agent 채팅 열기",
+	aiChatWithAgent: "Agent와 채팅",
 	aiChatViewTitle: "Agent 채팅",
 	aiChatNewChat: "새 대화",
 	aiChatPlaceholder: "Agent에게 질문을 입력하세요...",

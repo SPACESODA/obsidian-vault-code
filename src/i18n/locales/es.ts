@@ -210,8 +210,7 @@ export const es: TranslationSchema = {
 	gitChangedFilesModalPlaceholder: "Buscar archivos modificados...",
 
 	// Chat Agent
-	ribbonAIChatTooltip: "Chat de Agent (Cmd+Shift+L)",
-	commandOpenAIChat: "Abrir chat de Agent",
+	aiChatWithAgent: "Chatear con Agent",
 	aiChatViewTitle: "Chat de Agent",
 	aiChatNewChat: "Nueva conversación",
 	aiChatPlaceholder: "Pregunta a Agent cualquier cosa...",

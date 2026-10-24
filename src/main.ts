@@ -5284,7 +5284,7 @@ export default class VaultCodePlugin extends Plugin {
 
 		this.addCommand({
 			id: "open-ai-chat",
-			name: t("commandOpenAIChat"),
+			name: t("aiChatWithAgent"),
 			checkCallback: (checking) => {
 				if (!Platform.isDesktop || !this.settings.enableAIChat) return false;
 				if (!checking) {
@@ -5708,7 +5708,7 @@ export default class VaultCodePlugin extends Plugin {
 
 	public addAIChatRibbon(): void {
 		if (this.aiChatRibbonIconEl || !Platform.isDesktop || !this.settings.enableAIChat) return;
-		this.aiChatRibbonIconEl = this.addRibbonIcon("sparkles", t("ribbonAIChatTooltip"), () => {
+		this.aiChatRibbonIconEl = this.addRibbonIcon("sparkles", t("aiChatWithAgent"), () => {
 			void this.activateAIChatView();
 		});
 	}
@@ -6342,7 +6342,7 @@ export default class VaultCodePlugin extends Plugin {
 				const aiChatBtn = createEl("button", {
 					cls: "clickable-icon view-action vault-code-header-ai-chat-btn",
 					attr: {
-						"aria-label": t("commandOpenAIChat"),
+						"aria-label": t("aiChatWithAgent"),
 					},
 				});
 				setIcon(aiChatBtn, "sparkles");
@@ -6359,7 +6359,7 @@ export default class VaultCodePlugin extends Plugin {
 					actionsEl.appendChild(aiChatBtn);
 				}
 			} else {
-				existingAiChatBtn.setAttribute("aria-label", t("commandOpenAIChat"));
+				existingAiChatBtn.setAttribute("aria-label", t("aiChatWithAgent"));
 				if (actionsEl.firstChild && existingAiChatBtn !== actionsEl.firstChild) {
 					actionsEl.insertBefore(existingAiChatBtn, actionsEl.firstChild);
 				}

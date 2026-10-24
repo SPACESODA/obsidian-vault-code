@@ -208,8 +208,7 @@ export const en = {
 	gitChangedFilesModalPlaceholder: "Search changed files...",
 
 	// AI / Agent Chat
-	ribbonAIChatTooltip: "Agent chat (Cmd+Shift+L)",
-	commandOpenAIChat: "Open Agent chat",
+	aiChatWithAgent: "Chat with Agent",
 	aiChatViewTitle: "Agent chat",
 	aiChatNewChat: "New chat",
 	aiChatPlaceholder: "Ask Agent anything...",

@@ -210,8 +210,7 @@ export const zhCn: TranslationSchema = {
 	gitChangedFilesModalPlaceholder: "搜索已更改的文件...",
 
 	// Agent 聊天
-	ribbonAIChatTooltip: "Agent 聊天 (Cmd+Shift+L)",
-	commandOpenAIChat: "打开 Agent 聊天",
+	aiChatWithAgent: "与 Agent 聊天",
 	aiChatViewTitle: "Agent 聊天",
 	aiChatNewChat: "新对话",
 	aiChatPlaceholder: "向 Agent 提问任何问题...",

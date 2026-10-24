@@ -210,8 +210,7 @@ export const ja: TranslationSchema = {
 	gitChangedFilesModalPlaceholder: "変更されたファイルを検索...",
 
 	// Agent チャット
-	ribbonAIChatTooltip: "Agent チャット (Cmd+Shift+L)",
-	commandOpenAIChat: "Agent チャットを開く",
+	aiChatWithAgent: "Agent とチャット",
 	aiChatViewTitle: "Agent チャット",
 	aiChatNewChat: "新しいチャット",
 	aiChatPlaceholder: "Agent に質問を入力...",

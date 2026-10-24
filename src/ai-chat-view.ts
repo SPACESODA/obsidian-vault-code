@@ -159,7 +159,7 @@ export class AIChatView extends ItemView {
 	}
 
 	getDisplayText(): string {
-		return t("aiChatViewTitle");
+		return t("aiChatWithAgent");
 	}
 
 	getIcon(): string {
