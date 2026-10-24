@@ -287,7 +287,7 @@ export const zhCn: TranslationSchema = {
 	aiChatProviderCodex: "Codex",
 	settingsAIDefaultTargetName: "默认 AI 目标",
 	settingsAIDefaultTargetDesc: "用于对话和保管库编辑的默认本地编程代理。",
-	settingsAIAgentsTitle: "识别 AI Agent 提供商",
+	settingsAIAgentsTitle: "选择 AI Agent 提供商",
 	settingsAIAgentsDesc: "本地 Agent 可以使用工具检查并编辑仓库。点击卡片以设置默认 Agent。",
 	settingsAIAgentInstalled: "已安装",
 	settingsAIAgentMissing: "缺失",

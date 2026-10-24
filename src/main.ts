@@ -115,6 +115,8 @@ import {
 } from "./ai-service";
 import { AIChatView, VIEW_TYPE_AI_CHAT } from "./ai-chat-view";
 import { AIStorage } from "./ai-storage";
+import { type AIConnection, connectionProvider, normalizeConnections } from "./ai-connections";
+import { renderConnectionSettings } from "./ai-connections-settings";
 import { createCustomMenu } from "./custom-menu";
 
 /* ── View type constants ───────────────────────────────────── */
@@ -629,6 +631,7 @@ interface VaultCodeSettings {
 	enableGitIntegration: boolean;
 	enableAIChat: boolean;
 	aiProvider: AIProvider;
+	aiConnections: AIConnection[];
 	aiModel: string;
 	aiCodexModel: string;
 	aiReasoningEffort: "auto" | "low" | "medium" | "high";
@@ -676,6 +679,7 @@ const DEFAULT_SETTINGS: VaultCodeSettings = {
 	enableGitIntegration: true,
 	enableAIChat: true,
 	aiProvider: "antigravity",
+	aiConnections: [],
 	aiModel: "gemini-3.8-flash-medium",
 	aiCodexModel: "gpt-6.1-sol",
 	aiReasoningEffort: "auto",
@@ -5693,6 +5697,8 @@ export default class VaultCodePlugin extends Plugin {
 				leaf.view as unknown as { actionsEl?: HTMLElement }
 			)?.actionsEl;
 			actionsEl?.querySelector(".vault-code-header-toggle-btn")?.remove();
+			actionsEl?.querySelector(".vault-code-header-ai-chat-btn")?.remove();
+			actionsEl?.querySelector(".vault-code-header-diff-btn")?.remove();
 		});
 
 		this.removeAIChatRibbon();
@@ -5751,6 +5757,9 @@ export default class VaultCodePlugin extends Plugin {
 
 		if (leaf) {
 			workspace.setActiveLeaf(leaf, { focus: true });
+			if (leaf.view instanceof AIChatView) {
+				leaf.view.focusInput();
+			}
 		}
 	}
 
@@ -6318,6 +6327,55 @@ export default class VaultCodePlugin extends Plugin {
 
 		const isCodeEditor = view instanceof DotfileView;
 
+		// Agent chat button in leaf header
+		const existingAiChatBtn = actionsEl.querySelector<HTMLElement>(
+			".vault-code-header-ai-chat-btn",
+		);
+		const shouldShowAiChatBtn =
+			Platform.isDesktop &&
+			this.settings.enableAIChat &&
+			!(view instanceof AIChatView) &&
+			Boolean(file && this.isFileEditable(file));
+
+		if (shouldShowAiChatBtn) {
+			if (!existingAiChatBtn) {
+				const aiChatBtn = createEl("button", {
+					cls: "clickable-icon view-action vault-code-header-ai-chat-btn",
+					attr: {
+						"aria-label": t("commandOpenAIChat"),
+					},
+				});
+				setIcon(aiChatBtn, "sparkles");
+
+				aiChatBtn.addEventListener("click", (evt: MouseEvent) => {
+					evt.preventDefault();
+					evt.stopPropagation();
+					void this.activateAIChatView();
+				});
+
+				const toggleBtn = actionsEl.querySelector<HTMLElement>(
+					".vault-code-header-toggle-btn",
+				);
+				const moreBtn =
+					(view as unknown as { moreOptionsButtonEl?: HTMLElement })
+						.moreOptionsButtonEl ??
+					actionsEl.querySelector(
+						".clickable-icon[aria-label*='options' i], .clickable-icon:last-child",
+					);
+
+				const anchor = toggleBtn ?? moreBtn;
+				if (anchor && anchor.parentElement === actionsEl) {
+					actionsEl.insertBefore(aiChatBtn, anchor);
+				} else {
+					actionsEl.appendChild(aiChatBtn);
+				}
+			} else {
+				existingAiChatBtn.setAttribute("aria-label", t("commandOpenAIChat"));
+			}
+		} else if (existingAiChatBtn) {
+			existingAiChatBtn.remove();
+		}
+
 		if (!isMarkdown) {
 			if (existingBtn) {
 				existingBtn.remove();
@@ -6840,6 +6898,13 @@ export default class VaultCodePlugin extends Plugin {
 	async loadSettings() {
 		const loaded = (await this.loadData()) as Partial<VaultCodeSettings> | null;
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, loaded ?? {});
+		this.settings.aiConnections = normalizeConnections(loaded?.aiConnections);
+		if (this.settings.aiProvider === "ollama") {
+			const id = "local-ollama";
+			const model = this.settings.aiProviderLastModel?.ollama;
+			if (!this.settings.aiConnections.some((c) => c.id === id)) this.settings.aiConnections.push({ id, name: "Ollama", kind: "local", baseUrl: "http://127.0.0.1:11434/v1", format: "chat-completions", models: model && !["default", "auto"].includes(model) ? [model] : [] });
+			this.settings.aiProvider = connectionProvider(id);
+		}
 
 		// Ensure newly supported default extensions are available even with an existing saved configuration
 		if (loaded && typeof loaded.customFileExtensions === "string") {
@@ -8240,12 +8305,15 @@ function createSettingNameWithFilename(
 }
 
 class VaultCodeSettingTab extends PluginSettingTab {
+	private aiSettingsTab: "cli" | "api" | "local" = "cli";
 	plugin: VaultCodePlugin;
 	updateButtonState?: () => Promise<void>;
 
 	constructor(app: App, plugin: VaultCodePlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
+		const connection = plugin.settings.aiConnections.find((c) => connectionProvider(c.id) === plugin.settings.aiProvider);
+		if (connection) this.aiSettingsTab = connection.kind;
 	}
 
 	updateIgnoreButtons(): void {
@@ -8713,11 +8781,40 @@ class VaultCodeSettingTab extends PluginSettingTab {
 								this.plugin.aiService.clearCache();
 								this.app.workspace.detachLeavesOfType(VIEW_TYPE_AI_CHAT);
 							}
+							this.plugin.updateAllLeafHeaderActions();
 							this.display();
 						}),
 				);
 
 			if (this.plugin.settings.enableAIChat) {
+			const connectionTabs = containerEl.createDiv({ cls: "vault-code-connection-tabs", attr: { role: "tablist", "aria-label": "Connection type" } });
+			const connectionPanels = containerEl.createDiv({ cls: "vault-code-connection-panels" });
+			const panels = new Map<string, HTMLElement>();
+			const tabs = new Map<string, HTMLButtonElement>();
+			const showConnectionTab = (id: "cli" | "api" | "local") => {
+				this.aiSettingsTab = id;
+				if (!panels.has(id)) {
+					const panel = connectionPanels.createDiv({ attr: { role: "tabpanel", "aria-label": id === "cli" ? "CLI" : id === "api" ? "API" : "Local model" } });
+					panels.set(id, panel);
+					renderConnectionPanel(panel, id);
+				}
+				for (const [tabId, panel] of panels) panel.hidden = tabId !== id;
+				for (const [tabId, tab] of tabs) {
+					tab.toggleClass("is-active", tabId === id);
+					tab.setAttribute("aria-selected", String(tabId === id));
+				}
+			};
+			for (const [id, label] of [["cli", "CLI"], ["api", "API"], ["local", "Local model"]] as const) {
+				const tab = connectionTabs.createEl("button", { text: label, attr: { role: "tab" } });
+				tabs.set(id, tab);
+				tab.addEventListener("click", () => showConnectionTab(id));
+			}
+			const renderConnectionPanel = (containerEl: HTMLElement, tabId: "cli" | "api" | "local") => {
+			if (tabId !== "cli") {
+				const connectionsContainer = containerEl.createDiv();
+				renderConnectionSettings(connectionsContainer, this.plugin, tabId);
+			}
+			if (tabId === "cli") {
 				const agentSection = containerEl.createDiv({ cls: "vault-code-agent-section" });
 			const sectionHeader = agentSection.createDiv({ cls: "vault-code-agent-section-header" });
 			const titleRow = sectionHeader.createDiv({ cls: "vault-code-agent-title-row" });
@@ -8780,7 +8877,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 
 			const renderCards = (
 				agents: Array<{
-					id: AIProvider;
+					id: import("./ai-service").CLIProvider;
 					name: string;
 					icon: string;
 					isInstalled?: boolean;
@@ -8792,7 +8889,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 			) => {
 				gridEl.empty();
 				providerBadges.clear();
-				for (const agent of agents) {
+				for (const agent of agents.filter((a) => a.id !== "ollama")) {
 					const isActive = (this.plugin.settings.aiProvider || "antigravity") === agent.id;
 					const cardEl = gridEl.createDiv({
 						cls: `vault-code-agent-card${isActive ? " is-active" : ""}`,
@@ -8816,7 +8913,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 					}
 
 					const handleInstallAgent = async (
-						agentToInstall: { id: AIProvider; name: string },
+						agentToInstall: { id: import("./ai-service").CLIProvider; name: string },
 						btnEl: HTMLButtonElement,
 					) => {
 						if (btnEl.disabled || maintenanceRunning || refreshingProviders) return;
@@ -8906,7 +9003,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 						if (!isInstalled || isChecking || maintenanceRunning || refreshingProviders) return;
 						this.plugin.settings.aiProvider = agent.id;
 						void this.plugin.saveSettings().then(() => {
-							this.display();
+							renderCards(currentAgents, false);
 						});
 					});
 				}
@@ -9014,6 +9111,10 @@ class VaultCodeSettingTab extends PluginSettingTab {
 				});
 			});
 
+			}
+
+			if (tabId === "cli") {
+
 			new Setting(containerEl)
 				.setName(t("settingsAIDefaultScopeName"))
 				.setDesc(t("settingsAIDefaultScopeDesc"))
@@ -9067,6 +9168,11 @@ class VaultCodeSettingTab extends PluginSettingTab {
 							await this.plugin.saveSettings();
 						}),
 				);
+
+			}
+
+			};
+			showConnectionTab(this.aiSettingsTab);
 
 			new Setting(containerEl)
 				.setName(t("settingsAIChatFolderName"))
@@ -9150,6 +9256,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 						this.plugin.settings = {
 							...DEFAULT_SETTINGS,
 							aiProviderLastModel: { ...DEFAULT_SETTINGS.aiProviderLastModel },
+						aiConnections: [],
 						};
 						setLanguage(this.plugin.settings.language);
 						await this.plugin.saveSettings();
@@ -9182,6 +9289,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 							this.plugin.removeAIChatRibbon();
 							this.app.workspace.detachLeavesOfType(VIEW_TYPE_AI_CHAT);
 						}
+						this.plugin.updateAllLeafHeaderActions();
 
 						// Reset any active chat view session to clean initial state
 						this.app.workspace.iterateAllLeaves((leaf) => {

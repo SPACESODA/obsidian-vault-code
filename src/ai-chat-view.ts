@@ -22,6 +22,8 @@ import {
 } from "./ai-service";
 import { AIChatHistoryModal } from "./ai-history-modal";
 import { createCustomMenu } from "./custom-menu";
+import { isConnectionProvider, connectionProvider, extractEditProposal } from "./ai-connections";
+import { AIEditReviewModal } from "./ai-edit-review";
 
 export const VIEW_TYPE_AI_CHAT = "vault-code-ai-chat";
 
@@ -432,6 +434,10 @@ export class AIChatView extends ItemView {
 	}
 
 	private updateVaultToggleState(): void {
+		if (isConnectionProvider(this.selectedProvider)) {
+			this.chatScope = "active-note";
+			this.vaultToggleWrapper?.hide();
+		} else this.vaultToggleWrapper?.show();
 		if (this.vaultToggle !== null) {
 			this.vaultToggle.setValue(this.chatScope === "vault");
 		}
@@ -452,7 +458,7 @@ export class AIChatView extends ItemView {
 		setIcon(iconSpan, def?.icon || "sparkles");
 		this.providerBtnEl.createSpan({
 			cls: "vault-code-pill-label",
-			text: getAgentDisplayName(this.selectedProvider),
+			text: this.plugin.aiService.getProviderName(this.selectedProvider),
 		});
 		const chevronSpan = this.providerBtnEl.createSpan({ cls: "vault-code-pill-chevron" });
 		setIcon(chevronSpan, "chevron-down");
@@ -513,7 +519,7 @@ export class AIChatView extends ItemView {
 			this.modeBtnEl.addClass("is-mode-safe");
 		} else {
 			setIcon(iconSpan, "zap");
-			this.modeBtnEl.createSpan({ cls: "vault-code-pill-label", text: t("aiChatModeEdit") });
+			this.modeBtnEl.createSpan({ cls: "vault-code-pill-label", text: isConnectionProvider(this.selectedProvider) ? "Review edits" : t("aiChatModeEdit") });
 			this.modeBtnEl.removeClass("is-mode-safe");
 			this.modeBtnEl.addClass("is-mode-edit");
 		}
@@ -623,15 +629,31 @@ export class AIChatView extends ItemView {
 		this.updateContextChip();
 	}
 
+	private selectProvider(provider: AIProvider): void {
+		if (this.isGenerating || this.selectedProvider === provider) return;
+		this.selectedProvider = provider;
+		this.conversationId = undefined;
+		this.availableModels = [];
+		this.plugin.settings.aiProvider = provider;
+		const remembered = this.plugin.settings.aiProviderLastModel?.[provider];
+		this.selectedModel = remembered && remembered !== "auto" ? remembered : resolveOptimalModel(provider);
+		void this.plugin.saveSettings();
+		this.updateProviderBtnLabel(); this.updateModelBtnLabel(); this.updateEffortBtn();
+		this.updateVaultToggleState(); this.updateModeBtnLabel(); this.updateContextChip();
+		void this.loadModelsForProvider(provider);
+	}
+
 	private async showProviderMenu(event: MouseEvent): Promise<void> {
+		if (this.isGenerating) return;
 		const menu = createCustomMenu();
+		menu.addItem((item) => item.setTitle("CLI").setDisabled(true));
 		const agents = await this.plugin.aiService.detectAllAgents();
 		const installedMap = new Map<string, boolean>();
 		for (const a of agents) {
 			installedMap.set(a.id, a.isInstalled);
 		}
 
-		for (const def of ALL_AGENT_DEFS) {
+		for (const def of ALL_AGENT_DEFS.filter((d) => d.id !== "ollama")) {
 			const label = getAgentDisplayName(def.id);
 			const isInstalled = installedMap.get(def.id) ?? false;
 			const title = isInstalled ? label : `${label} (${t("settingsAIAgentMissing")})`;
@@ -643,32 +665,24 @@ export class AIChatView extends ItemView {
 				if (!isInstalled) {
 					item.setDisabled(true);
 				}
-				item.onClick(() => {
-					if (!isInstalled) return;
-					if (this.selectedProvider !== def.id) {
-						this.selectedProvider = def.id;
-						this.conversationId = undefined;
-						this.availableModels = [];
-						this.plugin.settings.aiProvider = def.id;
-						const remembered = this.plugin.settings.aiProviderLastModel?.[def.id];
-						this.selectedModel =
-							remembered && remembered !== "auto"
-								? remembered
-								: resolveOptimalModel(def.id);
-						void this.plugin.saveSettings();
-						this.updateProviderBtnLabel();
-						this.updateModelBtnLabel();
-						this.updateEffortBtn();
-						void this.loadModelsForProvider(def.id);
-					}
-				});
+				item.onClick(() => { if (isInstalled) this.selectProvider(def.id); });
 			});
+		}
+
+		for (const [kind, label] of [["api", "API"], ["local", "Local model"]] as const) {
+			menu.addSeparator();
+			menu.addItem((item) => item.setTitle(label).setDisabled(true));
+			for (const connection of this.plugin.settings.aiConnections.filter((c) => c.kind === kind)) {
+				menu.addItem((item) => item.setTitle(connection.name).setIcon(kind === "local" ? "server" : "cloud")
+					.setChecked(this.selectedProvider === connectionProvider(connection.id)).onClick(() => this.selectProvider(connectionProvider(connection.id))));
+			}
 		}
 
 		menu.showAtMouseEvent(event);
 	}
 
 	private showModelMenu(event: MouseEvent): void {
+		if (this.isGenerating) return;
 		const def = ALL_AGENT_DEFS.find((d) => d.id === this.selectedProvider);
 		const rawModels =
 			this.availableModels.length > 0
@@ -742,6 +756,7 @@ export class AIChatView extends ItemView {
 	}
 
 	private showModeMenu(event: MouseEvent): void {
+		if (this.isGenerating) return;
 		const menu = createCustomMenu();
 
 		menu.addItem((item) => {
@@ -755,7 +770,7 @@ export class AIChatView extends ItemView {
 		});
 
 		menu.addItem((item) => {
-			item.setTitle(t("aiChatModeEdit"));
+			item.setTitle(isConnectionProvider(this.selectedProvider) ? "Review edits" : t("aiChatModeEdit"));
 			item.setIcon("zap");
 			item.setChecked(this.mode === "edit");
 			item.onClick(() => {
@@ -854,6 +869,10 @@ export class AIChatView extends ItemView {
 		this.startNewChat();
 	}
 
+	public focusInput(): void {
+		this.inputEl?.focus();
+	}
+
 	private renderMessages(): void {
 		this.messagesContainerEl.empty();
 
@@ -888,10 +907,10 @@ export class AIChatView extends ItemView {
 		});
 
 		void this.plugin.aiService.detectAllAgents().then((agents) => {
-			const anyInstalled = agents.some((a) => a.isInstalled);
+			const anyInstalled = this.plugin.settings.aiConnections.length > 0 || agents.some((a) => a.id !== "ollama" && a.isInstalled);
 			if (!anyInstalled) {
 				subtitleEl.setText(
-					"No local AI coding agent detected on this computer. Please install an agent (such as Antigravity, Claude Code, Ollama, or Codex) or configure its path in settings to start.",
+					"Connect a CLI agent, API provider, or local model in settings to get started.",
 				);
 				const btn = welcomeEl.createEl("button", {
 					cls: "mod-cta vault-code-welcome-settings-btn",
@@ -945,7 +964,7 @@ export class AIChatView extends ItemView {
 		const bodyEl = bubbleEl.createDiv({ cls: "vault-code-chat-msg-body" });
 		void MarkdownRenderer.render(
 			this.app,
-			msg.content,
+			msg.role === "assistant" ? extractEditProposal(msg.content)?.explanation || msg.content : msg.content,
 			bodyEl,
 			"",
 			this,
@@ -962,7 +981,7 @@ export class AIChatView extends ItemView {
 			bodyEl.empty();
 			void MarkdownRenderer.render(
 				this.app,
-				msg.content,
+				extractEditProposal(msg.content)?.explanation || msg.content,
 				bodyEl,
 				"",
 				this,
@@ -1035,6 +1054,7 @@ export class AIChatView extends ItemView {
 		let activeFile: TFile | null = null;
 		let activeContent = "";
 		let selectedText = "";
+		let selectionStart: number | undefined;
 
 		if (this.chatScope === "active-note" && !this.contextExcluded) {
 			activeFile = (this.isContextPinned && this.pinnedContextFile)
@@ -1049,6 +1069,7 @@ export class AIChatView extends ItemView {
 				const editor = this.app.workspace.activeEditor?.editor;
 				if (editor && (!this.isContextPinned || this.app.workspace.getActiveFile()?.path === activeFile.path)) {
 					selectedText = editor.getSelection();
+					selectionStart = editor.posToOffset(editor.getCursor("from"));
 				}
 			}
 		}
@@ -1082,6 +1103,7 @@ export class AIChatView extends ItemView {
 
 		this.activeProcessHandle = this.plugin.aiService.sendMessage({
 			prompt: text,
+			history: this.messages.slice(0, -2).filter((m) => m.content.trim()).map((m) => ({ role: m.role, content: m.content })),
 			provider: this.selectedProvider,
 			model: this.selectedModel,
 			reasoningEffort: this.selectedReasoningEffort,
@@ -1110,11 +1132,23 @@ export class AIChatView extends ItemView {
 					this.currentTypingIndicatorEl = null;
 				}
 				assistantMsg.content = fullText;
+				if (this.renderRafId !== null) { window.cancelAnimationFrame(this.renderRafId); this.renderRafId = null; }
+				const proposal = isConnectionProvider(this.selectedProvider) ? extractEditProposal(fullText) : null;
+				if (proposal && this.mode === "edit" && activeFile) {
+					const file = activeFile;
+					let proposedContent = proposal.content;
+					const validSelection = !selectedText || (selectionStart !== undefined && activeContent.slice(selectionStart, selectionStart + selectedText.length) === selectedText);
+					if (selectedText && selectionStart !== undefined) proposedContent = activeContent.slice(0, selectionStart) + proposal.content + activeContent.slice(selectionStart + selectedText.length);
+					if (validSelection) {
+						const review = asstHeaderEl.createEl("button", { text: "Review edits", cls: "vault-code-cli-details-button" });
+						review.addEventListener("click", () => new AIEditReviewModal(this.app, file, activeContent, proposedContent, () => { review.disabled = true; review.setText("Applied"); }).open());
+					}
+				}
 				if (asstBodyEl) {
 					asstBodyEl.empty();
 					void MarkdownRenderer.render(
 						this.app,
-						assistantMsg.content,
+						proposal ? proposal.explanation || "Proposed note update." : assistantMsg.content,
 						asstBodyEl,
 						"",
 						this,

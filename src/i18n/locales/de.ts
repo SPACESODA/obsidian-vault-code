@@ -287,7 +287,7 @@ export const de: TranslationSchema = {
 	aiChatProviderCodex: "Codex",
 	settingsAIDefaultTargetName: "Standard-KI-Ziel",
 	settingsAIDefaultTargetDesc: "Der standardmäßige lokale Programmier-Agent für Chat und Vault-Bearbeitung.",
-	settingsAIAgentsTitle: "AI-Agent-Anbieter erkennen",
+	settingsAIAgentsTitle: "AI-Agent-Anbieter auswählen",
 	settingsAIAgentsDesc: "Lokale Agents können Werkzeuge nutzen, um den Vault zu prüfen und zu bearbeiten. Klicken Sie auf eine Karte, um sie als Standard festzulegen.",
 	settingsAIAgentInstalled: "Installiert",
 	settingsAIAgentMissing: "Fehlt",

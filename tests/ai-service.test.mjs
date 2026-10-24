@@ -12,6 +12,7 @@ const compiled = await build({
     b.onLoad({ filter: /.*/, namespace: 'test' }, () => ({ contents: `
       export const Platform = { isDesktop: true, isWin: false, isMacOS: true };
       export class App {} export class TFile {} export class FileSystemAdapter {}
+      export const requestUrl = async () => { throw new Error('Unexpected HTTP request'); };
       export const getLanguage = () => 'en'; export const requireApiVersion = () => true;
     ` }));
   } }],
@@ -50,7 +51,7 @@ function harness({ bins = {}, execute, output = 'Hello\n', stderr = '', code = 0
   globalThis.window = {
     process: { env: { HOME: '/nonexistent-vault-code-test', PATH: '/usr/bin', SHELL: '/bin/zsh' } },
     require: name => name === 'child_process' ? cp : name === 'fs' ? filesystem || { existsSync: () => false } : require(name),
-    setTimeout,
+    setTimeout, clearTimeout,
   };
   const app = { vault: { adapter: { getBasePath: () => '/tmp/test vault', exists: async () => false }, configDir: '.obsidian' } };
   const service = new AIService(app);
@@ -176,16 +177,16 @@ test('shell installers run with pipefail so failed downloads cannot count as suc
 
 test('update queue is serial and accounts for every installed provider', async () => {
   const h = harness();
-  h.service.detectAllAgents = async () => [{id:'claude',name:'Claude'}, {id:'codex',name:'Codex'}, {id:'ollama',name:'Ollama'}].map(a=>({...a,isInstalled:true}));
+  h.service.detectAllAgents = async () => [{id:'claude',name:'Claude'}, {id:'codex',name:'Codex'}, {id:'pi',name:'Pi'}].map(a=>({...a,isInstalled:true}));
   const order = []; let active = 0;
   h.service.updateAgent = async id => {
     assert.equal(active++, 0); order.push(id);
     await new Promise(r => setImmediate(r)); active--;
-    return { success: id !== 'ollama', message: 'manual update required' };
+    return { success: id !== 'pi', message: 'manual update required' };
   };
   const starts = [];
   const r = await h.service.updateAllConnectedAgents(undefined, a => starts.push(a.id));
-  assert.deepEqual(order, ['claude','codex','ollama']);
+  assert.deepEqual(order, ['claude','codex','pi']);
   assert.deepEqual(starts, order);
   assert.equal(r.total, 3); assert.equal(r.updated, 2); assert.equal(r.failed, 1); assert.equal(r.results.length, 3);
 });

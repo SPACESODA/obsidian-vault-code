@@ -287,7 +287,7 @@ export const zhTw: TranslationSchema = {
 	aiChatProviderCodex: "Codex",
 	settingsAIDefaultTargetName: "預設 AI 目標",
 	settingsAIDefaultTargetDesc: "用於對話和保管庫編輯的預設本機代理程式。",
-	settingsAIAgentsTitle: "識別 AI Agent 提供者",
+	settingsAIAgentsTitle: "選擇 AI Agent 提供者",
 	settingsAIAgentsDesc: "本地 Agent 可使用工具檢視並編輯儲存庫。點擊卡片以設定預設 Agent。",
 	settingsAIAgentInstalled: "已安裝",
 	settingsAIAgentMissing: "缺失",

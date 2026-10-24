@@ -287,7 +287,7 @@ export const ru: TranslationSchema = {
 	aiChatProviderCodex: "Codex",
 	settingsAIDefaultTargetName: "Целевой ИИ по умолчанию",
 	settingsAIDefaultTargetDesc: "Локальный агент по умолчанию для чата и редактирования хранилища.",
-	settingsAIAgentsTitle: "Определить провайдеров AI Agent",
+	settingsAIAgentsTitle: "Выбрать провайдеров AI Agent",
 	settingsAIAgentsDesc: "Локальные агенты могут использовать инструменты для просмотра и редактирования хранилища. Нажмите на карточку, чтобы выбрать агента по умолчанию.",
 	settingsAIAgentInstalled: "Установлено",
 	settingsAIAgentMissing: "Отсутствует",

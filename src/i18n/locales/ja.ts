@@ -287,7 +287,7 @@ export const ja: TranslationSchema = {
 	aiChatProviderCodex: "Codex",
 	settingsAIDefaultTargetName: "デフォルトAIターゲット",
 	settingsAIDefaultTargetDesc: "チャットと保管庫の編集に使用するデフォルトのローカルコーディングエージェント。",
-	settingsAIAgentsTitle: "AI Agent プロバイダーを検出",
+	settingsAIAgentsTitle: "AI Agent プロバイダーを選択",
 	settingsAIAgentsDesc: "ローカル Agent はツールを使用して保管庫を検査および編集できます。カードをクリックしてデフォルトに設定します。",
 	settingsAIAgentInstalled: "インストール済み",
 	settingsAIAgentMissing: "未インストール",

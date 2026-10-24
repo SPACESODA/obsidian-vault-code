@@ -287,7 +287,7 @@ export const es: TranslationSchema = {
 	aiChatProviderCodex: "Codex",
 	settingsAIDefaultTargetName: "Objetivo de IA predeterminado",
 	settingsAIDefaultTargetDesc: "El agente de programación local predeterminado utilizado para chat y edición de almacén.",
-	settingsAIAgentsTitle: "Identificar proveedores de AI Agent",
+	settingsAIAgentsTitle: "Elegir proveedores de AI Agent",
 	settingsAIAgentsDesc: "Los agentes locales pueden usar herramientas para inspeccionar y editar la bóveda. Haga clic en una tarjeta para establecerla como predeterminada.",
 	settingsAIAgentInstalled: "Instalado",
 	settingsAIAgentMissing: "Faltante",

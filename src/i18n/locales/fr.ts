@@ -287,7 +287,7 @@ export const fr: TranslationSchema = {
 	aiChatProviderCodex: "Codex",
 	settingsAIDefaultTargetName: "Cible d'IA par défaut",
 	settingsAIDefaultTargetDesc: "L'agent de code local par défaut utilisé pour le chat et l'édition du coffre.",
-	settingsAIAgentsTitle: "Identifier les fournisseurs d'Agent IA",
+	settingsAIAgentsTitle: "Choisir les fournisseurs d'Agent IA",
 	settingsAIAgentsDesc: "Les agents locaux peuvent utiliser des outils pour inspecter et modifier le coffre. Cliquez sur une carte pour la définir par défaut.",
 	settingsAIAgentInstalled: "Installé",
 	settingsAIAgentMissing: "Manquant",

@@ -287,7 +287,7 @@ export const ko: TranslationSchema = {
 	aiChatProviderCodex: "Codex",
 	settingsAIDefaultTargetName: "기본 AI 대상",
 	settingsAIDefaultTargetDesc: "대화 및 보관함 편집에 사용되는 기본 로컬 코딩 에이전트입니다.",
-	settingsAIAgentsTitle: "AI Agent 제공자 식별",
+	settingsAIAgentsTitle: "AI Agent 제공자 선택",
 	settingsAIAgentsDesc: "로컬 Agent는 도구를 사용하여 보관함을 검사하고 편집할 수 있습니다. 카드를 클릭하여 기본 Agent로 설정하세요.",
 	settingsAIAgentInstalled: "설치됨",
 	settingsAIAgentMissing: "누락",

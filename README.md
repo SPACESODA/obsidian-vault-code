@@ -133,13 +133,31 @@ Tailor Vault Code to your workflow in **Settings → Community plugins → Vault
 
 ---
 
+## Agent chat
+
+Choose **CLI**, **API**, or **Local model** in the plugin settings:
+
+- **CLI** uses installed coding agents and their own sign-in. Agents retain their existing vault tools.
+- **API** connects directly to hosted providers. Presets include OpenAI, Anthropic, Gemini, OpenRouter, DeepSeek, Qwen, Kimi, GLM, MiniMax, and SiliconFlow. Presets only fill editable defaults; custom endpoints and model IDs are supported.
+- **Local model** connects to a running Ollama, LM Studio, [Atomic Chat](https://github.com/AtomicBot-ai/Atomic-Chat), or another compatible server. Load a model in that app first. The Atomic Chat preset uses `http://127.0.0.1:53176/v1`. Use the server URL shown in your Atomic Chat settings if it differs; its upstream documentation also lists port `1337`.
+
+Add a connection, enter one or more model IDs (one per line), or use the refresh icon beside **Models** to discover them. **Advanced** contains the API format and optional non-secret headers. Regional endpoints and separate accounts can be saved as separate connections.
+
+API keys are stored through Obsidian's secret storage (requires Obsidian 1.11.4 or newer), not in the plugin's `data.json`. Local servers can run without a key. Keys must be configured on each device; provider configuration contains no keys. CLI chat remains available on older supported Obsidian versions.
+
+API and local-model chat use conversation history and attached note or selection context. **Review edits** lets a model propose changes; nothing is written until you review and apply them. Applying an edit is refused if the original note has changed in the meantime. Direct models do not receive shell access or vault-wide agent tools. Desktop supports streamed replies; a compatible server may also return a complete reply.
+
+**Test** sends a short synthetic prompt with no vault content. Hosted providers may charge for it. Model discovery does not verify generation access.
+
 ## Privacy & Network Disclosure
 
-Vault Code runs locally in your vault and **NEVER** tracks, collects, or transmits your data.
+Vault Code does not send analytics or telemetry. Network activity depends on the features you use:
 
-The only network requests made are:
-* **Live HTML Preview**: When previewing an HTML file that references remote stylesheets (such as Google Fonts or CDN CSS), Vault Code fetches the stylesheet so it renders securely inside Obsidian's sandbox.
-* **External Links**: Clicking author or GitHub links in Settings opens them in your default browser.
+- **Agent chat:** CLI agents communicate with their configured services. API connections send your prompts, conversation history, and attached note or selection to the configured endpoint. Local connections send the same context to the server URL you choose; a loopback server runs on your device. Connections are not tested automatically.
+- **CLI installation and updates:** These contact the selected agent's installer or package registry.
+- **Live HTML Preview:** Remote stylesheet references, such as fonts or CDN CSS, may be fetched for rendering.
+- **External links:** Links in settings open in your default browser.
+
 
 ---
 
