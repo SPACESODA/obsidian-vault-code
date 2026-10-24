@@ -160,8 +160,12 @@ export const DEFAULT_KIMI_MODELS = DEFAULT_GENERIC_MODELS;
 export const DEFAULT_GROK_MODELS = DEFAULT_GENERIC_MODELS;
 export const DEFAULT_AIDER_MODELS = DEFAULT_GENERIC_MODELS;
 
-export function resolveOptimalModel(_provider: AIProvider): string {
-	// Let the authenticated CLI choose its configured model instead of guessing an ID.
+export function resolveOptimalModel(_provider: AIProvider, models?: AgyModelInfo[]): string {
+	if (models && models.length > 0) {
+		const defaultItem = models.find((m) => m.id === "default");
+		if (defaultItem) return defaultItem.id;
+		return models[0]?.id || "default";
+	}
 	return "default";
 }
 
@@ -352,9 +356,9 @@ export const ALL_AGENT_DEFS: AgentDefinition[] = [
 export function getAgentDisplayName(provider: AIProvider): string {
 	switch (provider) {
 		case "antigravity":
-			return t("settingsAIProviderAntigravity");
+			return t("aiChatProviderAntigravity");
 		case "codex":
-			return t("settingsAIProviderCodex");
+			return t("aiChatProviderCodex");
 		case "claude":
 			return t("aiChatProviderClaude");
 		case "copilot":

@@ -1197,7 +1197,7 @@ export class AIChatView extends ItemView {
 
 				const isModelError = /model.*(?:not found|unknown|deprecated|discontinued|invalid|does not exist|unsupported)/i.test(err.message);
 				if (isModelError) {
-					const fallback = resolveOptimalModel(this.selectedProvider);
+					const fallback = resolveOptimalModel(this.selectedProvider, this.availableModels);
 					if (this.selectedModel !== fallback) {
 						this.selectedModel = fallback;
 						if (!this.plugin.settings.aiProviderLastModel) {

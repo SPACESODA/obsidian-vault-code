@@ -73,7 +73,7 @@ class ConnectionModal extends Modal {
 		const keySetting = new Setting(root).setName("API key").addText((text) => {
 			keyInput = text.inputEl;
 			text.inputEl.type = "password"; text.inputEl.autocomplete = "off";
-			text.setPlaceholder(this.plugin.aiService.getConnectionKey(this.draft.id) ? "Saved key — leave blank to keep" : "Optional if not required")
+			text.setPlaceholder(this.plugin.aiService.getConnectionKey(this.draft.id) ? "Saved key (leave blank to keep)" : "Optional if not required")
 				.onChange((v) => { this.key = v.trim(); this.clearKey = false; });
 		});
 		let modelInput: HTMLTextAreaElement;

@@ -8930,9 +8930,10 @@ class VaultCodeSettingTab extends PluginSettingTab {
 						setAgentActivity(agentToInstall.id, "installing");
 
 						try {
-							logOperation(`Installing ${agentToInstall.name}…`, `Installing ${agentToInstall.name}...`);
+							const installingText = t("settingsAIAgentInstalling", agentToInstall.name);
+							logOperation(`${installingText}…`, installingText);
 							const res = await this.plugin.aiService.installAgent(agentToInstall.id);
-							logOperation(`${res.message}${res.command ? `\n${res.command}` : ""}`, res.success ? `${agentToInstall.name} installed` : `${agentToInstall.name} needs attention — see details`);
+							logOperation(`${res.message}${res.command ? `\n${res.command}` : ""}`, res.success ? `${agentToInstall.name} installed` : `${agentToInstall.name} needs attention - see details`);
 							if (!res.success && res.command?.startsWith("https://")) openInDefaultBrowser(res.command);
 							if (res.success) {
 								new Notice(t("settingsAIAgentInstallSuccess", agentToInstall.name));
@@ -8967,7 +8968,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 							btnEl.className = "vault-code-agent-card-badge is-missing is-installable";
 							btnEl.empty();
 							btnEl.setText(t("settingsAIAgentInstallQuestion"));
-							logOperation(msg, `${agentToInstall.name} installation failed — see details`);
+							logOperation(msg, `${agentToInstall.name} installation failed - see details`);
 						} finally {
 							maintenanceRunning = false;
 							refreshProvidersButton.disabled = false;
@@ -9064,12 +9065,12 @@ class VaultCodeSettingTab extends PluginSettingTab {
 								setAgentActivity(agent.id, success ? "updated" : "failed");
 								logOperation(`${agent.name}: ${success ? "Updated and version check passed" : error || "Update failed"}`);
 								if (!success) {
-									new Notice(`${agent.name} needs attention. See CLI activity details.`, 5000);
+									new Notice(t("settingsAIAgentUpdateFailedSingle", agent.name), 5000);
 								}
 							},
 							(agent) => {
 								setAgentActivity(agent.id, "updating");
-								activitySummary.setText(`Updating ${agent.name}...`);
+								activitySummary.setText(`${t("settingsAIUpdatingCLIs")}: ${agent.name}...`);
 							},
 						);
 						logOperation(`${result.updated} updated, ${result.failed} failed or require manual setup (${result.total} installed).`, `${result.updated} updated · ${result.failed} need attention`);
@@ -9078,7 +9079,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 						} else if (result.failed === 0) {
 							new Notice(t("settingsAIUpdateAllSuccess", result.updated));
 						} else if (result.updated > 0) {
-							new Notice(t("settingsAIUpdateAllSuccess", result.updated));
+							new Notice(t("settingsAIUpdatePartial", result.updated, result.failed));
 						}
 						this.plugin.aiService.refreshAgentsCache();
 						const fresh = await this.plugin.aiService.detectAllAgents();
@@ -9087,7 +9088,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 					} catch (err: unknown) {
 						const msg = err instanceof Error ? err.message : String(err);
 						new Notice(`${t("settingsAIUpdateFailed")}: ${msg}`);
-						logOperation(msg, "Update stopped — see details");
+						logOperation(msg, "Update stopped - see details");
 					} finally {
 						maintenanceRunning = false;
 						refreshProvidersButton.disabled = false;

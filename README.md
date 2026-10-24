@@ -24,6 +24,7 @@ Vault Code automatically adapts to your Obsidian display language: English, 繁�
 * **Find & Replace**: Multiline search, regex, case and word matching, and jump navigation.
 * **Live Preview**: Toggle live preview for HTML, SVG, and MJML email templates.
 * **Git Integration (Desktop)**: View branch indicator, inline diff comparisons, and file change stats.
+* **Agent Chat (Desktop)**: Pair-program with local coding CLIs, hosted APIs, or local LLM servers.
 * **Mobile & Tablet Ready**: Edit code and manage files comfortably on phones and tablets.
 
 ---
@@ -89,6 +90,7 @@ When your vault is inside a Git repository:
 | <kbd>Shift</kbd> + <kbd>Option</kbd> / <kbd>Alt</kbd> + <kbd>↑</kbd> / <kbd>↓</kbd> | Duplicate line up / down | In code editor |
 | <kbd>Cmd</kbd> / <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>K</kbd> | Delete line | In code editor |
 | <kbd>Alt</kbd> + <kbd>Z</kbd> | Toggle line wrapping | In code editor |
+| <kbd>Cmd</kbd> / <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>L</kbd> | Open Agent chat | Anywhere on Desktop |
 | <kbd>Cmd</kbd> / <kbd>Ctrl</kbd> + <kbd>E</kbd> | Toggle code / live preview | HTML, SVG & MJML files |
 | <kbd>Cmd</kbd> / <kbd>Ctrl</kbd> + <kbd>S</kbd> | Save file | In code editor |
 | <kbd>Esc</kbd> | Close search bar or dismiss popups | Anywhere |
@@ -114,6 +116,11 @@ Tailor Vault Code to your workflow in **Settings → Community plugins → Vault
 
 #### Git (Desktop)
 * **Git integration**: Show file changes, branch indicator, and inline diff comparison when vault is inside a Git repository. Cleanly shuts down all Git operations when disabled.
+
+#### Agent chat (Desktop)
+* **Enable Agent chat**: Enable local coding CLIs (Antigravity, Claude, Codex, Copilot, Cursor, Ollama, OpenCode, Pi, Kimi, Grok, Aider), direct hosted APIs (OpenAI, Anthropic, Gemini, DeepSeek, etc.), and local model servers (Ollama, LM Studio, Atomic Chat). Cleanly shuts down all background processes when disabled.
+* **Chat folder**: Configure where chat history Markdown notes are stored.
+* **Auto-clean empty chats**: Automatically remove unedited or empty chat notes when closed.
 
 ---
 
