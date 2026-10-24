@@ -226,7 +226,7 @@ export const ru: TranslationSchema = {
 	aiChatContextPin: "Закрепить контекстную заметку",
 	aiChatContextUnpin: "Открепить контекстную заметку",
 	aiChatContextRemove: "Удалить контекст заметки",
-	aiChatAttachActiveNote: "Прикрепить активную заметку",
+	aiChatAttachActiveNote: "Прикрепить",
 	aiChatContextAttachedNotice: "Заметка '{0}' прикреплена",
 	aiChatContextPinnedNotice: "Контекст закреплен за '{0}'",
 	aiChatContextUnpinnedNotice: "Контекст откреплен",

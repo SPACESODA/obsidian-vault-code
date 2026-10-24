@@ -226,7 +226,7 @@ export const ja: TranslationSchema = {
 	aiChatContextPin: "コンテキストノートを固定",
 	aiChatContextUnpin: "コンテキストノートの固定を解除",
 	aiChatContextRemove: "ノートコンテキストを削除",
-	aiChatAttachActiveNote: "現在のノートを添付",
+	aiChatAttachActiveNote: "添付",
 	aiChatContextAttachedNotice: "ノート「{0}」を添付しました",
 	aiChatContextPinnedNotice: "コンテキストを「{0}」に固定しました",
 	aiChatContextUnpinnedNotice: "コンテキストの固定を解除しました",

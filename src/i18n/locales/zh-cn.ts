@@ -226,7 +226,7 @@ export const zhCn: TranslationSchema = {
 	aiChatContextPin: "固定上下文笔记",
 	aiChatContextUnpin: "取消固定上下文笔记",
 	aiChatContextRemove: "移除笔记上下文",
-	aiChatAttachActiveNote: "附加当前笔记",
+	aiChatAttachActiveNote: "附加",
 	aiChatContextAttachedNotice: "已附加笔记“{0}”",
 	aiChatContextPinnedNotice: "已将上下文固定到“{0}”",
 	aiChatContextUnpinnedNotice: "已取消固定上下文",

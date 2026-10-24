@@ -2506,37 +2506,43 @@ button.vault-code-ignore-btn:hover {
 	align-items: center;
 	align-self: flex-start;
 	gap: 6px;
-	padding: 2px 7px;
-	border-radius: var(--radius-s, 4px);
+	padding: 3.5px 8px;
+	min-height: 25px;
+	border-radius: var(--radius-s, 5px);
 	background-color: var(--background-primary);
-	border: 1px solid var(--background-modifier-border);
-	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+	border: 1px solid var(--background-modifier-border-hover);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 0.5px 1px rgba(0, 0, 0, 0.04);
 	font-size: var(--font-ui-smaller, 11px);
+	line-height: 1.4;
 	color: var(--text-muted);
 	max-width: 100%;
 	transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .vault-code-chat-context-chip:hover {
-	border-color: var(--background-modifier-border-hover);
-	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+	border-color: var(--interactive-accent);
+	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12);
 }
 
 .vault-code-chat-context-chip.is-detached {
 	background: transparent;
 	border: none;
 	padding: 0;
+	box-shadow: none;
+	min-height: auto;
 }
 
 .vault-code-context-attach-btn {
 	display: inline-flex;
 	align-items: center;
 	gap: 5px;
-	padding: 2px 7px;
-	border-radius: var(--radius-s, 4px);
+	padding: 3.5px 8px;
+	min-height: 25px;
+	border-radius: var(--radius-s, 5px);
 	background-color: transparent;
 	border: 1px dashed var(--background-modifier-border);
 	font-size: var(--font-ui-smaller, 11px);
+	line-height: 1.4;
 	color: var(--text-muted);
 	cursor: pointer;
 	max-width: 100%;
@@ -2550,8 +2556,8 @@ button.vault-code-ignore-btn:hover {
 }
 
 .vault-code-context-attach-icon svg {
-	width: 11px;
-	height: 11px;
+	width: 12px;
+	height: 12px;
 	display: block;
 	color: var(--text-accent);
 }
@@ -2560,7 +2566,8 @@ button.vault-code-ignore-btn:hover {
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
-	max-width: 220px;
+	max-width: 240px;
+	font-weight: 500;
 }
 
 .vault-code-context-chip-icon svg {
@@ -2577,18 +2584,22 @@ button.vault-code-ignore-btn:hover {
 	color: var(--text-normal);
 	font-weight: 500;
 	font-size: var(--font-ui-smaller, 11px);
+	line-height: 1.4;
 }
 
 .vault-code-context-chip-btn {
-	display: flex;
+	display: inline-flex;
 	align-items: center;
 	justify-content: center;
+	width: 18px;
+	height: 18px;
 	padding: 2px;
-	border-radius: var(--radius-s, 4px);
+	border-radius: var(--radius-s, 3px);
 	background: transparent;
 	border: none;
 	cursor: pointer;
 	color: var(--text-muted);
+	transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .vault-code-context-chip-btn:hover {

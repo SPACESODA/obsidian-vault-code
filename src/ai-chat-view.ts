@@ -516,7 +516,7 @@ export class AIChatView extends ItemView {
 
 				const attachBtn = this.contextChipEl.createEl("button", {
 					cls: "vault-code-context-attach-btn",
-					attr: { "aria-label": t("aiChatAttachActiveNote") },
+					attr: { "aria-label": `${t("aiChatAttachActiveNote")}: ${currentOpen.name}` },
 				});
 				const iconSpan = attachBtn.createSpan({ cls: "vault-code-context-attach-icon" });
 				setIcon(iconSpan, "paperclip");
