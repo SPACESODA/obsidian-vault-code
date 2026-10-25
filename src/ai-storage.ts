@@ -1,6 +1,6 @@
 import { App, TFile, TFolder, normalizePath } from "obsidian";
 import type { ChatMessage } from "./ai-chat-view";
-import type { AIProvider } from "./ai-service";
+import type { AIProvider, ReasoningEffort } from "./ai-service";
 
 export interface ChatMetadata {
 	title: string;
@@ -8,7 +8,7 @@ export interface ChatMetadata {
 	last_chat?: string;
 	provider?: AIProvider;
 	model: string;
-	reasoning_effort?: string;
+	reasoning_effort?: ReasoningEffort;
 	scope: "active-note" | "vault";
 	mode: "safe" | "edit";
 	conversationId?: string;
@@ -159,7 +159,7 @@ export class AIStorage {
 			last_chat: nowStr,
 			model: defaultModel,
 			scope: "active-note",
-			mode: "edit",
+			mode: "safe",
 		};
 
 		let bodyContent = content;
@@ -188,7 +188,12 @@ export class AIStorage {
 			if (modelMatch && modelMatch[1]) metadata.model = modelMatch[1].trim();
 
 			const effortMatch = fmBlock.match(/reasoning_effort:\s*"?([^"\n\r]+)"?/);
-			if (effortMatch && effortMatch[1]) metadata.reasoning_effort = effortMatch[1].trim();
+			if (effortMatch && effortMatch[1]) {
+				const effortVal = effortMatch[1].trim();
+				if (effortVal === "auto" || effortVal === "low" || effortVal === "medium" || effortVal === "high") {
+					metadata.reasoning_effort = effortVal;
+				}
+			}
 
 			const scopeMatch = fmBlock.match(/scope:\s*"?([^"\n\r]+)"?/);
 			if (scopeMatch && scopeMatch[1] && (scopeMatch[1] === "active-note" || scopeMatch[1] === "vault")) {
@@ -273,6 +278,48 @@ export class AIStorage {
 			});
 		} catch (err) {
 			console.error("Vault Code: Failed to update chat scope frontmatter", err);
+		}
+	}
+
+	/**
+	 * Updates the provider and optionally model of an existing chat note in its frontmatter immediately.
+	 */
+	public async updateChatProvider(file: TFile, newProvider: AIProvider, newModel?: string): Promise<void> {
+		try {
+			await this.app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
+				fm["provider"] = newProvider;
+				if (newModel !== undefined) {
+					fm["model"] = newModel;
+				}
+			});
+		} catch (err) {
+			console.error("Vault Code: Failed to update chat provider frontmatter", err);
+		}
+	}
+
+	/**
+	 * Updates the model of an existing chat note in its frontmatter immediately.
+	 */
+	public async updateChatModel(file: TFile, newModel: string): Promise<void> {
+		try {
+			await this.app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
+				fm["model"] = newModel;
+			});
+		} catch (err) {
+			console.error("Vault Code: Failed to update chat model frontmatter", err);
+		}
+	}
+
+	/**
+	 * Updates the reasoning effort of an existing chat note in its frontmatter immediately.
+	 */
+	public async updateChatEffort(file: TFile, newEffort: ReasoningEffort): Promise<void> {
+		try {
+			await this.app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
+				fm["reasoning_effort"] = newEffort;
+			});
+		} catch (err) {
+			console.error("Vault Code: Failed to update chat reasoning effort frontmatter", err);
 		}
 	}
 

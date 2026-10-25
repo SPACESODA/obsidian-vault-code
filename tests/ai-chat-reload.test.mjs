@@ -175,3 +175,149 @@ test("changing mode or scope immediately updates the chat file frontmatter", asy
 	assert.equal(view.chatScope, "vault");
 	assert.deepEqual(updated[1], { type: "scope", file: dummyFile, scope: "vault" });
 });
+
+test("changing provider, model, or effort immediately updates the chat file frontmatter", async () => {
+	const leaf = {};
+	const dummyFile = new globalThis.__TestTFile("Agent-Chats/active.md");
+	const updated = [];
+	const plugin = {
+		settings: {
+			aiProvider: "antigravity",
+			aiProviderLastModel: {},
+			aiReasoningEffort: "auto",
+			aiScope: "active-note",
+			aiMode: "safe",
+			aiConnections: [],
+		},
+		aiService: {
+			getModelsForProvider: async () => [{ id: "claude-3-5-sonnet", displayName: "Claude 3.5 Sonnet" }],
+			detectAllAgents: async () => [],
+		},
+		aiStorage: {
+			updateChatProvider: async (file, provider, model) => { updated.push({ type: "provider", file, provider, model }); },
+			updateChatModel: async (file, model) => { updated.push({ type: "model", file, model }); },
+			updateChatEffort: async (file, effort) => { updated.push({ type: "effort", file, effort }); },
+		},
+		saveSettings: async () => {},
+	};
+	const view = new AIChatView(leaf, plugin);
+	view.currentChatFile = dummyFile;
+
+	// Changing provider
+	view.selectProvider("claude");
+	assert.equal(view.selectedProvider, "claude");
+	assert.equal(updated[0].type, "provider");
+	assert.equal(updated[0].provider, "claude");
+
+	// Auto-adjusting model when loading models
+	view.availableModels = [{ id: "claude-3-5-sonnet", displayName: "Claude 3.5 Sonnet" }];
+	await view.loadModelsForProvider("claude");
+	assert.equal(view.selectedModel, "claude-3-5-sonnet");
+	assert.equal(updated[1].type, "model");
+	assert.equal(updated[1].model, "claude-3-5-sonnet");
+});
+
+test("loadChatFromFile follows recorded provider, model, effort, scope, and mode when available", async () => {
+	const leaf = {};
+	const dummyFile = new globalThis.__TestTFile("Agent-Chats/existing.md");
+	const plugin = {
+		settings: {
+			aiProvider: "antigravity",
+			aiProviderLastModel: {},
+			aiReasoningEffort: "auto",
+			aiScope: "active-note",
+			aiMode: "safe",
+			aiConnections: [],
+		},
+		aiService: {
+			getModelsForProvider: async () => [],
+			isProviderAvailable: async (prov) => prov === "claude",
+		},
+		aiStorage: {
+			parseChat: () => ({
+				metadata: {
+					title: "Existing Claude Chat",
+					created: "2026-10-25 10:00:00",
+					provider: "claude",
+					model: "claude-3-7-sonnet",
+					reasoning_effort: "high",
+					scope: "vault",
+					mode: "edit",
+					conversationId: "conv-123",
+				},
+				messages: [
+					{ role: "user", content: "Hello" },
+					{ role: "assistant", content: "Hi" },
+				],
+			}),
+		},
+		saveSettings: async () => {},
+	};
+	const view = new AIChatView(leaf, plugin);
+	view.app = {
+		vault: {
+			read: async () => "dummy",
+		},
+	};
+
+	await view.loadChatFromFile(dummyFile);
+
+	assert.equal(view.selectedProvider, "claude");
+	assert.equal(view.selectedModel, "claude-3-7-sonnet");
+	assert.equal(view.selectedReasoningEffort, "high");
+	assert.equal(view.chatScope, "vault");
+	assert.equal(view.mode, "edit");
+	assert.equal(view.conversationId, "conv-123");
+});
+
+test("loadChatFromFile falls back to settings default provider when recorded provider does not exist", async () => {
+	const leaf = {};
+	const dummyFile = new globalThis.__TestTFile("Agent-Chats/deleted-provider.md");
+	const plugin = {
+		settings: {
+			aiProvider: "antigravity",
+			aiProviderLastModel: { antigravity: "gemini-2.5-flash" },
+			aiReasoningEffort: "medium",
+			aiScope: "vault",
+			aiMode: "safe",
+			aiConnections: [],
+		},
+		aiService: {
+			getModelsForProvider: async () => [],
+			isProviderAvailable: async () => false, // Provider unavailable
+		},
+		aiStorage: {
+			parseChat: () => ({
+				metadata: {
+					title: "Old Removed Connection Chat",
+					created: "2026-10-20 10:00:00",
+					provider: "connection:deleted-id",
+					model: "custom-model",
+					scope: "active-note",
+					mode: "edit",
+					conversationId: "dead-conv-id",
+				},
+				messages: [],
+			}),
+		},
+		saveSettings: async () => {},
+	};
+	const view = new AIChatView(leaf, plugin);
+	view.app = {
+		vault: {
+			read: async () => "dummy",
+		},
+	};
+
+	await view.loadChatFromFile(dummyFile);
+
+	// Provider fell back to default
+	assert.equal(view.selectedProvider, "antigravity");
+	assert.equal(view.selectedModel, "gemini-2.5-flash");
+	// Conversation ID reset because provider changed
+	assert.equal(view.conversationId, undefined);
+	// Recorded mode is still respected
+	assert.equal(view.mode, "edit");
+	// Fallback effort used since old metadata had none
+	assert.equal(view.selectedReasoningEffort, "medium");
+});

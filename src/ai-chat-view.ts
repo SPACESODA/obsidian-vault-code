@@ -200,12 +200,15 @@ export class AIChatView extends ItemView {
 		const models = await this.plugin.aiService.getModelsForProvider(provider);
 		if (provider !== this.selectedProvider) return;
 		this.availableModels = models.filter((m) => m.id !== "auto");
-		if (!this.availableModels.some((m) => m.id === this.selectedModel)) {
+		if (this.availableModels.length > 0 && !this.availableModels.some((m) => m.id === this.selectedModel)) {
 			this.selectedModel = this.availableModels.find((m) => m.id === "default")?.id
 				|| this.availableModels[0]?.id || resolveOptimalModel(provider);
 			if (!this.plugin.settings.aiProviderLastModel) this.plugin.settings.aiProviderLastModel = {};
 			this.plugin.settings.aiProviderLastModel[provider] = this.selectedModel;
 			void this.plugin.saveSettings();
+			if (this.currentChatFile) {
+				void this.plugin.aiStorage.updateChatModel(this.currentChatFile, this.selectedModel);
+			}
 		}
 
 		this.updateModelBtnLabel();
@@ -724,6 +727,9 @@ export class AIChatView extends ItemView {
 		this.updateProviderBtnLabel(); this.updateModelBtnLabel(); this.updateEffortBtn();
 		this.updateVaultToggleState(); this.updateModeBtnLabel(); this.updateContextChip();
 		void this.loadModelsForProvider(provider);
+		if (this.currentChatFile) {
+			void this.plugin.aiStorage.updateChatProvider(this.currentChatFile, provider, this.selectedModel);
+		}
 	}
 
 	private async showProviderMenu(event: MouseEvent): Promise<void> {
@@ -781,6 +787,9 @@ export class AIChatView extends ItemView {
 			this.plugin.settings.aiProviderLastModel[this.selectedProvider] = modelId;
 			void this.plugin.saveSettings();
 			this.updateModelBtnLabel();
+			if (this.currentChatFile) {
+				void this.plugin.aiStorage.updateChatModel(this.currentChatFile, modelId);
+			}
 		};
 
 		// If list is large (> 8 models), open searchable SuggestModal directly
@@ -831,6 +840,9 @@ export class AIChatView extends ItemView {
 					this.plugin.settings.aiReasoningEffort = opt.id;
 					void this.plugin.saveSettings();
 					this.updateEffortBtn();
+					if (this.currentChatFile) {
+						void this.plugin.aiStorage.updateChatEffort(this.currentChatFile, opt.id);
+					}
 				});
 			});
 		}
@@ -885,21 +897,58 @@ export class AIChatView extends ItemView {
 			const parsed = this.plugin.aiStorage.parseChat(content, this.selectedModel);
 			this.currentChatFile = file;
 			this.currentChatTitle = parsed.metadata.title;
-			this.conversationId = parsed.metadata.conversationId;
-			if (parsed.metadata.provider) {
-				this.selectedProvider = parsed.metadata.provider;
+
+			// Validate and follow recorded provider, fallback to setting's default if not available
+			const recordedProvider = parsed.metadata.provider;
+			const isAvailable = recordedProvider
+				? await this.plugin.aiService.isProviderAvailable(recordedProvider)
+				: false;
+
+			if (recordedProvider && isAvailable) {
+				this.selectedProvider = recordedProvider;
+				this.selectedModel = parsed.metadata.model || resolveOptimalModel(recordedProvider);
+				this.conversationId = parsed.metadata.conversationId;
+			} else {
+				const fallbackProvider = this.plugin.settings.aiProvider || "antigravity";
+				this.selectedProvider = fallbackProvider;
+				const remembered = this.plugin.settings.aiProviderLastModel?.[fallbackProvider];
+				this.selectedModel =
+					remembered && remembered !== "auto"
+						? remembered
+						: resolveOptimalModel(fallbackProvider);
+				this.conversationId = undefined;
+				if (recordedProvider && !isAvailable) {
+					console.warn(
+						`Vault Code: Saved chat provider "${recordedProvider}" is unavailable; falling back to "${fallbackProvider}".`,
+					);
+				}
 			}
-			this.selectedModel = parsed.metadata.model;
+
 			if (parsed.metadata.reasoning_effort) {
-				this.selectedReasoningEffort = parsed.metadata.reasoning_effort as ReasoningEffort;
+				this.selectedReasoningEffort = parsed.metadata.reasoning_effort;
+			} else {
+				this.selectedReasoningEffort = this.plugin.settings.aiReasoningEffort || "auto";
 			}
-			this.chatScope = parsed.metadata.scope;
-			this.mode = parsed.metadata.mode;
+
+			if (parsed.metadata.scope) {
+				this.chatScope = parsed.metadata.scope;
+			} else {
+				this.chatScope = this.plugin.settings.aiScope || "active-note";
+			}
+
+			if (parsed.metadata.mode) {
+				this.mode = parsed.metadata.mode;
+			} else {
+				this.mode = this.plugin.settings.aiMode || "safe";
+			}
+
 			this.messages = parsed.messages;
 
-			this.headerTitleEl?.setText(this.currentChatTitle);
-			this.headerTitleEl.title = `${this.currentChatTitle} (${t("aiChatRenameChat")})`;
-			this.headerTitleEl.addClass("is-editable");
+			if (this.headerTitleEl) {
+				this.headerTitleEl.setText(this.currentChatTitle);
+				this.headerTitleEl.title = `${this.currentChatTitle} (${t("aiChatRenameChat")})`;
+				this.headerTitleEl.addClass("is-editable");
+			}
 			this.updateProviderBtnLabel();
 			this.updateModelBtnLabel();
 			this.updateEffortBtn();
@@ -910,7 +959,7 @@ export class AIChatView extends ItemView {
 			this.openNoteBtnEl?.show();
 
 			this.renderMessages();
-			this.inputEl.focus();
+			this.inputEl?.focus();
 		} catch (e) {
 			console.error("Vault Code: Failed to load chat note", e);
 			new Notice(t("aiChatNoticeDeleteFailed"));
@@ -1009,6 +1058,7 @@ export class AIChatView extends ItemView {
 	}
 
 	private renderMessages(): void {
+		if (!this.messagesContainerEl) return;
 		this.messagesContainerEl.empty();
 
 		if (this.messages.length === 0) {
@@ -1117,7 +1167,9 @@ export class AIChatView extends ItemView {
 	}
 
 	private scrollToBottom(): void {
-		this.messagesContainerEl.scrollTop = this.messagesContainerEl.scrollHeight;
+		if (this.messagesContainerEl) {
+			this.messagesContainerEl.scrollTop = this.messagesContainerEl.scrollHeight;
+		}
 	}
 
 	private async handleSubmit(): Promise<void> {
@@ -1343,6 +1395,9 @@ export class AIChatView extends ItemView {
 						this.plugin.settings.aiProviderLastModel[this.selectedProvider] = fallback;
 						void this.plugin.saveSettings();
 						this.updateModelBtnLabel();
+						if (this.currentChatFile) {
+							void this.plugin.aiStorage.updateChatModel(this.currentChatFile, fallback);
+						}
 						new Notice(t("aiChatNoticeModelOffShelf", fallback));
 					}
 				}

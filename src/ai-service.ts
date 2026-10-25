@@ -1084,6 +1084,21 @@ export class AIService {
 		return this.plugin?.settings.aiConnections.find((c) => c.id === provider.slice("connection:".length));
 	}
 
+	public async isProviderAvailable(provider: AIProvider): Promise<boolean> {
+		if (isConnectionProvider(provider)) {
+			const connectionId = provider.slice("connection:".length);
+			return (this.plugin?.settings.aiConnections || []).some((c) => c.id === connectionId);
+		}
+		const def = ALL_AGENT_DEFS.find((d) => d.id === provider);
+		if (!def) return false;
+		if (this.detectedAgentsCache) {
+			const detected = this.detectedAgentsCache.find((a) => a.id === provider);
+			if (detected) return detected.isInstalled;
+		}
+		const path = await this.detectProviderPath(def.id);
+		return Boolean(path);
+	}
+
 	public getProviderName(provider: AIProvider): string {
 		return this.getConnection(provider)?.name || (isConnectionProvider(provider) ? "Connection unavailable" : getAgentDisplayName(provider));
 	}
