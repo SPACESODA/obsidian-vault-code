@@ -719,16 +719,25 @@ export class AIChatView extends ItemView {
 		if (this.isGenerating || this.selectedProvider === provider) return;
 		this.selectedProvider = provider;
 		this.conversationId = undefined;
-		this.availableModels = [];
+		const def = ALL_AGENT_DEFS.find((d) => d.id === provider);
+		const cached = this.plugin.aiService.getCachedModels?.(provider);
+		this.availableModels = (cached && cached.length > 0)
+			? cached
+			: (def?.models || (provider === "antigravity" ? DEFAULT_AGY_MODELS : []));
 		this.plugin.settings.aiProvider = provider;
 		const remembered = this.plugin.settings.aiProviderLastModel?.[provider];
-		this.selectedModel = remembered && remembered !== "auto" ? remembered : resolveOptimalModel(provider);
+		this.selectedModel = remembered && remembered !== "auto" ? remembered : resolveOptimalModel(provider, this.availableModels);
 		void this.plugin.saveSettings();
 		this.updateProviderBtnLabel(); this.updateModelBtnLabel(); this.updateEffortBtn();
 		this.updateVaultToggleState(); this.updateModeBtnLabel(); this.updateContextChip();
 		void this.loadModelsForProvider(provider);
 		if (this.currentChatFile) {
-			void this.plugin.aiStorage.updateChatProvider(this.currentChatFile, provider, this.selectedModel);
+			void this.plugin.aiStorage.updateChatProvider(
+				this.currentChatFile,
+				provider,
+				this.selectedModel,
+				this.selectedReasoningEffort,
+			);
 		}
 	}
 
@@ -773,10 +782,13 @@ export class AIChatView extends ItemView {
 	private showModelMenu(event: MouseEvent): void {
 		if (this.isGenerating) return;
 		const def = ALL_AGENT_DEFS.find((d) => d.id === this.selectedProvider);
+		const cached = this.plugin.aiService.getCachedModels?.(this.selectedProvider);
 		const rawModels =
 			this.availableModels.length > 0
 				? this.availableModels
-				: (def?.models || DEFAULT_AGY_MODELS);
+				: (cached && cached.length > 0
+					? cached
+					: (def?.models || (this.selectedProvider === "antigravity" ? DEFAULT_AGY_MODELS : [])));
 		const modelsToUse = rawModels.filter((m) => m.id !== "auto");
 
 		const selectModel = (modelId: string) => {
@@ -1279,7 +1291,9 @@ export class AIChatView extends ItemView {
 					{
 						provider: this.selectedProvider,
 						model: this.selectedModel,
-						reasoning_effort: this.selectedReasoningEffort,
+						reasoning_effort: supportsReasoningEffort(this.selectedProvider)
+							? this.selectedReasoningEffort
+							: undefined,
 						scope: this.chatScope,
 						mode: this.mode,
 						conversationId: this.conversationId,
@@ -1369,7 +1383,9 @@ export class AIChatView extends ItemView {
 							created: this.plugin.aiStorage.formatDateTime(),
 							provider: this.selectedProvider,
 							model: this.selectedModel,
-							reasoning_effort: this.selectedReasoningEffort,
+							reasoning_effort: supportsReasoningEffort(this.selectedProvider)
+								? this.selectedReasoningEffort
+								: undefined,
 							scope: this.chatScope,
 							mode: this.mode,
 							conversationId: this.conversationId,
@@ -1417,7 +1433,9 @@ export class AIChatView extends ItemView {
 							created: this.plugin.aiStorage.formatDateTime(),
 							provider: this.selectedProvider,
 							model: this.selectedModel,
-							reasoning_effort: this.selectedReasoningEffort,
+							reasoning_effort: supportsReasoningEffort(this.selectedProvider)
+								? this.selectedReasoningEffort
+								: undefined,
 							scope: this.chatScope,
 							mode: this.mode,
 							conversationId: this.conversationId,

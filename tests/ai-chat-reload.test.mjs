@@ -26,30 +26,34 @@ async function load(entry, stubs = {}) {
 	return mod.exports;
 }
 
+const OBSIDIAN_STUB = `
+	export class ItemView {
+		constructor(leaf) { this.leaf = leaf; this.containerEl = { children: [1] }; this.contentEl = { empty(){}, addClass(){} }; }
+	}
+	export class WorkspaceLeaf {}
+	export class App {}
+	export class FileSystemAdapter {}
+	export class TFile { constructor(path) { this.path = path; } }
+	export class TFolder {}
+	export const normalizePath = (p) => p;
+	globalThis.__TestTFile = TFile;
+	export class Component { registerEvent(){} }
+	export class Modal {}
+	export class SuggestModal {}
+	export class Menu {}
+	export class ToggleComponent { setValue(){ return this; } onChange(){ return this; } }
+	export const Platform = { isDesktop: true, isMacOS: true, isWin: false };
+	export const setIcon = () => {};
+	export const Notice = class {};
+	export const debounce = (fn) => fn;
+	export const MarkdownRenderer = { render: async () => {} };
+	export const getLanguage = () => "en";
+	export const requireApiVersion = () => true;
+	export const requestUrl = () => {};
+`;
+
 const { AIChatView, VIEW_TYPE_AI_CHAT } = await load("src/ai-chat-view.ts", {
-	obsidian: `
-		export class ItemView {
-			constructor(leaf) { this.leaf = leaf; this.containerEl = { children: [1] }; this.contentEl = { empty(){}, addClass(){} }; }
-		}
-		export class WorkspaceLeaf {}
-		export class App {}
-		export class FileSystemAdapter {}
-		export class TFile { constructor(path) { this.path = path; } }
-		globalThis.__TestTFile = TFile;
-		export class Component { registerEvent(){} }
-		export class Modal {}
-		export class SuggestModal {}
-		export class Menu {}
-		export class ToggleComponent { setValue(){ return this; } onChange(){ return this; } }
-		export const Platform = { isDesktop: true, isMacOS: true, isWin: false };
-		export const setIcon = () => {};
-		export const Notice = class {};
-		export const debounce = (fn) => fn;
-		export const MarkdownRenderer = { render: async () => {} };
-		export const getLanguage = () => "en";
-		export const requireApiVersion = () => true;
-		export const requestUrl = () => {};
-	`,
+	obsidian: OBSIDIAN_STUB,
 });
 
 test("AIChatView getState and setState preserve active chat file across view reloads", async () => {
@@ -320,4 +324,62 @@ test("loadChatFromFile falls back to settings default provider when recorded pro
 	assert.equal(view.mode, "edit");
 	// Fallback effort used since old metadata had none
 	assert.equal(view.selectedReasoningEffort, "medium");
+});
+
+test("updateChatProvider deletes reasoning_effort when switching to provider without effort support", async () => {
+	const frontmatter = {
+		title: "Active Chat",
+		provider: "codex",
+		model: "o3-mini",
+		reasoning_effort: "high",
+	};
+	const fakeApp = {
+		fileManager: {
+			processFrontMatter: async (_file, fn) => { fn(frontmatter); },
+		},
+	};
+	const { AIStorage } = await load("src/ai-storage.ts", {
+		obsidian: OBSIDIAN_STUB,
+	});
+	const storage = new AIStorage(fakeApp);
+	const dummyFile = new globalThis.__TestTFile("Agent-Chats/test.md");
+
+	// Switch to Antigravity (does not support reasoning effort)
+	await storage.updateChatProvider(dummyFile, "antigravity", "gemini-3.8-flash-high");
+	assert.equal(frontmatter.provider, "antigravity");
+	assert.equal(frontmatter.model, "gemini-3.8-flash-high");
+	assert.equal("reasoning_effort" in frontmatter, false);
+
+	// Switch back to Codex (supports reasoning effort)
+	await storage.updateChatProvider(dummyFile, "codex", "o3-mini", "medium");
+	assert.equal(frontmatter.provider, "codex");
+	assert.equal(frontmatter.model, "o3-mini");
+	assert.equal(frontmatter.reasoning_effort, "medium");
+});
+
+test("getModelsForProvider caches discovered models to avoid repeating slow CLI calls", async () => {
+	let fetchCount = 0;
+	const { AIService } = await load("src/ai-service.ts", {
+		obsidian: OBSIDIAN_STUB,
+	});
+	const service = new AIService({});
+	service.getAvailableModels = async () => {
+		fetchCount++;
+		return [{ id: "gemini-3.8-flash-high", displayName: "Gemini 3.8 Flash (High)" }];
+	};
+
+	const models1 = await service.getModelsForProvider("antigravity");
+	assert.equal(fetchCount, 1);
+	assert.equal(models1.length, 1);
+
+	// Second call should return from cache with no additional fetch
+	const models2 = await service.getModelsForProvider("antigravity");
+	assert.equal(fetchCount, 1);
+	assert.deepEqual(models2, models1);
+
+	// Refresh cache should allow re-fetching
+	service.refreshAgentsCache();
+	const models3 = await service.getModelsForProvider("antigravity");
+	assert.equal(fetchCount, 2);
+	assert.deepEqual(models3, models1);
 });

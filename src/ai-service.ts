@@ -411,6 +411,7 @@ export class AIService {
 	private cachedCp: NodeChildProcess | null = null;
 	private cachedPaths = new Map<string, string | null>();
 	private detectedAgentsCache: DetectedAgentInfo[] | null = null;
+	private providerModelsCache = new Map<string, AgyModelInfo[]>();
 	private shellPath: string | null = null;
 	private shellPathPromise?: Promise<void>;
 
@@ -423,9 +424,14 @@ export class AIService {
 		return Platform.isDesktop && (this.plugin?.settings.enableAIChat ?? true);
 	}
 
+	public getCachedModels(provider: AIProvider): AgyModelInfo[] | undefined {
+		return this.providerModelsCache.get(provider);
+	}
+
 	public clearCache(): void {
 		this.cachedPaths.clear();
 		this.detectedAgentsCache = null;
+		this.providerModelsCache.clear();
 	}
 
 	private async resolveChildProcess(): Promise<NodeChildProcess | null> {
@@ -853,6 +859,7 @@ export class AIService {
 		this.shellPathPromise = undefined;
 		this.detectedAgentsCache = null;
 		this.cachedPaths.clear();
+		this.providerModelsCache.clear();
 	}
 
 	public async installAgent(provider: CLIProvider): Promise<{ success: boolean; message: string; command?: string }> {
@@ -1194,6 +1201,13 @@ export class AIService {
 	}
 
 	public async getModelsForProvider(provider: AIProvider): Promise<AgyModelInfo[]> {
+		const cached = this.providerModelsCache.get(provider);
+		if (cached && cached.length > 0) {
+			return cached;
+		}
+
+		let result: AgyModelInfo[] = [];
+
 		if (isConnectionProvider(provider)) {
 			const connection = this.getConnection(provider);
 			if (!connection) return [];
@@ -1204,63 +1218,68 @@ export class AIService {
 					if (models.length) await this.plugin?.saveSettings();
 				} catch { /* Manual model IDs remain available in settings. */ }
 			}
-			return connection.models.map((id) => ({ id, displayName: id }));
-		}
-		if (this.plugin && !this.plugin.settings.enableAIChat) {
+			result = connection.models.map((id) => ({ id, displayName: id }));
+		} else if (this.plugin && !this.plugin.settings.enableAIChat) {
 			return [];
-		}
-		if (provider === "codex") {
-			return await this.getCodexModels();
-		}
-		if (provider === "antigravity") {
-			return await this.getAvailableModels();
-		}
-		const discovery: Partial<Record<AIProvider, string[]>> = {
-			cursor: ["models"], ollama: ["list"], opencode: ["models"], pi: ["--list-models"],
-		};
-		const command = discovery[provider];
-		const cp = await this.resolveChildProcess();
-		const path = command ? await this.detectProviderPath(provider) : null;
-		if (provider === "ollama" && path) {
-			const fs = await this.resolveFileSystem();
-			const isRealBinary = fs ? fs.existsSync(path) : true;
-			if (isRealBinary) {
-				const isListening = await this.isOllamaListening();
-				if (!isListening) return [];
+		} else if (provider === "codex") {
+			result = await this.getCodexModels();
+		} else if (provider === "antigravity") {
+			result = await this.getAvailableModels();
+		} else {
+			const discovery: Partial<Record<AIProvider, string[]>> = {
+				cursor: ["models"], ollama: ["list"], opencode: ["models"], pi: ["--list-models"],
+			};
+			const command = discovery[provider];
+			const cp = await this.resolveChildProcess();
+			const path = command ? await this.detectProviderPath(provider) : null;
+			if (provider === "ollama" && path) {
+				const fs = await this.resolveFileSystem();
+				const isRealBinary = fs ? fs.existsSync(path) : true;
+				if (isRealBinary) {
+					const isListening = await this.isOllamaListening();
+					if (!isListening) return [];
+				}
+			}
+			if (cp && path && command) {
+				const models = await new Promise<AgyModelInfo[]>((resolve) => {
+					cp.execFile(path, command, { env: this.getEnv(), timeout: 15000, maxBuffer: 1024 * 1024, shell: Platform.isWin }, (err, stdout) => {
+						if (err || !stdout) { resolve([]); return; }
+						const models: AgyModelInfo[] = [];
+						for (const raw of stdout.toString().split("\n")) {
+							const line = raw.replace(new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g"), "").trim();
+							if (!line || /^(NAME|provider\s+model|Available models|Model\s)/i.test(line)) continue;
+							let id = "";
+							if (provider === "opencode") {
+								if (/^[\w.-]+\/[^\s]+$/.test(line)) id = line;
+							} else if (provider === "ollama") {
+								const match = line.match(/^(\S+)\s+[a-f0-9]{12,}\s/i);
+								id = match?.[1] || "";
+							} else if (provider === "pi") {
+								const match = line.match(/^([\w.-]+)\s+([\w./:-]+)\s+/);
+								if (match) id = `${match[1]}/${match[2]}`;
+							} else {
+								// Cursor prints model-id - display name (and may mark the default).
+								const match = line.match(/^([\w.:-]+)\s+-\s+(.+)$/);
+								id = match?.[1] || "";
+							}
+							if (id && !models.some((m) => m.id === id)) models.push({ id, displayName: id });
+						}
+						resolve(models);
+					});
+				});
+				if (provider === "ollama") result = models;
+				else if (models.length) result = [...DEFAULT_GENERIC_MODELS, ...models];
+			}
+			if (result.length === 0) {
+				const found = ALL_AGENT_DEFS.find((d) => d.id === provider);
+				result = found ? found.models : DEFAULT_GENERIC_MODELS;
 			}
 		}
-		if (cp && path && command) {
-			const models = await new Promise<AgyModelInfo[]>((resolve) => {
-				cp.execFile(path, command, { env: this.getEnv(), timeout: 15000, maxBuffer: 1024 * 1024, shell: Platform.isWin }, (err, stdout) => {
-					if (err || !stdout) { resolve([]); return; }
-					const models: AgyModelInfo[] = [];
-					for (const raw of stdout.toString().split("\n")) {
-						const line = raw.replace(new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g"), "").trim();
-						if (!line || /^(NAME|provider\s+model|Available models|Model\s)/i.test(line)) continue;
-						let id = "";
-						if (provider === "opencode") {
-							if (/^[\w.-]+\/[^\s]+$/.test(line)) id = line;
-						} else if (provider === "ollama") {
-							const match = line.match(/^(\S+)\s+[a-f0-9]{12,}\s/i);
-							id = match?.[1] || "";
-						} else if (provider === "pi") {
-							const match = line.match(/^([\w.-]+)\s+([\w./:-]+)\s+/);
-							if (match) id = `${match[1]}/${match[2]}`;
-						} else {
-							// Cursor prints model-id - display name (and may mark the default).
-							const match = line.match(/^([\w.:-]+)\s+-\s+(.+)$/);
-							id = match?.[1] || "";
-						}
-						if (id && !models.some((m) => m.id === id)) models.push({ id, displayName: id });
-					}
-					resolve(models);
-				});
-			});
-			if (provider === "ollama") return models;
-			if (models.length) return [...DEFAULT_GENERIC_MODELS, ...models];
+
+		if (result.length > 0) {
+			this.providerModelsCache.set(provider, result);
 		}
-		const found = ALL_AGENT_DEFS.find((d) => d.id === provider);
-		return found ? found.models : DEFAULT_GENERIC_MODELS;
+		return result;
 	}
 
 	public async getVaultIgnorePatterns(): Promise<string[]> {

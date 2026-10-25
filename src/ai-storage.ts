@@ -1,6 +1,6 @@
 import { App, TFile, TFolder, normalizePath } from "obsidian";
 import type { ChatMessage } from "./ai-chat-view";
-import type { AIProvider, ReasoningEffort } from "./ai-service";
+import { type AIProvider, type ReasoningEffort, supportsReasoningEffort } from "./ai-service";
 
 export interface ChatMetadata {
 	title: string;
@@ -282,14 +282,26 @@ export class AIStorage {
 	}
 
 	/**
-	 * Updates the provider and optionally model of an existing chat note in its frontmatter immediately.
+	 * Updates the provider and optionally model/effort of an existing chat note in its frontmatter immediately.
 	 */
-	public async updateChatProvider(file: TFile, newProvider: AIProvider, newModel?: string): Promise<void> {
+	public async updateChatProvider(
+		file: TFile,
+		newProvider: AIProvider,
+		newModel?: string,
+		newEffort?: ReasoningEffort,
+	): Promise<void> {
 		try {
 			await this.app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
 				fm["provider"] = newProvider;
 				if (newModel !== undefined) {
 					fm["model"] = newModel;
+				}
+				if (supportsReasoningEffort(newProvider)) {
+					if (newEffort !== undefined) {
+						fm["reasoning_effort"] = newEffort;
+					}
+				} else {
+					delete fm["reasoning_effort"];
 				}
 			});
 		} catch (err) {
