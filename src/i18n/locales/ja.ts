@@ -385,7 +385,7 @@ export const ja: TranslationSchema = {
 	previewUnable: "このファイルをプレビューできません。",
 	previewApplyFailed: "編集を適用できません。",
 	previewEditTooLarge: "ファイルが大きすぎてセルを編集できません。",
-	previewUtf8Only: "セル編集は UTF-8 テキストファイルのみ対応しています。このファイルはコードで編集してください。",
+	previewUtf8Only: "このプレビューは UTF-8 のみ対応しています。",
 	previewReadOnlyCell: "このセルは読み取り専用です。コードで編集してください。",
 	previewCellTooLong: "セル編集は {0} 文字までです。長い値はコードで編集してください。",
 	previewNullCharacter: "ヌル文字は使用できません。",

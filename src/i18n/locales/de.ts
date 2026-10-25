@@ -385,7 +385,7 @@ export const de: TranslationSchema = {
 	previewUnable: "Diese Datei kann nicht angezeigt werden.",
 	previewApplyFailed: "Die Änderung konnte nicht angewendet werden.",
 	previewEditTooLarge: "Datei zu groß zum Bearbeiten von Zellen.",
-	previewUtf8Only: "Zellbearbeitung unterstützt nur UTF-8-Textdateien. Bearbeite diese Datei in Code.",
+	previewUtf8Only: "Diese Vorschau benötigt UTF-8.",
 	previewReadOnlyCell: "Diese Zelle ist schreibgeschützt. Bearbeite sie in Code.",
 	previewCellTooLong: "Zellen können bis zu {0} Zeichen enthalten. Bearbeite längere Werte in Code.",
 	previewNullCharacter: "Nullzeichen sind nicht erlaubt.",

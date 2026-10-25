@@ -385,7 +385,7 @@ export const ko: TranslationSchema = {
 	previewUnable: "이 파일을 미리볼 수 없습니다.",
 	previewApplyFailed: "수정 내용을 적용할 수 없습니다.",
 	previewEditTooLarge: "파일이 너무 커서 셀을 편집할 수 없습니다.",
-	previewUtf8Only: "셀 편집은 UTF-8 텍스트 파일만 지원합니다. 이 파일은 코드에서 편집하세요.",
+	previewUtf8Only: "이 미리보기는 UTF-8만 지원합니다.",
 	previewReadOnlyCell: "이 셀은 읽기 전용입니다. 코드에서 편집하세요.",
 	previewCellTooLong: "셀 편집은 {0}자까지 가능합니다. 더 긴 값은 코드에서 편집하세요.",
 	previewNullCharacter: "널 문자는 사용할 수 없습니다.",

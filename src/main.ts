@@ -109,7 +109,7 @@ import {
 	rejectChunk,
 } from "@codemirror/merge";
 import { PreviewError } from "./preview-errors";
-import { DATA_PREVIEW_EXTENSIONS } from "./file-preview-data";
+import { DATA_PREVIEW_EXTENSIONS, PREVIEW_LIMITS } from "./file-preview-data";
 import { FilePreviewRenderer, formatPreviewError } from "./file-preview";
 import { PreviewSaveGuard, previewLineEnding, previewDocumentBytes, decodePreviewBytes, tableEditModel, type CellChange } from "./file-preview-edit";
 import { t, setLanguage, SUPPORTED_LANGUAGES } from "./i18n";
@@ -3927,7 +3927,11 @@ export class DotfileView extends TextFileView {
 			this.filePreviewRenderer ??= new FilePreviewRenderer(this.app, this);
 			const file = this.file;
 			await this.filePreviewRenderer.render(this.previewEl, ext, rawContent, file.path,
-				(change, current) => this.applyPreviewCellEdit(rawContent, file, change, current));
+				(change, current) => this.applyPreviewCellEdit(rawContent, file, change, current),
+				() => {
+					if (file.stat.size > PREVIEW_LIMITS.characters * 4) return Promise.reject(new PreviewError("previewTooLarge"));
+					return this.app.vault.readBinary(file);
+				});
 		} else if (ext === "svg") {
 			this.renderSvgPreview(rawContent);
 		} else if (ext === "html" || ext === "htm") {

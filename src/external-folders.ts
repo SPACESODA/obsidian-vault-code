@@ -1,6 +1,33 @@
 /** Desktop filesystem operations, injected so importing the plugin stays safe on mobile. */
-export type FolderFS = Pick<typeof import("fs/promises"), "realpath" | "lstat" | "stat" | "opendir" | "symlink" | "unlink" | "readlink">;
-export type FolderPath = Pick<typeof import("path"), "resolve" | "relative" | "isAbsolute" | "join" | "basename" | "dirname">;
+// Keep this boundary self-contained: review environments may not load Node declarations.
+interface FolderEntry {
+	name: string;
+	isDirectory(): boolean;
+	isSymbolicLink(): boolean;
+}
+interface FolderStat {
+	ino: number;
+	dev: number;
+	isDirectory(): boolean;
+	isSymbolicLink(): boolean;
+}
+export interface FolderFS {
+	realpath(path: string): Promise<string>;
+	lstat(path: string): Promise<FolderStat>;
+	stat(path: string): Promise<FolderStat>;
+	opendir(path: string): Promise<AsyncIterable<FolderEntry>>;
+	symlink(target: string, path: string, type: "dir" | "junction"): Promise<void>;
+	unlink(path: string): Promise<void>;
+	readlink(path: string): Promise<string>;
+}
+export interface FolderPath {
+	resolve(...paths: string[]): string;
+	relative(from: string, to: string): string;
+	isAbsolute(path: string): boolean;
+	join(...paths: string[]): string;
+	basename(path: string): string;
+	dirname(path: string): string;
+}
 export type ExternalFolderCode = "name" | "location" | "loop" | "exists" | "unavailable" | "large" | "shortcut" | "busy" | "cancelled" | "ignored";
 export class ExternalFolderError extends Error {
 	constructor(public code: ExternalFolderCode) { super(code); }

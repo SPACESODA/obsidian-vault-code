@@ -3,7 +3,7 @@ import { PreviewError, type PreviewTextKey } from "./preview-errors";
 import { Component, MarkdownRenderer, type App } from "obsidian";
 import { PREVIEW_LIMITS, parseDelimited, parseJsonPreview, jsonRecordTable, parseDiffPreview, mermaidMarkdown, type PreviewTable } from "./file-preview-data";
 
-import { tableEditModel, editableToken, changeTableCell, type TableEditModel, type CellChange } from "./file-preview-edit";
+import { decodePreviewBytes, tableEditModel, editableToken, changeTableCell, type TableEditModel, type CellChange } from "./file-preview-edit";
 
 export type ApplyCellEdit = (change: CellChange, current: () => boolean) => Promise<void>;
 
@@ -180,12 +180,20 @@ export class FilePreviewRenderer {
 		this.cancelCell?.(); this.cancelCell = undefined;
 		if (this.component) { this.owner.removeChild(this.component); this.component = undefined; }
 	}
-	async render(container: HTMLElement, extension: string, source: string, path: string, applyEdit?: ApplyCellEdit): Promise<void> {
+	async render(container: HTMLElement, extension: string, source: string, path: string, applyEdit?: ApplyCellEdit, readBytes?: () => Promise<ArrayBuffer>): Promise<void> {
 		this.clear();
 		container.empty();
 		const generation = this.generation;
-		if (!source.trim()) { notice(container, t("previewEmpty")); return; }
 		if (source.length > PREVIEW_LIMITS.characters) { notice(container, t("previewTooLarge")); return; }
+		if (readBytes && ["csv", "tsv", "json", "jsonl", "ndjson"].includes(extension)) {
+			try { decodePreviewBytes(await readBytes()); }
+			catch (error: unknown) {
+				if (generation === this.generation) notice(container, formatPreviewError(error));
+				return;
+			}
+			if (generation !== this.generation) return;
+		}
+		if (!source.trim()) { notice(container, t("previewEmpty")); return; }
 		const content = container.createDiv({ cls: "vault-code-file-preview" });
 		try {
 			const model = tableEditModel(source, extension);

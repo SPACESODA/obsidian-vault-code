@@ -383,7 +383,7 @@ export const en = {
 	previewUnable: "Unable to preview this file.",
 	previewApplyFailed: "Unable to apply this edit.",
 	previewEditTooLarge: "File too large for cell editing.",
-	previewUtf8Only: "Cell editing supports UTF-8 text files only. Use Code for this file.",
+	previewUtf8Only: "This preview requires UTF-8.",
 	previewReadOnlyCell: "This cell is read-only. Use Code to edit it.",
 	previewCellTooLong: "Cell editing is limited to {0} characters. Use Code for larger values.",
 	previewNullCharacter: "Null characters are not allowed.",

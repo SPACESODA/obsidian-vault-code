@@ -385,7 +385,7 @@ export const it: TranslationSchema = {
 	previewUnable: "Impossibile visualizzare questo file.",
 	previewApplyFailed: "Impossibile applicare la modifica.",
 	previewEditTooLarge: "File troppo grande per modificare le celle.",
-	previewUtf8Only: "La modifica delle celle supporta solo file di testo UTF-8. Usa Codice per questo file.",
+	previewUtf8Only: "Questa anteprima richiede UTF-8.",
 	previewReadOnlyCell: "Questa cella è di sola lettura. Modificala in Codice.",
 	previewCellTooLong: "La modifica è limitata a {0} caratteri per cella. Usa Codice per valori più lunghi.",
 	previewNullCharacter: "I caratteri nulli non sono consentiti.",

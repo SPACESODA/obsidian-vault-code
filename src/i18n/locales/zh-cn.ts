@@ -385,7 +385,7 @@ export const zhCn: TranslationSchema = {
 	previewUnable: "无法预览此文件。",
 	previewApplyFailed: "无法应用此编辑。",
 	previewEditTooLarge: "文件太大，无法编辑单元格。",
-	previewUtf8Only: "单元格编辑仅支持 UTF-8 文本文件。请在源码中编辑此文件。",
+	previewUtf8Only: "此预览仅支持 UTF-8。",
 	previewReadOnlyCell: "此单元格为只读。请在源码中编辑。",
 	previewCellTooLong: "单元格编辑上限为 {0} 个字符。较长的值请在源码中编辑。",
 	previewNullCharacter: "不允许空字符。",

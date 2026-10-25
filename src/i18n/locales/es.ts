@@ -385,7 +385,7 @@ export const es: TranslationSchema = {
 	previewUnable: "No se puede previsualizar este archivo.",
 	previewApplyFailed: "No se pudo aplicar la edición.",
 	previewEditTooLarge: "El archivo es demasiado grande para editar celdas.",
-	previewUtf8Only: "La edición de celdas solo admite texto UTF-8. Edita este archivo en Código.",
+	previewUtf8Only: "Esta vista previa requiere UTF-8.",
 	previewReadOnlyCell: "Esta celda es de solo lectura. Edítala en Código.",
 	previewCellTooLong: "La edición de celdas se limita a {0} caracteres. Usa Código para valores más largos.",
 	previewNullCharacter: "No se permiten caracteres nulos.",

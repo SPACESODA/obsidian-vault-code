@@ -247,3 +247,25 @@ test('a touch tap opens a cell draft but never applies without confirmation',asy
   cell.all('button')[1].events.click();
   assert.equal(cell.textContent,'a');assert.equal(writes,0);
 });
+
+test('unsupported encodings show one quiet notice before data tables or editors appear',async()=>{
+  for(const extension of ['csv','tsv','json','jsonl','ndjson']) {
+    const {root,preview}=renderer();let writes=0;
+    await preview.render(root,extension,'name\nreplacement text','test.'+extension,async()=>{writes++;},async()=>new Uint8Array([0xff,0xfe,65,0]).buffer);
+    assert.match(root.textContent,/This preview requires UTF-8\./);
+    assert.equal(root.all('table').length,0);assert.equal(root.all('textarea').length,0);
+    assert.equal(root.children.length,1);assert.equal(writes,0);
+  }
+});
+test('UTF-8 multilingual data and BOM still render after the byte check',async()=>{
+  const {root,preview}=renderer();const source='\uFEFFname,notes\r\n測試,日本語 한국어 😀\r\n';
+  await preview.render(root,'csv',source,'test.csv',undefined,async()=>new TextEncoder().encode(source).buffer);
+  assert.equal(root.all('table').length,1);assert.match(root.textContent,/測試/);assert.match(root.textContent,/한국어 😀/);
+});
+test('an obsolete encoding check cannot replace a newer preview',async()=>{
+  const {root,preview}=renderer();let release;
+  const pending=preview.render(root,'csv','old','old.csv',undefined,()=>new Promise(resolve=>{release=resolve;}));
+  await preview.render(root,'csv','name\nlatest','new.csv');
+  release(new Uint8Array([0xff]).buffer);await pending;
+  assert.match(root.textContent,/latest/);assert.doesNotMatch(root.textContent,/requires UTF-8/);
+});

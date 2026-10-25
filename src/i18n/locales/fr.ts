@@ -385,7 +385,7 @@ export const fr: TranslationSchema = {
 	previewUnable: "Impossible d’afficher ce fichier.",
 	previewApplyFailed: "Impossible d’appliquer cette modification.",
 	previewEditTooLarge: "Fichier trop volumineux pour modifier les cellules.",
-	previewUtf8Only: "La modification des cellules nécessite un fichier texte UTF-8. Utilisez Code pour ce fichier.",
+	previewUtf8Only: "Cet aperçu nécessite UTF-8.",
 	previewReadOnlyCell: "Cette cellule est en lecture seule. Modifiez-la dans Code.",
 	previewCellTooLong: "La modification est limitée à {0} caractères par cellule. Utilisez Code pour les valeurs plus longues.",
 	previewNullCharacter: "Les caractères nuls ne sont pas autorisés.",

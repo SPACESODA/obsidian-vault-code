@@ -385,7 +385,7 @@ export const zhTw: TranslationSchema = {
 	previewUnable: "無法預覽此檔案。",
 	previewApplyFailed: "無法套用此編輯。",
 	previewEditTooLarge: "檔案太大，無法編輯儲存格。",
-	previewUtf8Only: "儲存格編輯僅支援 UTF-8 文字檔案。請在原始碼中編輯此檔案。",
+	previewUtf8Only: "此預覽僅支援 UTF-8。",
 	previewReadOnlyCell: "此儲存格為唯讀。請在原始碼中編輯。",
 	previewCellTooLong: "儲存格編輯上限為 {0} 個字元。較長的值請在原始碼中編輯。",
 	previewNullCharacter: "不允許空字元。",
