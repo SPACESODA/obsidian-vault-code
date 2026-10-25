@@ -8877,14 +8877,14 @@ class VaultCodeSettingTab extends PluginSettingTab {
 				);
 
 			if (this.plugin.settings.enableAIChat) {
-			const connectionTabs = containerEl.createDiv({ cls: "vault-code-connection-tabs", attr: { role: "tablist", "aria-label": "Connection type" } });
+			const connectionTabs = containerEl.createDiv({ cls: "vault-code-connection-tabs", attr: { role: "tablist", "aria-label": t("settingsAIConnectionType") } });
 			const connectionPanels = containerEl.createDiv({ cls: "vault-code-connection-panels" });
 			const panels = new Map<string, HTMLElement>();
 			const tabs = new Map<string, HTMLButtonElement>();
 			const showConnectionTab = (id: "cli" | "api" | "local") => {
 				this.aiSettingsTab = id;
 				if (!panels.has(id)) {
-					const panel = connectionPanels.createDiv({ attr: { role: "tabpanel", "aria-label": id === "cli" ? "CLI" : id === "api" ? "API" : "Local model" } });
+					const panel = connectionPanels.createDiv({ attr: { role: "tabpanel", "aria-label": id === "cli" ? t("settingsAITabCLI") : id === "api" ? t("settingsAITabAPI") : t("settingsAITabLocal") } });
 					panels.set(id, panel);
 					renderConnectionPanel(panel, id);
 				}
@@ -8894,7 +8894,12 @@ class VaultCodeSettingTab extends PluginSettingTab {
 					tab.setAttribute("aria-selected", String(tabId === id));
 				}
 			};
-			for (const [id, label] of [["cli", "CLI"], ["api", "API"], ["local", "Local model"]] as const) {
+			const tabDefs: Array<["cli" | "api" | "local", string]> = [
+				["cli", t("settingsAITabCLI")],
+				["api", t("settingsAITabAPI")],
+				["local", t("settingsAITabLocal")],
+			];
+			for (const [id, label] of tabDefs) {
 				const tab = connectionTabs.createEl("button", { text: label, attr: { role: "tab" } });
 				tabs.set(id, tab);
 				tab.addEventListener("click", () => showConnectionTab(id));
@@ -8914,7 +8919,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 			});
 			const refreshProvidersButton = titleRow.createEl("button", {
 				cls: "clickable-icon vault-code-agent-refresh",
-				attr: { type: "button", "aria-label": "Refresh providers" },
+				attr: { type: "button", "aria-label": t("settingsAICLIRefreshProviders") },
 			});
 			setIcon(refreshProvidersButton, "refresh-cw");
 			sectionHeader.createDiv({
@@ -8927,24 +8932,24 @@ class VaultCodeSettingTab extends PluginSettingTab {
 			activityPanel.hidden = true;
 			const activityHeader = activityPanel.createDiv({ cls: "vault-code-cli-activity-header" });
 			const activityInfo = activityHeader.createDiv({ cls: "vault-code-cli-activity-info" });
-			activityInfo.createDiv({ cls: "vault-code-cli-activity-title", text: "CLI activity" });
+			activityInfo.createDiv({ cls: "vault-code-cli-activity-title", text: t("settingsAICLIActivity") });
 			const activitySummary = activityInfo.createDiv({ cls: "vault-code-cli-activity-summary", attr: { role: "status", "aria-live": "polite" } });
 			const activityActions = activityHeader.createDiv({ cls: "vault-code-cli-activity-actions" });
 			const detailsButton = activityActions.createEl("button", {
-				cls: "vault-code-cli-details-button", text: "Show details", attr: { "aria-expanded": "false" },
+				cls: "vault-code-cli-details-button", text: t("settingsAICLIShowDetails"), attr: { "aria-expanded": "false" },
 			});
 			const copyResultsButton = activityActions.createEl("button", {
-				cls: "vault-code-cli-details-button", text: "Copy log",
+				cls: "vault-code-cli-details-button", text: t("settingsAICLICopyLog"),
 			});
-			const operationLog = activityPanel.createDiv({ cls: "vault-code-cli-log", attr: { role: "log", "aria-label": "CLI setup and update results" } });
+			const operationLog = activityPanel.createDiv({ cls: "vault-code-cli-log", attr: { role: "log", "aria-label": t("settingsAICLILogAria") } });
 			operationLog.hidden = true;
 			detailsButton.addEventListener("click", () => {
 				operationLog.hidden = !operationLog.hidden;
-				detailsButton.setText(operationLog.hidden ? "Show details" : "Hide details");
+				detailsButton.setText(operationLog.hidden ? t("settingsAICLIShowDetails") : t("settingsAICLIHideDetails"));
 				detailsButton.setAttribute("aria-expanded", String(!operationLog.hidden));
 			});
 			copyResultsButton.addEventListener("click", () => {
-				void navigator.clipboard.writeText(operationLog.innerText).then(() => new Notice("CLI activity log copied"));
+				void navigator.clipboard.writeText(operationLog.innerText).then(() => new Notice(t("settingsAICLICopiedLog")));
 			});
 			const logOperation = (message: string, summary?: string) => {
 				activityPanel.hidden = false;
@@ -8962,7 +8967,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 				badge.className = `vault-code-agent-card-badge ${busy ? "is-installing" : state === "updated" ? "is-installed" : "is-missing"}`;
 				badge.setAttribute("aria-busy", String(busy));
 				if (busy) badge.createSpan({ cls: "vault-code-badge-spinner" });
-				badge.createSpan({ text: state === "installing" ? "Installing..." : state === "updating" ? "Updating..." : state === "updated" ? "Updated" : "Needs attention" });
+				badge.createSpan({ text: state === "installing" ? t("settingsAIAgentInstalling") : state === "updating" ? t("settingsAIAgentUpdating") : state === "updated" ? t("settingsAIAgentUpdated") : t("settingsAICLINeedsAttention") });
 			};
 
 			const renderCards = (
@@ -9075,13 +9080,13 @@ class VaultCodeSettingTab extends PluginSettingTab {
 					} else if (isInstalled) {
 						const installedBadge = cardEl.createDiv({
 							cls: `vault-code-agent-card-badge ${agent.diagnostic ? "is-missing" : "is-installed"}`,
-							text: agent.diagnostic ? "Needs attention" : t("settingsAIAgentInstalled"),
+							text: agent.diagnostic ? t("settingsAICLINeedsAttention") : t("settingsAIAgentInstalled"),
 						});
 						providerBadges.set(agent.id, installedBadge);
 					} else {
 						const installBtn = cardEl.createEl("button", {
 							cls: "vault-code-agent-card-badge is-missing is-installable",
-							text: AGENT_INSTALL_CONFIGS[agent.id].installCmd ? t("settingsAIAgentInstallQuestion") : "Setup guide",
+							text: AGENT_INSTALL_CONFIGS[agent.id].installCmd ? t("settingsAIAgentInstallQuestion") : t("settingsAICLISetupGuide"),
 						});
 						providerBadges.set(agent.id, installBtn);
 						installBtn.addEventListener("click", (e) => {
@@ -9125,7 +9130,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 					if (clearCache) this.plugin.aiService.refreshAgentsCache();
 					currentAgents = await this.plugin.aiService.detectAllAgents();
 				} catch {
-					new Notice("Could not refresh providers. Try again.");
+					new Notice(t("settingsAICLIRefreshFailed"));
 				} finally {
 					renderCards(currentAgents, false);
 					refreshingProviders = false;
@@ -9144,7 +9149,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 				refreshProvidersButton.disabled = true;
 				updateAllBtn.disabled = true;
 				updateIcon.addClass("vault-code-spin");
-				updateText.setText("Updating...");
+				updateText.setText(t("settingsAIAgentUpdating"));
 				logOperation("Checking installed CLIs before updating…", "Updating installed CLIs...");
 
 				void (async () => {
