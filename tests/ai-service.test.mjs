@@ -297,7 +297,7 @@ test('Ollama background checks do not spawn child process when server is not lis
   let listExecuted = false;
   const h = harness({
     bins: { ollama: '/usr/local/bin/ollama' },
-    filesystem: { existsSync: (p) => p === '/usr/local/bin/ollama' },
+    filesystem: { existsSync: (p) => p === '/usr/local/bin/ollama', realpathSync: p => p },
     execute: (f, a) => {
       if (a[0] === 'list') {
         listExecuted = true;
@@ -306,6 +306,13 @@ test('Ollama background checks do not spawn child process when server is not lis
       return null;
     },
   });
+  // Do not depend on whether Ollama or its socket exists on the host/CI runner.
+  h.service.resolveNet = async () => ({ createConnection() {
+    const socket = new EventEmitter();
+    socket.destroy = () => {};
+    queueMicrotask(() => socket.emit('error', new Error('connection refused')));
+    return socket;
+  } });
   const agents = await h.service.detectAllAgents();
   const ollama = agents.find(a => a.id === 'ollama');
   assert.equal(ollama.connectionStatus, 'Start Ollama');
