@@ -1,3 +1,5 @@
+import { t } from "./i18n";
+
 /** Direct model connections. Secrets are stored separately through Obsidian SecretStorage. */
 export type ConnectionKind = "api" | "local";
 export type APIFormat = "chat-completions" | "responses" | "anthropic";
@@ -134,6 +136,6 @@ export function extractEditProposal(text: string): EditProposal | null {
 	} catch { return null; }
 }
 export function reviewedContent(current: string, original: string, proposed: string): string {
-	if (current !== original) throw new Error("The note changed since this reply. Ask for a new edit before applying.");
+	if (current !== original) throw new Error(t("aiEditConflict"));
 	return proposed;
 }

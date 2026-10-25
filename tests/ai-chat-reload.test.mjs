@@ -602,3 +602,22 @@ test("Continue is unavailable during generation or after another user request", 
 	view.messages.push({ id: "user-2", role: "user" });
 	view.updateContinueAction(); assert.equal(view.continueBtnEl.hidden, true);
 });
+
+test("an older chat load cannot replace a more recently opened conversation", async () => {
+	const plugin = {
+		settings: { aiProvider: "claude", aiProviderLastModel: {}, aiConnections: [] },
+		aiService: { isProviderAvailable: async () => true, getModelsForProvider: async () => [] },
+		aiStorage: { parseChat: text => ({ metadata: { title: text, provider: "claude" }, messages: [{ role: "assistant", content: text }] }) },
+	};
+	const view = new AIChatView({}, plugin);
+	let resolveOld;
+	view.app = { vault: { read: file => file.path === "old.md" ? new Promise(resolve => { resolveOld = resolve; }) : Promise.resolve("Latest") } };
+	for (const method of ["renderSelectionQuote", "updateProviderBtnLabel", "updateModelBtnLabel", "updateEffortBtn", "updateVaultToggleState", "updateModeBtnLabel", "updateContextChip", "renderMessages"]) view[method] = () => {};
+	const old = view.loadChatFromFile(new globalThis.__TestTFile("old.md"));
+	const latest = new globalThis.__TestTFile("latest.md");
+	await view.loadChatFromFile(latest);
+	resolveOld("Old"); await old;
+	assert.equal(view.currentChatFile, latest);
+	assert.equal(view.currentChatTitle, "Latest");
+	assert.equal(view.messages[0].content, "Latest");
+});

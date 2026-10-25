@@ -1,8 +1,8 @@
 # Vault Code
 
-<span style="color: #8a5cf5; font-weight: bold; font-size: 1.15em;">Vault Code make your Obsidian vault a workspace for notes, code, and files.</span>
+<span style="color: #8a5cf5; font-weight: bold; font-size: 1.15em;">Vault Code turns your Obsidian vault into a workspace for notes, code, and files.</span>
 
-View hidden files, create and organize files of any kind, and edit code in a beautiful editor. Preview HTML, SVG, and MJML files and collaborate with AI agents, all without leaving Obsidian.
+View hidden files, create and organize files of any kind, and edit code in a beautiful editor. Preview HTML, SVG, and MJML files and collaborate with AI agents, without leaving Obsidian.
 
 Vault Code follows your Obsidian theme and display language: English, 繁體中文, 简体中文, 日本語, 한국어, Español, Français, Italiano, Deutsch, and Русский.
 
@@ -16,7 +16,7 @@ Vault Code follows your Obsidian theme and display language: English, 繁體中�
 * **Code editor**: Syntax highlighting, line numbers, folding, and familiar editing shortcuts.
 * **Markdown source editing**: Switch between Obsidian's note view and the code editor.
 * **Find & replace**: Search across lines with regex, case matching, and whole-word matching.
-* **Live preview**: Render HTML, SVG, and MJML beside your work.
+* **Live preview**: Render web pages, emails, diagrams, data tables, and diffs.
 * **Git (Desktop)**: Review diffs, keep or revert changes, and commit individual files.
 * **Agent chat (Desktop)**: Connect coding CLIs, hosted APIs, or local model servers.
 * **Mobile & tablet support**: Edit code and manage files on iOS, iPadOS, and Android.
@@ -40,13 +40,13 @@ Open scripts, styles, and configuration files alongside your notes.
 * Open extensionless files such as `Makefile`, `Dockerfile`, `LICENSE`, and `CNAME`.
 * Hide `.git`, `node_modules`, and other clutter with ignore rules.
 
-### 🌐 Preview HTML, SVG & MJML
+### 🌐 Preview files beside your code
 
-Build a web page, adjust an SVG, or work on an email template right in your vault.
+Switch between code and preview with the **Preview** button or **Toggle code / preview** command.
 
-* Switch between code and live rendered preview using the **Preview** header button or the **Toggle code / preview** command.
-* Use relative paths to local CSS, scripts, and images. Remote stylesheets and CSS imports can also be loaded.
-* Render MJML email templates with the built-in compiler.
+* Render HTML, SVG, and MJML, including linked styles and images.
+* View Mermaid diagrams, JSON, CSV/TSV, JSONL/NDJSON, and diff/patch files.
+* Edit supported table cells with **Apply** or **Cancel**. Invalid or ambiguous data stays read-only.
 
 ### 🔍 Find & replace
 
@@ -83,7 +83,7 @@ Choose a connection in settings:
 * **API**: Bring your own key for OpenAI, Anthropic, Gemini, DeepSeek, Qwen, or another provider. Custom endpoints and model IDs are supported.
 * **Local model**: Connect Ollama, LM Studio, Atomic Chat, or another compatible server.
 
-Attach a note or selection, pin context, and revisit chats saved as Markdown. API and local models propose note edits for you to **review before applying**.
+Attach notes or selections, pin context, and revisit Markdown chat histories. **Safe mode** is read-only. **Edit mode** enables edits; API and local models require review before applying.
 
 Some providers require a subscription or credits. API keys use Obsidian's secret storage (**1.11.4+**) and must be configured on each device.
 

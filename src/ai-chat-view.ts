@@ -111,6 +111,7 @@ export class AIChatView extends ItemView {
 	private followOutput = true;
 	private messageResizeObserver: ResizeObserver | null = null;
 	private submissionId = 0;
+	private chatLoadId = 0;
 	private safeRequest: { userId: string; file: TFile | null; quote: SelectionQuote | null; scope: "active-note" | "vault" } | null = null;
 	private activeProcessHandle: AIProcessHandle | null = null;
 	private availableModels: AgyModelInfo[] = [];
@@ -242,6 +243,7 @@ export class AIChatView extends ItemView {
 	}
 
 	async onClose(): Promise<void> {
+		this.chatLoadId++;
 		this.stopGenerating();
 		this.disposeMessageRendering();
 		if (this.renderRafId !== null) {
@@ -422,6 +424,7 @@ export class AIChatView extends ItemView {
 		});
 
 		this.inputEl.addEventListener("keydown", (e: KeyboardEvent) => {
+			if (e.isComposing) return;
 			if (e.key === "Enter" && !e.shiftKey) {
 				e.preventDefault();
 				void this.handleSubmit();
@@ -493,7 +496,7 @@ export class AIChatView extends ItemView {
 		this.vaultToggleWrapper = bottomRow.createDiv({ cls: "vault-code-chat-toggle-vault" });
 		const toggleLabel = this.vaultToggleWrapper.createSpan({
 			cls: "vault-code-toggle-label",
-			text: "Entire Vault",
+			text: t("aiChatScopeVault"),
 		});
 		const toggle = new ToggleComponent(this.vaultToggleWrapper)
 			.setValue(this.chatScope === "vault")
@@ -765,7 +768,7 @@ export class AIChatView extends ItemView {
 				attachBtn.addEventListener("click", (e) => {
 					e.preventDefault();
 					e.stopPropagation();
-					this.attachActiveFile(currentOpen);
+					this.attachActiveFile();
 				});
 			} else {
 				this.contextChipEl.hide();
@@ -773,7 +776,7 @@ export class AIChatView extends ItemView {
 		}
 	}
 
-	private attachActiveFile(file: TFile): void {
+	private attachActiveFile(): void {
 		this.contextExcluded = false;
 		this.isContextPinned = false;
 		this.pinnedContextFile = null;
@@ -852,7 +855,7 @@ export class AIChatView extends ItemView {
 			});
 		}
 
-		for (const [kind, label] of [["api", "API"], ["local", "Local model"]] as const) {
+		for (const [kind, label] of [["api", "API"], ["local", t("settingsAITabLocal")]] as const) {
 			menu.addSeparator();
 			menu.addItem((item) => item.setTitle(label).setDisabled(true));
 			for (const connection of this.plugin.settings.aiConnections.filter((c) => c.kind === kind)) {
@@ -986,21 +989,24 @@ export class AIChatView extends ItemView {
 	}
 
 	public async loadChatFromFile(file: TFile): Promise<void> {
+		const loadId = ++this.chatLoadId;
 		this.safeRequest = null;
 		this.stopGenerating();
 		this.pendingQuote = null;
 		this.renderSelectionQuote();
 		try {
 			const content = await this.app.vault.read(file);
+			if (loadId !== this.chatLoadId) return;
 			const parsed = this.plugin.aiStorage.parseChat(content, this.selectedModel);
-			this.currentChatFile = file;
-			this.currentChatTitle = parsed.metadata.title;
 
 			// Validate and follow recorded provider, fallback to setting's default if not available
 			const recordedProvider = parsed.metadata.provider;
 			const isAvailable = recordedProvider
 				? await this.plugin.aiService.isProviderAvailable(recordedProvider)
 				: false;
+			if (loadId !== this.chatLoadId) return;
+			this.currentChatFile = file;
+			this.currentChatTitle = parsed.metadata.title;
 
 			if (recordedProvider && isAvailable) {
 				this.selectedProvider = recordedProvider;
@@ -1063,12 +1069,14 @@ export class AIChatView extends ItemView {
 			this.renderMessages();
 			this.inputEl?.focus();
 		} catch (e) {
+			if (loadId !== this.chatLoadId) return;
 			console.error("Vault Code: Failed to load chat note", e);
 			new Notice(t("aiChatNoticeDeleteFailed"));
 		}
 	}
 
 	public startNewChat(): void {
+		this.chatLoadId++;
 		this.safeRequest = null;
 		this.stopGenerating();
 		this.pendingQuote = null;
@@ -1209,11 +1217,11 @@ export class AIChatView extends ItemView {
 			const anyInstalled = this.plugin.settings.aiConnections.length > 0 || agents.some((a) => a.id !== "ollama" && a.isInstalled);
 			if (!anyInstalled) {
 				subtitleEl.setText(
-					"Connect a CLI agent, API provider, or local model in settings to get started.",
+					t("aiChatConnectHint"),
 				);
 				const btn = welcomeEl.createEl("button", {
 					cls: "mod-cta vault-code-welcome-settings-btn",
-					text: "Open settings",
+					text: t("aiChatOpenSettings"),
 				});
 				btn.addEventListener("click", () => {
 					const appWithSetting = this.app as unknown as {
@@ -1238,7 +1246,7 @@ export class AIChatView extends ItemView {
 
 		if (msg.role === "user") {
 			setIcon(roleIcon, "user");
-			roleWrapper.createSpan({ text: "You" });
+			roleWrapper.createSpan({ text: t("aiChatYou") });
 		} else {
 			setIcon(roleIcon, "sparkles");
 			roleWrapper.createSpan({ text: "Agent" });
@@ -1472,12 +1480,12 @@ export class AIChatView extends ItemView {
 					const validSelection = !selectedText || (selectionStart !== undefined && activeContent.slice(selectionStart, selectionStart + selectedText.length) === selectedText);
 					if (selectedText && selectionStart !== undefined) proposedContent = activeContent.slice(0, selectionStart) + proposal.content + activeContent.slice(selectionStart + selectedText.length);
 					if (validSelection) {
-						const review = asstHeaderEl.createEl("button", { text: "Review edits", cls: "vault-code-cli-details-button" });
-						review.addEventListener("click", () => new AIEditReviewModal(this.app, file, activeContent, proposedContent, () => { review.disabled = true; review.setText("Applied"); }).open());
+						const review = asstHeaderEl.createEl("button", { text: t("aiEditReview"), cls: "vault-code-cli-details-button" });
+						review.addEventListener("click", () => new AIEditReviewModal(this.app, file, activeContent, proposedContent, () => { review.disabled = true; review.setText(t("aiEditApplied")); }).open());
 					}
 				}
 				if (asstBodyEl) {
-					void this.renderMessageBody(proposal ? proposal.explanation || "Proposed note update." : assistantMsg.content, asstBodyEl)
+					void this.renderMessageBody(proposal ? proposal.explanation || t("aiEditProposal") : assistantMsg.content, asstBodyEl)
 						.then(() => this.scrollToBottom());
 				}
 

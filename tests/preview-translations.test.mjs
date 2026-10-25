@@ -23,3 +23,14 @@ test('boolean and numeric validation translations retain the required source lit
     assert.ok(strings.previewCsvBreak.includes('LF'));assert.ok(strings.previewCsvBreak.includes('CRLF'));
   }
 });
+
+test('all UI translations have matching keys, placeholders and nonempty values',()=>{
+  const keys=Object.keys(translations.en).sort();
+  for(const [language,strings] of Object.entries(translations)) {
+    assert.deepEqual(Object.keys(strings).sort(),keys,language);
+    for(const key of keys) {
+      assert.ok(typeof strings[key]==='string'&&strings[key].trim(),`${language}: ${key}`);
+      assert.deepEqual((strings[key].match(/\{\d+\}/g)||[]).sort(),(translations.en[key].match(/\{\d+\}/g)||[]).sort(),`${language}: ${key}`);
+    }
+  }
+});

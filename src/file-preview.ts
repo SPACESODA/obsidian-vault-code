@@ -79,6 +79,8 @@ function makeEditable(cell: HTMLTableCellElement, row: number, column: number, e
 		input.focus();
 	};
 	cell.addEventListener("dblclick", begin);
+	// A touch tap opens only a draft; Apply remains mandatory before any change.
+	cell.addEventListener("pointerup", event => { if (event.pointerType === "touch") begin(); });
 	cell.addEventListener("keydown", event => { if (event.target === cell && event.key === "Enter") { event.preventDefault(); begin(); } });
 }
 

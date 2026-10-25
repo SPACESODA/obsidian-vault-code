@@ -233,3 +233,17 @@ test('structured errors localize when displayed, including positional values and
   }finally{setLanguage('en');}
   assert.equal(formatPreviewError(error),'TSV row 5: field count is 1, expected 4. Review the source in Code.');
 });
+
+test('a touch tap opens a cell draft but never applies without confirmation',async()=>{
+  const h=renderer();let writes=0;
+  await h.preview.render(h.root,'csv','Name,Count\na,2\n','a.csv',async()=>{writes++;});
+  const cell=h.root.all('td')[0];
+  cell.events.pointerup({pointerType:'mouse'});
+  assert.equal(cell.all('textarea').length,0);
+  cell.events.pointerup({pointerType:'touch'});
+  assert.equal(cell.all('textarea').length,1);
+  cell.all('textarea')[0].value='Draft only';
+  assert.equal(writes,0);
+  cell.all('button')[1].events.click();
+  assert.equal(cell.textContent,'a');assert.equal(writes,0);
+});

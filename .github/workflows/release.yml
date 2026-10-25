@@ -20,8 +20,8 @@ jobs:
         with:
           node-version: 20
 
-      - run: npm install --legacy-peer-deps
-      - run: npm run build
+      - run: npm ci --legacy-peer-deps
+      - run: npm run check
 
       - name: Attest Build Provenance
         uses: actions/attest-build-provenance@v2

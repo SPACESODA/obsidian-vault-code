@@ -108,7 +108,6 @@ import {
 	acceptChunk,
 	rejectChunk,
 } from "@codemirror/merge";
-import mjml2html from "mjml-browser";
 import { PreviewError } from "./preview-errors";
 import { DATA_PREVIEW_EXTENSIONS } from "./file-preview-data";
 import { FilePreviewRenderer, formatPreviewError } from "./file-preview";
@@ -2584,6 +2583,7 @@ export class DotfileView extends TextFileView {
 	private editorEl: HTMLElement | null = null;
 	private previewEl: HTMLElement | null = null;
 	private filePreviewRenderer: FilePreviewRenderer | null = null;
+	private previewGeneration = 0;
 	private previewSave: { file: TFile; guard: PreviewSaveGuard; separator: string; prefix: string } | null = null;
 	private previewConflictNotified = false;
 	private langEl: HTMLElement | null = null;
@@ -3802,6 +3802,7 @@ export class DotfileView extends TextFileView {
 	}
 
 	async onClose(): Promise<void> {
+		this.previewGeneration++;
 		this.closeGotoLine();
 		if (this.diffToolbarEl) {
 			this.diffToolbarEl.remove();
@@ -3857,6 +3858,7 @@ export class DotfileView extends TextFileView {
 	}
 
 	private updateViewModeUI(): void {
+		if (!this.isPreviewMode) this.previewGeneration++;
 		const previewable = this.isPreviewable();
 
 		if (!previewable) {
@@ -3913,6 +3915,7 @@ export class DotfileView extends TextFileView {
 
 	private async renderPreview(): Promise<void> {
 		if (!this.previewEl || !this.file) return;
+		const generation = ++this.previewGeneration;
 		this.filePreviewRenderer?.clear();
 		this.previewEl.empty();
 
@@ -3929,7 +3932,7 @@ export class DotfileView extends TextFileView {
 		} else if (ext === "html" || ext === "htm") {
 			await this.renderHtmlPreview(rawContent);
 		} else if (ext === "mjml") {
-			await this.renderMjmlPreview(rawContent);
+			await this.renderMjmlPreview(rawContent, generation);
 		}
 	}
 
@@ -4363,7 +4366,7 @@ export class DotfileView extends TextFileView {
 		iframe.srcdoc = inlinedHtml;
 	}
 
-	private async renderMjmlPreview(content: string): Promise<void> {
+	private async renderMjmlPreview(content: string, generation: number): Promise<void> {
 		if (!this.previewEl) return;
 
 		const trimmed = content.trim();
@@ -4376,6 +4379,9 @@ export class DotfileView extends TextFileView {
 		}
 
 		try {
+			// Initialize the email compiler only when an MJML preview is requested.
+			const { default: mjml2html } = await import("mjml-browser");
+			if (generation !== this.previewGeneration || !this.isPreviewMode) return;
 			const mjmlFn =
 				typeof mjml2html === "function"
 					? mjml2html
@@ -4386,7 +4392,7 @@ export class DotfileView extends TextFileView {
 				minify: false,
 			});
 
-			if (!this.previewEl || !this.isPreviewMode) return;
+			if (!this.previewEl || !this.isPreviewMode || generation !== this.previewGeneration) return;
 
 			if (!result || !result.html) {
 				const errBox = this.previewEl.createDiv({
@@ -4398,7 +4404,7 @@ export class DotfileView extends TextFileView {
 
 			await this.renderHtmlPreview(result.html);
 		} catch (e) {
-			if (!this.previewEl || !this.isPreviewMode) return;
+			if (!this.previewEl || !this.isPreviewMode || generation !== this.previewGeneration) return;
 			this.previewEl.empty();
 			const errBox = this.previewEl.createDiv({
 				cls: "hidden-files-preview-error",
@@ -4702,7 +4708,7 @@ export class DotfileView extends TextFileView {
 			create(state) {
 				return buildDecorations(state);
 			},
-			update(deco, tr) {
+			update(_deco, tr) {
 				return buildDecorations(tr.state);
 			},
 			provide: (f) => EditorView.decorations.from(f),
@@ -4941,6 +4947,9 @@ export default class VaultCodePlugin extends Plugin {
 	async onload() {
 		this.aiService = new AIService(this.app, this);
 		this.aiStorage = new AIStorage(this.app);
+		// Registering a view can immediately restore it during startup or hot reload.
+		// Its settings and ignore policy must already be ready before onOpen runs.
+		await this.initializeIgnoreFiltering();
 
 		this.registerView(
 			VIEW_TYPE_DOTFILE,
@@ -4950,8 +4959,6 @@ export default class VaultCodePlugin extends Plugin {
 			VIEW_TYPE_AI_CHAT,
 			(leaf) => new AIChatView(leaf, this),
 		);
-
-		await this.initializeIgnoreFiltering();
 
 		if (Platform.isDesktop) {
 			this.statusBarGitEl = this.addStatusBarItem();
