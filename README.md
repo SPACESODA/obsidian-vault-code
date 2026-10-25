@@ -1,10 +1,10 @@
 # Vault Code
 
-<span style="color: #8a5cf5; font-weight: bold; font-size: 1.15em;">Vault Code turns your Obsidian vault into a workspace for notes, code, and files.</span>
+<h2 align="center" style="color: #8a5cf5; font-weight: bold;">Vault Code turns your Obsidian vault into a workspace for notes, code, and files.</h2>
 
-View hidden files, create and organize files of any kind, and edit code in a beautiful editor. Preview web pages, diagrams, and data, or work with AI agents—all without leaving Obsidian.
+View hidden files, create and organize files of any kind, and edit code in a beautiful editor. Preview web pages, diagrams, and data, or work with AI agents, all without leaving Obsidian.
 
-Vault Code follows your Obsidian theme and display language: English, 繁體中文, 简体中文, 日本語, 한국어, Español, Français, Italiano, Deutsch, and Русский.
+**Vault Code** follows your Obsidian theme and display language: English, 繁體中文, 简体中文, 日本語, 한국어, Español, Français, Italiano, Deutsch, and Русский.
 
 ---
 
@@ -12,14 +12,15 @@ Vault Code follows your Obsidian theme and display language: English, 繁體中�
 
 * **Hidden files & folders**: Reveal dotfiles, dotfolders, and extensionless files.
 * **File creation & renaming**: Create any file type or nested path; rename files and extensions.
+* **External folders**: Add folders from your disk by symlink.
 * **Ignore rules**: Keep the explorer tidy with `.obsidianignore` and `.gitignore`.
 * **Code editor**: Syntax highlighting, line numbers, folding, and familiar editing shortcuts.
 * **Markdown source editing**: Switch between Obsidian's note view and the code editor.
 * **Find & replace**: Search across lines with regex, case matching, and whole-word matching.
 * **Live preview**: Render web pages, emails, diagrams, data tables, and diffs.
-* **Git (Desktop)**: Review diffs, keep or revert changes, and commit individual files.
-* **Agent chat (Desktop)**: Connect coding CLIs, hosted APIs, or local model servers.
-* **Mobile & tablet support**: Edit code and manage files on iOS, iPadOS, and Android.
+* **Git**: Review diffs, keep or revert changes, and commit individual files.
+* **Agent chat**: Connect coding CLIs, hosted APIs, or local model servers.
+* **Mobile & tablet support**: Edit notes, code, and manage files on any device.
 
 ---
 
@@ -29,7 +30,7 @@ Vault Code follows your Obsidian theme and display language: English, 繁體中�
 
 Open scripts, styles, and configuration files alongside your notes.
 
-* **Language support**: Python, JavaScript, TypeScript, Rust, Go, C++, SQL, HTML, CSS, JSON, YAML, shell scripts, and more.
+* **150+ languages supported**: Python, JavaScript, TypeScript, Rust, Go, SQL, HTML, CSS, JSON, YAML, and more!
 * **Markdown source**: Right-click a `.md` file and choose **Edit in code editor**, or click `</>` in the tab header. Useful for frontmatter, tables, and regex edits.
 * **Familiar controls**: Line numbers, bracket matching, code folding, line duplication, commenting, and go-to-line.
 * **Native foundation**: Built on Obsidian's editor engine, with your theme, font size, and light or dark mode.
@@ -63,7 +64,7 @@ Right-click a file or folder in the explorer:
 * **New folder here**: Name a folder directly in the explorer.
 * **New file here (any extension)**: Create any file type, including dotfiles and nested paths such as `src/components/Button.tsx`.
 * **Edit file name and extension...**: Rename files or change their extensions with built-in validation.
-* **Add external folder by symlink (Desktop)**: Bring a folder from your disk into the explorer. Edits affect the originals; deleting the symlink keeps the original folder intact.
+* **Add external folder by symlink (Desktop)**: Choose any folder on your disk and link it into your vault without leaving Obsidian.
 
 ### 🌿 Review changes with Git (Desktop)
 
@@ -86,13 +87,13 @@ Choose a connection in settings:
 
 Attach notes or selections, pin context, and revisit Markdown chat histories. **Safe mode** is read-only. **Edit mode** enables edits; API and local models require review before applying.
 
-Some providers require a subscription or credits. API keys use Obsidian's secret storage (**1.11.4+**) and must be configured on each device.
+Most providers require a paid subscription. API keys use Obsidian's secret storage (**1.11.4+**) and must be configured on each device.
 
 ### 🛡️ Control editing and file opening
 
 * Single-clicking unsupported files selects them. Opening them in your system's default app on double-click is optional and disabled by default.
-* Disable auto-save to save manually with <kbd>Cmd</kbd> / <kbd>Ctrl</kbd> + <kbd>S</kbd>. A dirty dot (`●`) marks unsaved changes, and closing an unsaved tab prompts you. **Quitting Obsidian still saves unsaved edits.**
-* File management and code editing work on desktop, mobile, and tablets. Git and Agent chat require desktop Obsidian.
+* Disable auto-save to save manually with <kbd>Cmd</kbd> / <kbd>Ctrl</kbd> + <kbd>S</kbd>. A dot `●` marks unsaved changes, and closing an unsaved tab prompts you. **Quitting Obsidian still saves unsaved edits.**
+* File management and code editing work on desktop, mobile, and tablets. Git, Agent chat, and adding external folders require desktop Obsidian.
 
 ---
 
@@ -113,19 +114,6 @@ Some providers require a subscription or credits. API keys use Obsidian's secret
 | <kbd>Esc</kbd> | Close search or dismiss a popup | Relevant editor or dialog |
 
 Assign custom shortcuts to **Vault Code: Chat with Agent** or **Vault Code: Toggle code / preview in code editor** in **Settings → Hotkeys**.
-
----
-
-## Settings
-
-Open **Settings → Community plugins → Vault Code**:
-
-* **Language**: Follow Obsidian or choose a display language.
-* **File explorer**: Show hidden files or all file types, configure double-click behavior, and apply ignore rules.
-* **Code editor**: Choose editable extensions, allow dotfile editing, set indentation and line wrapping, or disable auto-save.
-* **Git (Desktop)**: Enable the branch indicator, diffs, and file commits.
-* **Agent chat (Desktop)**: Manage CLI, API, and local connections; choose defaults and the chat history folder.
-* **Auto-clean old chats**: Move chats last modified more than 7, 30, or 90 days ago to the trash on startup. Off by default; manual cleanup is also available.
 
 ---
 
