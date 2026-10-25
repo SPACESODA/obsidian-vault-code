@@ -417,4 +417,10 @@ export const de: TranslationSchema = {
 	previewNoOutput: "Die Kompilierung hat keine Ausgabe erzeugt.",
 	previewMjmlError: "MJML-Kompilierungsfehler",
 
+	aiChatErrorLabel: "Fehler",
+	aiChatChooseMode: "Modus wählen",
+	aiChatSafePermissionHelp: "Im sicheren Modus ist eine Werkzeugfreigabe erforderlich. Wähle den Bearbeitungsmodus, um Dateiänderungen und Befehle zu erlauben, und sende die Anfrage erneut. Prüfe andernfalls die CLI-Berechtigungen im Terminal.",
+	aiChatPermissionHelp: "Diese CLI benötigt eine Werkzeugfreigabe. Prüfe die Berechtigungen im Terminal und sende die Anfrage erneut.",
+	aiChatStopped: "Antwort gestoppt.",
+
 };

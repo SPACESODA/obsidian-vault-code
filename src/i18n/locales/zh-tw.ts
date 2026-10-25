@@ -417,4 +417,10 @@ export const zhTw: TranslationSchema = {
 	previewNoOutput: "編譯未產生任何輸出。",
 	previewMjmlError: "MJML 編譯錯誤",
 
+	aiChatErrorLabel: "錯誤",
+	aiChatChooseMode: "選擇模式",
+	aiChatSafePermissionHelp: "保管庫安全模式下，此工具需要授權。若要允許編輯檔案和執行指令，請選擇編輯模式，再重新送出請求。否則，請在終端機中檢查 CLI 權限。",
+	aiChatPermissionHelp: "此 CLI 需要工具授權。請在終端機中檢查權限，再重新送出請求。",
+	aiChatStopped: "回覆已停止。",
+
 };

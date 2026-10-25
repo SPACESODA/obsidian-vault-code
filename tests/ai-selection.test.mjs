@@ -127,7 +127,7 @@ function node(tag='div',options={}) {
 function chat() {
   const view=Object.create(AIChatView.prototype);
   view.inputEl=node('textarea');view.inputEl.value='My existing question';view.quoteContainerEl=node();
-  view.pendingQuote=null;view.isGenerating=false;view.chatScope='active-note';view.messages=[];
+  view.renderRafId=null;view.submissionId=0;view.pendingQuote=null;view.isGenerating=false;view.chatScope='active-note';view.messages=[];
   view.selectedProvider='connection:test';view.selectedModel='test-model';view.mode='safe';
   view.updateVaultToggleState=()=>{};view.updateContextChip=()=>{};view.autoResizeTextarea=()=>{};
   view.updateSendButtonState=()=>{};view.scrollToBottom=()=>{};view.renderMessageBubble=()=>{};
@@ -160,4 +160,38 @@ test('sending consumes the quote once, preserves it in history, and uses its sou
 test('an empty question leaves the quote attached and sends nothing',async()=>{
   const {view,requests}=chat();view.inputEl.value='';view.attachSelection(captureSelection('Note/test.md','hello',0,5));
   await view.handleSubmit(); assert.ok(view.pendingQuote);assert.equal(requests.length,0);
+});
+
+test('cancelling while a chat note is being created cannot send or attach a stale note',async()=>{
+  const {view,requests,file}=chat();
+  view.attachSelection(captureSelection(file.path,'selected text',0,13));
+  view.currentChatFile=null;
+  let resolveNote;
+  view.plugin.aiStorage={createChatNote:()=>new Promise(resolve=>{resolveNote=resolve;})};
+  const submission=view.handleSubmit();
+  assert.equal(view.isGenerating,true);
+  view.submissionId++;
+  view.isGenerating=false;
+  resolveNote({path:'Agent-Chats/cancelled.md'});
+  await submission;
+  assert.equal(requests.length,0);
+  assert.equal(view.currentChatFile,null);
+});
+
+test('permission recovery opens the mode menu only on click and never resends',async()=>{
+  const {view,requests,file}=chat();
+  view.attachSelection(captureSelection(file.path,'selected text',0,13));
+  view.renderMessageBody=async()=>{};
+  await view.handleSubmit();
+  view.currentChatFile=null;
+  const body=view.currentStreamingMsgEl.children[1];body.isConnected=true;
+  view.currentTypingIndicatorEl.remove=()=>{};
+  let opened=0;view.showModeMenu=()=>{opened++;};
+  requests[0].onError(new Error('Headless chat cannot show the CLI approval prompt.'));
+  await Promise.resolve();
+  assert.equal(view.mode,'safe');assert.equal(opened,0);assert.equal(requests.length,1);
+  const action=body.children.find(child=>child.children.some(button=>button.textContent==='Choose mode'));
+  assert.ok(action);
+  action.children[0].events.click({});
+  assert.equal(opened,1);assert.equal(view.mode,'safe');assert.equal(requests.length,1);
 });

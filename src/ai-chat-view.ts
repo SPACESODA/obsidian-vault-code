@@ -23,7 +23,8 @@ import { AIChatHistoryModal } from "./ai-history-modal";
 import { createCustomMenu } from "./custom-menu";
 import { isConnectionProvider, connectionProvider, extractEditProposal } from "./ai-connections";
 import { AIEditReviewModal } from "./ai-edit-review";
-import { renderChatMarkdown } from "./ai-chat-markdown";
+import { chatErrorContent, isChatPermissionError } from "./ai-chat-feedback";
+import { renderChatMarkdown, disposeChatMarkdown } from "./ai-chat-markdown";
 import { type SelectionQuote, selectionLabel, quoteMessage } from "./ai-selection";
 
 export const VIEW_TYPE_AI_CHAT = "vault-code-ai-chat";
@@ -107,6 +108,8 @@ export class AIChatView extends ItemView {
 	private chatScope: "active-note" | "vault";
 	private mode: "safe" | "edit";
 	private isGenerating = false;
+	private followOutput = true;
+	private submissionId = 0;
 	private activeProcessHandle: AIProcessHandle | null = null;
 	private availableModels: AgyModelInfo[] = [];
 
@@ -237,6 +240,7 @@ export class AIChatView extends ItemView {
 
 	async onClose(): Promise<void> {
 		this.stopGenerating();
+		this.disposeMessageRendering();
 		if (this.renderRafId !== null) {
 			window.cancelAnimationFrame(this.renderRafId);
 			this.renderRafId = null;
@@ -347,6 +351,10 @@ export class AIChatView extends ItemView {
 		this.messagesContainerEl = container.createDiv({
 			cls: "vault-code-chat-messages",
 		});
+		this.messagesContainerEl.addEventListener("scroll", () => {
+			const el = this.messagesContainerEl;
+			this.followOutput = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+		}, { passive: true });
 		this.messagesContainerEl.addEventListener("contextmenu", (e: MouseEvent) => {
 			const target = e.target as HTMLElement | null;
 			if (!target) return;
@@ -1115,8 +1123,13 @@ export class AIChatView extends ItemView {
 		this.inputEl?.focus();
 	}
 
+	private disposeMessageRendering(): void {
+		for (const body of this.messagesContainerEl?.querySelectorAll<HTMLElement>(".vault-code-chat-msg-body") ?? []) disposeChatMarkdown(body, this);
+	}
+
 	private renderMessages(): void {
 		if (!this.messagesContainerEl) return;
+		this.disposeMessageRendering();
 		this.messagesContainerEl.empty();
 
 		if (this.messages.length === 0) {
@@ -1128,7 +1141,7 @@ export class AIChatView extends ItemView {
 			this.renderMessageBubble(msg);
 		}
 
-		this.scrollToBottom();
+		this.scrollToBottom(true);
 	}
 
 	private renderWelcome(): void {
@@ -1224,8 +1237,9 @@ export class AIChatView extends ItemView {
 		});
 	}
 
-	private scrollToBottom(): void {
-		if (this.messagesContainerEl) {
+	private scrollToBottom(force = false): void {
+		if (force) this.followOutput = true;
+		if (this.messagesContainerEl && this.followOutput) {
 			this.messagesContainerEl.scrollTop = this.messagesContainerEl.scrollHeight;
 		}
 	}
@@ -1235,6 +1249,7 @@ export class AIChatView extends ItemView {
 
 		const text = this.inputEl.value.trim();
 		if (!text) return;
+		const submission = ++this.submissionId;
 		const quote = this.pendingQuote;
 		const messageText = quote ? quoteMessage(text, quote) : text;
 		this.pendingQuote = null;
@@ -1287,6 +1302,7 @@ export class AIChatView extends ItemView {
 		this.currentTypingIndicatorEl.createSpan({ cls: "vault-code-typing-dot" });
 
 		this.currentStreamingMsgEl = asstBubbleEl;
+		this.followOutput = true;
 
 		this.isGenerating = true;
 		this.updateSendButtonState();
@@ -1325,12 +1341,14 @@ export class AIChatView extends ItemView {
 			}
 		}
 
+		if (submission !== this.submissionId || !this.isGenerating) return;
+
 		// Auto-create chat note on first turn if not yet saved
 		if (!this.currentChatFile) {
 			this.currentChatTitle = text.slice(0, 50);
 			const folder = this.plugin.settings.aiChatFolder || "Agent-Chats";
 			try {
-				this.currentChatFile = await this.plugin.aiStorage.createChatNote(
+				const createdChat = await this.plugin.aiStorage.createChatNote(
 					folder,
 					this.currentChatTitle,
 					this.messages,
@@ -1345,6 +1363,8 @@ export class AIChatView extends ItemView {
 						conversationId: this.conversationId,
 					},
 				);
+				if (submission !== this.submissionId || !this.isGenerating) return;
+				this.currentChatFile = createdChat;
 				this.headerTitleEl?.setText(this.currentChatTitle);
 				this.headerTitleEl.title = `${this.currentChatTitle} (${t("aiChatRenameChat")})`;
 				this.headerTitleEl.addClass("is-editable");
@@ -1354,6 +1374,8 @@ export class AIChatView extends ItemView {
 			}
 		}
 
+		if (submission !== this.submissionId || !this.isGenerating) return;
+		const requestMode = this.mode;
 		this.activeProcessHandle = this.plugin.aiService.sendMessage({
 			prompt: messageText,
 			contextInPrompt: Boolean(quote),
@@ -1369,9 +1391,11 @@ export class AIChatView extends ItemView {
 			activeContent,
 			selectedText,
 			onInit: (convId: string) => {
+				if (submission !== this.submissionId || !this.isGenerating) return;
 				this.conversationId = convId;
 			},
 			onDelta: (delta: string) => {
+				if (submission !== this.submissionId || !this.isGenerating) return;
 				if (this.currentTypingIndicatorEl) {
 					this.currentTypingIndicatorEl.remove();
 					this.currentTypingIndicatorEl = null;
@@ -1382,6 +1406,7 @@ export class AIChatView extends ItemView {
 				}
 			},
 			onDone: (fullText: string) => {
+				if (submission !== this.submissionId || !this.isGenerating) return;
 				if (this.currentTypingIndicatorEl) {
 					this.currentTypingIndicatorEl.remove();
 					this.currentTypingIndicatorEl = null;
@@ -1441,6 +1466,7 @@ export class AIChatView extends ItemView {
 				}
 			},
 			onError: (err: Error) => {
+				if (submission !== this.submissionId || !this.isGenerating) return;
 				if (this.currentTypingIndicatorEl) {
 					this.currentTypingIndicatorEl.remove();
 					this.currentTypingIndicatorEl = null;
@@ -1464,10 +1490,17 @@ export class AIChatView extends ItemView {
 					}
 				}
 
-				assistantMsg.content = `> ⚠️ **Error**: ${err.message}`;
+				assistantMsg.content = chatErrorContent(err.message, requestMode, assistantMsg.content);
 				if (asstBodyEl) {
 					if (this.renderRafId !== null) { window.cancelAnimationFrame(this.renderRafId); this.renderRafId = null; }
-					void this.renderMessageBody(assistantMsg.content, asstBodyEl).then(() => this.scrollToBottom());
+					void this.renderMessageBody(assistantMsg.content, asstBodyEl).then(() => {
+						if (asstBodyEl.isConnected && this.messages.includes(assistantMsg) && requestMode === "safe" && isChatPermissionError(err.message)) {
+							const actions = asstBodyEl.createDiv({ cls: "vault-code-chat-error-actions" });
+							const choose = actions.createEl("button", { text: t("aiChatChooseMode"), attr: { type: "button" } });
+							choose.addEventListener("click", event => this.showModeMenu(event));
+						}
+						this.scrollToBottom();
+					});
 				}
 				this.finishGenerating();
 
@@ -1494,6 +1527,11 @@ export class AIChatView extends ItemView {
 	}
 
 	private stopGenerating(): void {
+		this.submissionId++;
+		if (this.renderRafId !== null) {
+			window.cancelAnimationFrame(this.renderRafId);
+			this.renderRafId = null;
+		}
 		if (this.activeProcessHandle) {
 			this.activeProcessHandle.kill();
 			this.activeProcessHandle = null;
@@ -1502,6 +1540,15 @@ export class AIChatView extends ItemView {
 			this.currentTypingIndicatorEl.remove();
 			this.currentTypingIndicatorEl = null;
 		}
+		if (this.isGenerating && this.currentStreamingMsgEl) {
+			const message = this.messages.find(msg => msg.id === this.currentStreamingMsgEl?.getAttribute("data-msg-id"));
+			const body = this.currentStreamingMsgEl.querySelector<HTMLElement>(".vault-code-chat-msg-body");
+			if (message) {
+				if (!message.content.trim()) message.content = t("aiChatStopped");
+				if (body) void this.renderMessageBody(message.content, body);
+			}
+		}
+
 		this.finishGenerating();
 	}
 

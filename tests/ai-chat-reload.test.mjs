@@ -487,3 +487,37 @@ test("context chip attach, pin, and remove state updates work immediately and re
 	assert.equal(emptyCalls, 6);
 	assert.equal(renderedState.fileName, "README Draft.md");
 });
+
+test("streaming follows the bottom only until the reader scrolls away", () => {
+	const view = Object.create(AIChatView.prototype);
+	view.messagesContainerEl = { scrollTop: 100, scrollHeight: 1000 };
+	view.followOutput = false;
+	view.scrollToBottom();
+	assert.equal(view.messagesContainerEl.scrollTop, 100);
+	view.scrollToBottom(true);
+	assert.equal(view.messagesContainerEl.scrollTop, 1000);
+	assert.equal(view.followOutput, true);
+});
+
+test("Stop invalidates pending submissions and labels an otherwise empty reply", () => {
+	const view = Object.create(AIChatView.prototype);
+	view.submissionId = 7;
+	view.renderRafId = null;
+	view.isGenerating = true;
+	const message = { id: "assistant-1", content: "" };
+	view.messages = [message];
+	const body = {};
+	view.currentStreamingMsgEl = { getAttribute: () => message.id, querySelector: () => body };
+	let killed = false;
+	view.activeProcessHandle = { kill: () => { killed = true; } };
+	let rendered;
+	view.renderMessageBody = (content, target) => { rendered = { content, target }; return Promise.resolve(); };
+	view.updateSendButtonState = () => {};
+	view.scrollToBottom = () => {};
+	view.stopGenerating();
+	assert.equal(killed, true);
+	assert.equal(view.submissionId, 8);
+	assert.equal(view.isGenerating, false);
+	assert.equal(message.content, "Response stopped.");
+	assert.equal(rendered.target, body);
+});

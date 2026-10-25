@@ -417,4 +417,10 @@ export const ko: TranslationSchema = {
 	previewNoOutput: "컴파일 결과가 없습니다.",
 	previewMjmlError: "MJML 컴파일 오류",
 
+	aiChatErrorLabel: "오류",
+	aiChatChooseMode: "모드 선택",
+	aiChatSafePermissionHelp: "보관함 안전 모드에서는 도구 승인이 필요합니다. 파일 수정과 명령 실행을 허용하려면 편집 모드를 선택한 뒤 다시 보내세요. 그렇지 않으면 터미널에서 CLI 권한을 확인하세요.",
+	aiChatPermissionHelp: "이 CLI는 도구 승인이 필요합니다. 터미널에서 권한을 확인한 뒤 다시 보내세요.",
+	aiChatStopped: "응답이 중지되었습니다.",
+
 };

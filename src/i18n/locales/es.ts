@@ -417,4 +417,10 @@ export const es: TranslationSchema = {
 	previewNoOutput: "La compilación no generó ningún resultado.",
 	previewMjmlError: "Error de compilación MJML",
 
+	aiChatErrorLabel: "Error",
+	aiChatChooseMode: "Elegir modo",
+	aiChatSafePermissionHelp: "El modo seguro requiere aprobar esta herramienta. Para permitir cambios en archivos y comandos, elige el modo de edición y vuelve a enviar la solicitud. Si no, revisa los permisos de la CLI en Terminal.",
+	aiChatPermissionHelp: "Esta CLI requiere aprobar la herramienta. Revisa sus permisos en Terminal y vuelve a enviar la solicitud.",
+	aiChatStopped: "Respuesta detenida.",
+
 };

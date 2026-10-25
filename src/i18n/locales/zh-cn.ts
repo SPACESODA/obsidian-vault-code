@@ -417,4 +417,10 @@ export const zhCn: TranslationSchema = {
 	previewNoOutput: "编译未产生任何输出。",
 	previewMjmlError: "MJML 编译错误",
 
+	aiChatErrorLabel: "错误",
+	aiChatChooseMode: "选择模式",
+	aiChatSafePermissionHelp: "保险库安全模式下，此工具需要授权。如需允许编辑文件和执行命令，请选择编辑模式，再重新发送请求。否则，请在终端中检查 CLI 权限。",
+	aiChatPermissionHelp: "此 CLI 需要工具授权。请在终端中检查权限，再重新发送请求。",
+	aiChatStopped: "回复已停止。",
+
 };

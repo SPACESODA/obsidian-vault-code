@@ -417,4 +417,10 @@ export const ja: TranslationSchema = {
 	previewNoOutput: "コンパイル結果がありません。",
 	previewMjmlError: "MJML コンパイルエラー",
 
+	aiChatErrorLabel: "エラー",
+	aiChatChooseMode: "モードを選択",
+	aiChatSafePermissionHelp: "保管庫の安全モードではツールの承認が必要です。ファイルの編集やコマンドの実行を許可する場合は、編集モードを選択してから再送信してください。それ以外の場合は、ターミナルで CLI の権限を確認してください。",
+	aiChatPermissionHelp: "この CLI にはツールの承認が必要です。ターミナルで権限を確認してから再送信してください。",
+	aiChatStopped: "応答を停止しました。",
+
 };

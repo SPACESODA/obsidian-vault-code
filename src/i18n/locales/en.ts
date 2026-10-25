@@ -415,6 +415,12 @@ export const en = {
 	previewNoOutput: "Compilation produced no output.",
 	previewMjmlError: "MJML compilation error",
 
+	aiChatErrorLabel: "Error",
+	aiChatChooseMode: "Choose mode",
+	aiChatSafePermissionHelp: "Tool approval is required in safe mode. To allow file edits and commands, choose edit mode, then resend your request. Otherwise, review the CLI permissions in your terminal.",
+	aiChatPermissionHelp: "This CLI requires tool approval. Review its permissions in your terminal, then resend your request.",
+	aiChatStopped: "Response stopped.",
+
 };
 
 export type TranslationSchema = typeof en;

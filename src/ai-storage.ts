@@ -2,6 +2,7 @@ import { App, TFile, TFolder, normalizePath, parseYaml, stringifyYaml } from "ob
 import type { ChatMessage } from "./ai-chat-view";
 import { type AIProvider, type ReasoningEffort, supportsReasoningEffort } from "./ai-service";
 
+import { parseChatTurns } from "./ai-chat-turns";
 import { CHAT_PROPERTIES, chatProperty, migrateChatProperties } from "./ai-chat-properties";
 
 function chatFrontmatter(content: string): { properties: Record<string, unknown>; body: string } | null {
@@ -196,39 +197,12 @@ export class AIStorage {
 			if (typeof id === "string") metadata.conversationId = id;
 		}
 
-		// Parse Turns (support ##### You / ##### Agent, #### You / #### Agent, as well as legacy formats)
-		const messages: ChatMessage[] = [];
-		const turnSections = bodyContent.split(/\n(?=#{2,5}\s+(?:👤|✨|✦\s*)?(?:You|Agent|Assistant))/gi);
-
-		for (let i = 0; i < turnSections.length; i++) {
-			const section = turnSections[i]?.trim();
-			if (!section) continue;
-
-			const isUser = /^#{2,5}\s+(?:👤\s*)?You/i.test(section);
-			const isAssistant = /^#{2,5}\s+(?:✨|✦\s*)?(?:Agent|Assistant)/i.test(section);
-
-			if (isUser) {
-				const text = section.replace(/^#{2,5}[^\n]*\n+/i, "").trim();
-				if (text) {
-					messages.push({
-						id: `user-${Date.now()}-${i}`,
-						role: "user",
-						content: text,
-						timestamp: Date.now(),
-					});
-				}
-			} else if (isAssistant) {
-				const text = section.replace(/^#{2,5}[^\n]*\n+/i, "").trim();
-				if (text) {
-					messages.push({
-						id: `asst-${Date.now()}-${i}`,
-						role: "assistant",
-						content: text,
-						timestamp: Date.now(),
-					});
-				}
-			}
-		}
+		const messages: ChatMessage[] = parseChatTurns(bodyContent).map((turn, index) => ({
+			id: `${turn.role}-${Date.now()}-${index}`,
+			role: turn.role,
+			content: turn.content,
+			timestamp: Date.now(),
+		}));
 
 		return { metadata, messages };
 	}
