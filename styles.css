@@ -2316,6 +2316,12 @@ input[type="text"].vault-code-chat-title-input:focus-visible {
 	display: flex;
 	flex-direction: column;
 	gap: 20px;
+	user-select: none;
+	-webkit-user-select: none;
+}
+
+.vault-code-chat-messages ::selection {
+	background-color: var(--text-selection, rgba(80, 140, 255, 0.3));
 }
 
 .vault-code-chat-msg.is-user + .vault-code-chat-msg.is-assistant {
@@ -2331,6 +2337,9 @@ input[type="text"].vault-code-chat-title-input:focus-visible {
 	text-align: center;
 	max-width: 320px;
 	padding: 24px 16px;
+	user-select: none;
+	-webkit-user-select: none;
+	cursor: default;
 }
 
 .vault-code-chat-welcome-icon svg {
@@ -2345,6 +2354,9 @@ input[type="text"].vault-code-chat-title-input:focus-visible {
 	font-size: var(--font-ui-large, 16px);
 	font-weight: 600;
 	color: var(--text-normal);
+	user-select: none;
+	-webkit-user-select: none;
+	cursor: default;
 }
 
 .vault-code-chat-welcome-subtitle {
@@ -2352,6 +2364,9 @@ input[type="text"].vault-code-chat-title-input:focus-visible {
 	font-size: var(--font-ui-small, 12px);
 	color: var(--text-muted);
 	line-height: 1.5;
+	user-select: none;
+	-webkit-user-select: none;
+	cursor: default;
 }
 
 .vault-code-chat-msg {
@@ -2359,6 +2374,13 @@ input[type="text"].vault-code-chat-title-input:focus-visible {
 	display: flex;
 	flex-direction: column;
 	gap: 4px;
+}
+
+.vault-code-chat-msg-header,
+.vault-code-chat-msg-role {
+	user-select: none;
+	-webkit-user-select: none;
+	cursor: default;
 }
 
 .vault-code-chat-msg.is-user {
@@ -2466,6 +2488,31 @@ input[type="text"].vault-code-chat-title-input:focus-visible {
 	min-width: 0;
 	max-width: 100%;
 	overflow-wrap: anywhere;
+	user-select: text;
+	-webkit-user-select: text;
+	cursor: text;
+}
+
+.vault-code-chat-markdown * {
+	user-select: text;
+	-webkit-user-select: text;
+}
+
+.vault-code-chat-markdown a {
+	cursor: pointer;
+}
+
+.vault-code-chat-markdown button {
+	cursor: pointer;
+	user-select: none;
+	-webkit-user-select: none;
+}
+
+.vault-code-chat-markdown pre,
+.vault-code-chat-markdown code {
+	user-select: text;
+	-webkit-user-select: text;
+	cursor: text;
 }
 
 .vault-code-chat-markdown.is-plain-text { white-space: pre-wrap; }
@@ -2885,7 +2932,7 @@ textarea.vault-code-chat-input:active {
 .vault-code-chat-toggle-vault {
 	display: inline-flex;
 	align-items: center;
-	gap: 6px;
+	gap: 4px;
 	cursor: pointer;
 	user-select: none;
 }
@@ -2906,7 +2953,7 @@ textarea.vault-code-chat-input:active {
 .vault-code-chat-toggle-vault .checkbox-container {
 	transform: scale(0.8);
 	transform-origin: center right;
-	margin: 0;
+	margin: 0 0 0 -5px;
 	cursor: pointer;
 }
 
@@ -3599,4 +3646,200 @@ svg.vault-code-spin {
 @media (max-width: 600px) {
 	.vault-code-edit-comparison { grid-template-columns: minmax(0, 1fr); }
 	.vault-code-connection-modal .setting-item { flex-wrap: wrap; }
+}
+
+/* Quote a selection without moving focus away from its source editor. */
+.vault-code-selection-agent {
+	position: fixed;
+	left: var(--selection-agent-left);
+	top: var(--selection-agent-top);
+	z-index: 1000;
+	width: 30px;
+	height: 30px;
+	padding: 5px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--text-accent);
+	background-color: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m, 6px);
+	box-shadow: var(--shadow-s, 0 2px 8px rgba(0, 0, 0, 0.15));
+	cursor: pointer;
+	transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
+}
+.vault-code-selection-agent svg {
+	width: 16px;
+	height: 16px;
+	display: block;
+	color: inherit;
+}
+.vault-code-selection-agent[hidden] { display: none; }
+.vault-code-selection-agent:hover,
+.vault-code-selection-agent:focus-visible {
+	color: var(--text-on-accent, #ffffff);
+	background-color: var(--interactive-accent);
+	border-color: var(--interactive-accent);
+	box-shadow: var(--shadow-m, 0 4px 12px rgba(0, 0, 0, 0.25));
+}
+.vault-code-selection-agent:active {
+	background-color: var(--interactive-accent-hover, var(--interactive-accent));
+	color: var(--text-on-accent, #ffffff);
+	transform: scale(0.92);
+}
+.vault-code-chat-quote-container:empty { display: none; }
+.vault-code-chat-quote-row {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	padding: 6px 10px;
+	margin-bottom: 8px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m, 6px);
+	background: var(--background-secondary);
+	min-width: 0;
+	transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.vault-code-chat-quote-row:hover {
+	border-color: var(--background-modifier-border-hover);
+}
+.vault-code-chat-quote { flex: 1; min-width: 0; }
+.vault-code-chat-quote summary {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	cursor: pointer;
+	font-size: var(--font-ui-smaller, 12px);
+	user-select: none;
+	outline: none;
+	list-style: none;
+	min-height: 22px;
+	line-height: 1.4;
+	min-width: 0;
+}
+.vault-code-chat-quote summary::-webkit-details-marker,
+.vault-code-chat-quote summary::marker {
+	display: none;
+}
+.vault-code-chat-quote summary:focus,
+.vault-code-chat-quote summary:focus-visible,
+.vault-code-chat-quote:focus,
+.vault-code-chat-quote:focus-visible {
+	outline: none !important;
+	box-shadow: none !important;
+}
+.vault-code-chat-quote-chevron {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 14px;
+	height: 14px;
+	flex-shrink: 0;
+	color: var(--text-muted);
+	transition: transform 0.18s cubic-bezier(0.2, 0, 0, 1), color 0.15s ease;
+}
+.vault-code-chat-quote-chevron svg {
+	width: 12px;
+	height: 12px;
+	display: block;
+}
+.vault-code-chat-quote[open] .vault-code-chat-quote-chevron {
+	transform: rotate(90deg);
+}
+.vault-code-chat-quote summary:hover .vault-code-chat-quote-chevron {
+	color: var(--text-normal);
+}
+.vault-code-chat-quote-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 14px;
+	height: 14px;
+	flex-shrink: 0;
+	color: var(--text-accent);
+}
+.vault-code-chat-quote-icon svg {
+	width: 13px;
+	height: 13px;
+	display: block;
+}
+.vault-code-chat-quote-file {
+	font-weight: 500;
+	color: var(--text-normal);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	min-width: 0;
+	transition: color 0.15s ease;
+}
+.vault-code-chat-quote summary:hover .vault-code-chat-quote-file {
+	color: var(--text-accent);
+}
+.vault-code-chat-quote-lines {
+	display: inline-flex;
+	align-items: center;
+	padding: 1px 6px;
+	font-size: 10.5px;
+	font-family: var(--font-monospace);
+	font-weight: 500;
+	line-height: 1.35;
+	color: var(--text-muted);
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s, 3px);
+	white-space: nowrap;
+	letter-spacing: 0.2px;
+	flex-shrink: 0;
+}
+.vault-code-chat-quote-remove {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 22px;
+	padding: 0;
+	border-radius: var(--radius-s, 4px);
+	color: var(--text-muted);
+	background: transparent;
+	border: none;
+	cursor: pointer;
+	flex-shrink: 0;
+	transition: background-color 0.15s ease, color 0.15s ease;
+}
+.vault-code-chat-quote-remove:hover {
+	color: var(--text-normal);
+	background-color: var(--background-modifier-hover);
+}
+.vault-code-chat-quote-remove svg {
+	width: 13px;
+	height: 13px;
+	display: block;
+}
+.vault-code-chat-quote pre,
+.vault-code-chat-quote-preview {
+	margin: 8px 0 2px 0;
+	padding: 8px 10px;
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s, 4px);
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-smaller, 11px);
+	line-height: 1.5;
+	color: var(--text-muted);
+	max-height: 150px;
+	overflow-y: auto;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	tab-size: 2;
+}
+.vault-code-chat-quote pre::-webkit-scrollbar,
+.vault-code-chat-quote-preview::-webkit-scrollbar {
+	width: 4px;
+	height: 4px;
+}
+.vault-code-chat-quote pre::-webkit-scrollbar-thumb,
+.vault-code-chat-quote-preview::-webkit-scrollbar-thumb {
+	background: var(--background-modifier-border-hover);
+	border-radius: 4px;
 }

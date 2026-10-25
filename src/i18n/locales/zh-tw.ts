@@ -211,6 +211,9 @@ export const zhTw: TranslationSchema = {
 
 	// Agent 聊天
 	aiChatWithAgent: "與 Agent 聊天",
+	aiChatQuoteSelection: "傳送至聊天",
+	aiChatRemoveQuote: "移除引用",
+	aiChatSelectionPlaceholder: "詢問這段內容…",
 	aiChatViewTitle: "Agent 聊天",
 	aiChatNewChat: "新對話",
 	aiChatPlaceholder: "向 Agent 詢問任何問題...",

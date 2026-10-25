@@ -211,6 +211,9 @@ export const ko: TranslationSchema = {
 
 	// Agent 채팅
 	aiChatWithAgent: "Agent와 채팅",
+	aiChatQuoteSelection: "채팅으로 보내기",
+	aiChatRemoveQuote: "인용 제거",
+	aiChatSelectionPlaceholder: "선택 내용에 대해 질문…",
 	aiChatViewTitle: "Agent 채팅",
 	aiChatNewChat: "새 대화",
 	aiChatPlaceholder: "Agent에게 질문을 입력하세요...",

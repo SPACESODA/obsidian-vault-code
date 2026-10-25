@@ -11,7 +11,7 @@ export function renderConnectionSettings(container: HTMLElement, plugin: VaultCo
 	const connections = plugin.settings.aiConnections.filter((c) => c.kind === kind);
 	const addLabel = kind === "api" ? "Add provider" : "Add local model";
 	if (connections.length) {
-		const add = header.createEl("button", { cls: "clickable-icon", attr: { "aria-label": addLabel, title: addLabel } });
+		const add = header.createEl("button", { cls: "clickable-icon", attr: { "aria-label": addLabel } });
 		setIcon(add, "plus");
 		add.addEventListener("click", openAdd);
 	} else {
@@ -32,7 +32,7 @@ export function renderConnectionSettings(container: HTMLElement, plugin: VaultCo
 		};
 		row.addEventListener("click", () => { void select(); });
 		row.addEventListener("keydown", (event) => { if (event.target === row && ["Enter", " "].includes(event.key)) { event.preventDefault(); void select(); } });
-		const edit = row.createEl("button", { cls: "clickable-icon", attr: { "aria-label": `Edit ${connection.name}`, title: "Edit connection" } });
+		const edit = row.createEl("button", { cls: "clickable-icon", attr: { "aria-label": `Edit ${connection.name}` } });
 		setIcon(edit, "pencil");
 		edit.addEventListener("click", (event) => { event.stopPropagation(); new ConnectionModal(plugin.app, plugin, kind, connection, redraw).open(); });
 	}
@@ -82,7 +82,7 @@ class ConnectionModal extends Modal {
 			area.setPlaceholder("One model ID per line").setValue(this.draft.models.join("\n")).onChange((v) => { this.draft.models = parseModelIds(v); });
 			modelInput = area.inputEl;
 		});
-		const discover = modelsSetting.controlEl.createEl("button", { cls: "clickable-icon", attr: { "aria-label": "Discover models", title: "Discover models" } });
+		const discover = modelsSetting.controlEl.createEl("button", { cls: "clickable-icon", attr: { "aria-label": "Discover models" } });
 		setIcon(discover, "refresh-cw");
 		const advancedButton = root.createEl("button", { cls: "vault-code-cli-details-button", text: "Advanced", attr: { "aria-expanded": "false" } });
 		const advanced = root.createDiv({ cls: "vault-code-connection-advanced" }); advanced.hidden = true;

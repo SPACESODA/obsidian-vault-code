@@ -211,6 +211,9 @@ export const ru: TranslationSchema = {
 
 	// Чат Agent
 	aiChatWithAgent: "Чат с Agent",
+	aiChatQuoteSelection: "Отправить в чат",
+	aiChatRemoveQuote: "Удалить цитату",
+	aiChatSelectionPlaceholder: "Спросите об этом фрагменте…",
 	aiChatViewTitle: "Чат Agent",
 	aiChatNewChat: "Новый чат",
 	aiChatPlaceholder: "Спросите Agent о чем угодно...",

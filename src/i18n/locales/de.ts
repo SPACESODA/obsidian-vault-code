@@ -211,6 +211,9 @@ export const de: TranslationSchema = {
 
 	// Agent Chat
 	aiChatWithAgent: "Mit Agent chatten",
+	aiChatQuoteSelection: "An Chat senden",
+	aiChatRemoveQuote: "Zitat entfernen",
+	aiChatSelectionPlaceholder: "Frage zu dieser Auswahl…",
 	aiChatViewTitle: "Agent-Chat",
 	aiChatNewChat: "Neuer Chat",
 	aiChatPlaceholder: "Frage den Agenten etwas...",

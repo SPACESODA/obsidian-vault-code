@@ -116,6 +116,8 @@ export type AIProvider = CLIProvider | `connection:${string}`;
 export type ReasoningEffort = "auto" | "low" | "medium" | "high";
 
 export interface SendMessageOptions {
+	/** The prompt already includes its quoted context; retain source fields only for reviewed edits. */
+	contextInPrompt?: boolean;
 	history?: DirectMessage[];
 	prompt: string;
 	provider?: AIProvider;
@@ -1286,7 +1288,7 @@ export class AIService {
 	private async buildEffectivePrompt(options: SendMessageOptions): Promise<string> {
 		let effectivePrompt = options.prompt.trim();
 
-		if (options.scope === "active-note" && options.activeFile) {
+		if (options.scope === "active-note" && options.activeFile && !options.contextInPrompt) {
 			const contextHeader = [
 				`[Context: Active Note "${options.activeFile.path}"]`,
 			];

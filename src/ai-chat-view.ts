@@ -24,6 +24,7 @@ import { createCustomMenu } from "./custom-menu";
 import { isConnectionProvider, connectionProvider, extractEditProposal } from "./ai-connections";
 import { AIEditReviewModal } from "./ai-edit-review";
 import { renderChatMarkdown } from "./ai-chat-markdown";
+import { type SelectionQuote, selectionLabel, quoteMessage } from "./ai-selection";
 
 export const VIEW_TYPE_AI_CHAT = "vault-code-ai-chat";
 
@@ -132,6 +133,8 @@ export class AIChatView extends ItemView {
 	private vaultToggle: ToggleComponent | null = null;
 	private vaultToggleWrapper!: HTMLElement;
 	private contextChipEl!: HTMLElement;
+	private quoteContainerEl!: HTMLElement;
+	private pendingQuote: SelectionQuote | null = null;
 	private contextPinBtnEl!: HTMLElement;
 	private openNoteBtnEl!: HTMLElement;
 
@@ -320,6 +323,42 @@ export class AIChatView extends ItemView {
 		this.messagesContainerEl = container.createDiv({
 			cls: "vault-code-chat-messages",
 		});
+		this.messagesContainerEl.addEventListener("contextmenu", (e: MouseEvent) => {
+			const target = e.target as HTMLElement | null;
+			if (!target) return;
+			const msgEl = target.closest<HTMLElement>(".vault-code-chat-msg");
+			const selection = window.getSelection()?.toString()?.trim();
+			if (!msgEl && !selection) return;
+
+			e.preventDefault();
+			const msgId = msgEl?.getAttribute("data-msg-id");
+			const msg = msgId ? this.messages.find((m) => m.id === msgId) : null;
+
+			const menu = createCustomMenu();
+			if (selection) {
+				menu.addItem((item) => {
+					item.setTitle("Copy")
+						.setIcon("copy")
+						.onClick(() => {
+							void navigator.clipboard.writeText(selection).then(() => {
+								new Notice(t("aiChatCopied"));
+							});
+						});
+				});
+			}
+			if (msg) {
+				menu.addItem((item) => {
+					item.setTitle(t("aiChatCopy"))
+						.setIcon("copy")
+						.onClick(() => {
+							void navigator.clipboard.writeText(msg.content).then(() => {
+								new Notice(t("aiChatCopied"));
+							});
+						});
+				});
+			}
+			menu.showAtMouseEvent(e);
+		});
 		this.renderMessages();
 	}
 
@@ -329,6 +368,9 @@ export class AIChatView extends ItemView {
 
 		// Context chip inside the card (top)
 		this.contextChipEl = inputCard.createDiv({ cls: "vault-code-chat-context-chip" });
+
+		this.quoteContainerEl = inputCard.createDiv({ cls: "vault-code-chat-quote-container" });
+		this.renderSelectionQuote();
 
 		// Message entry field row (middle) with send button at top-right corner
 		const inputRow = inputCard.createDiv({ cls: "vault-code-chat-input-row" });
@@ -434,7 +476,7 @@ export class AIChatView extends ItemView {
 	}
 
 	private updateVaultToggleState(): void {
-		if (isConnectionProvider(this.selectedProvider)) {
+		if (this.pendingQuote || isConnectionProvider(this.selectedProvider)) {
 			this.chatScope = "active-note";
 			this.vaultToggleWrapper?.hide();
 		} else this.vaultToggleWrapper?.show();
@@ -531,6 +573,7 @@ export class AIChatView extends ItemView {
 	private updateContextChip(): void {
 		if (!this.contextChipEl) return;
 		this.contextChipEl.empty();
+		if (this.pendingQuote) { this.contextChipEl.hide(); return; }
 
 		const activeFile = (this.isContextPinned && this.pinnedContextFile)
 			? this.pinnedContextFile
@@ -797,6 +840,8 @@ export class AIChatView extends ItemView {
 
 	public async loadChatFromFile(file: TFile): Promise<void> {
 		this.stopGenerating();
+		this.pendingQuote = null;
+		this.renderSelectionQuote();
 		try {
 			const content = await this.app.vault.read(file);
 			const parsed = this.plugin.aiStorage.parseChat(content, this.selectedModel);
@@ -836,6 +881,8 @@ export class AIChatView extends ItemView {
 
 	public startNewChat(): void {
 		this.stopGenerating();
+		this.pendingQuote = null;
+		this.renderSelectionQuote();
 		this.currentChatFile = null;
 		this.currentChatTitle = "Untitled Chat";
 		this.conversationId = undefined;
@@ -867,6 +914,54 @@ export class AIChatView extends ItemView {
 
 	public clearChat(): void {
 		this.startNewChat();
+	}
+
+	public attachSelection(quote: SelectionQuote): void {
+		this.pendingQuote = quote;
+		this.renderSelectionQuote();
+		this.updateVaultToggleState();
+		this.updateContextChip();
+		this.focusInput();
+	}
+
+	private renderSelectionQuote(): void {
+		if (!this.quoteContainerEl) return;
+		this.quoteContainerEl.empty();
+		const quote = this.pendingQuote;
+		if (!quote) {
+			this.inputEl?.setAttribute("placeholder", t("aiChatPlaceholder"));
+			return;
+		}
+		this.inputEl?.setAttribute("placeholder", t("aiChatSelectionPlaceholder"));
+		const row = this.quoteContainerEl.createDiv({ cls: "vault-code-chat-quote-row" });
+		const details = row.createEl("details", { cls: "vault-code-chat-quote" });
+		const summary = details.createEl("summary");
+		const chevron = summary.createSpan({ cls: "vault-code-chat-quote-chevron" });
+		setIcon(chevron, "chevron-right");
+		const fileIcon = summary.createSpan({ cls: "vault-code-chat-quote-icon" });
+		setIcon(fileIcon, "file-text");
+		summary.createSpan({
+			text: quote.path.split("/").pop() || quote.path,
+			cls: "vault-code-chat-quote-file",
+			attr: { "aria-label": selectionLabel(quote) },
+		});
+		summary.createSpan({
+			text: `L${quote.startLine}${quote.endLine === quote.startLine ? "" : `–${quote.endLine}`}`,
+			cls: "vault-code-chat-quote-lines",
+		});
+		details.createEl("pre", { cls: "vault-code-chat-quote-preview", text: quote.text });
+		const remove = row.createEl("button", {
+			cls: "clickable-icon vault-code-chat-quote-remove",
+			attr: { "aria-label": t("aiChatRemoveQuote") },
+		});
+		setIcon(remove, "x");
+		remove.addEventListener("click", () => {
+			this.pendingQuote = null;
+			this.renderSelectionQuote();
+			this.updateVaultToggleState();
+			this.updateContextChip();
+			this.focusInput();
+		});
 	}
 
 	public focusInput(): void {
@@ -990,6 +1085,12 @@ export class AIChatView extends ItemView {
 
 		const text = this.inputEl.value.trim();
 		if (!text) return;
+		const quote = this.pendingQuote;
+		const messageText = quote ? quoteMessage(text, quote) : text;
+		this.pendingQuote = null;
+		this.renderSelectionQuote();
+		this.updateVaultToggleState();
+		this.updateContextChip();
 
 		this.inputEl.value = "";
 		this.autoResizeTextarea();
@@ -999,7 +1100,7 @@ export class AIChatView extends ItemView {
 		const userMsg: ChatMessage = {
 			id: `user-${Date.now()}`,
 			role: "user",
-			content: text,
+			content: messageText,
 			timestamp: Date.now(),
 		};
 		this.messages.push(userMsg);
@@ -1047,7 +1148,13 @@ export class AIChatView extends ItemView {
 		let selectedText = "";
 		let selectionStart: number | undefined;
 
-		if (this.chatScope === "active-note" && !this.contextExcluded) {
+		if (quote) {
+			const file = this.app.vault.getAbstractFileByPath(quote.path);
+			activeFile = file instanceof TFile ? file : null;
+			activeContent = quote.source;
+			selectedText = quote.text;
+			selectionStart = quote.from;
+		} else if (this.chatScope === "active-note" && !this.contextExcluded) {
 			activeFile = (this.isContextPinned && this.pinnedContextFile)
 				? this.pinnedContextFile
 				: this.app.workspace.getActiveFile();
@@ -1093,12 +1200,13 @@ export class AIChatView extends ItemView {
 		}
 
 		this.activeProcessHandle = this.plugin.aiService.sendMessage({
-			prompt: text,
+			prompt: messageText,
+			contextInPrompt: Boolean(quote),
 			history: this.messages.slice(0, -2).filter((m) => m.content.trim()).map((m) => ({ role: m.role, content: m.content })),
 			provider: this.selectedProvider,
 			model: this.selectedModel,
 			reasoningEffort: this.selectedReasoningEffort,
-			scope: this.chatScope,
+			scope: quote ? "active-note" : this.chatScope,
 			mode: this.mode,
 			conversationId: this.conversationId,
 			activeFile,

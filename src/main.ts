@@ -117,6 +117,9 @@ import { AIChatView, VIEW_TYPE_AI_CHAT } from "./ai-chat-view";
 import { AIStorage } from "./ai-storage";
 import { type AIConnection, connectionProvider, normalizeConnections } from "./ai-connections";
 import { renderConnectionSettings } from "./ai-connections-settings";
+import { preserveSettingsScroll } from "./settings-scroll";
+import { agentSelectionExtension } from "./ai-selection-extension";
+import type { SelectionQuote } from "./ai-selection";
 import { createCustomMenu } from "./custom-menu";
 
 /* ── View type constants ───────────────────────────────────── */
@@ -3312,6 +3315,7 @@ export class DotfileView extends TextFileView {
 		}
 
 		const extensions: Extension[] = [
+			this.plugin.createAgentSelectionExtension(),
 			preventStuckAutoScrollExtension(),
 			lineNumbers(),
 			highlightActiveLineGutter(),
@@ -5010,6 +5014,7 @@ export default class VaultCodePlugin extends Plugin {
 		this.patchFileManagerPrompt();
 
 		this.registerDomEvent(window, "input", this.onInputCapture, true);
+		this.registerEditorExtension(this.createAgentSelectionExtension());
 
 		// Watch for ignore file changes at vault root and git status updates
 		this.registerEvent(
@@ -5735,9 +5740,30 @@ export default class VaultCodePlugin extends Plugin {
 		}
 	}
 
-	async activateAIChatView(): Promise<void> {
+	public createAgentSelectionExtension(): Extension {
+		return agentSelectionExtension({
+			enabled: () => Platform.isDesktop && this.settings.enableAIChat,
+			label: () => t("aiChatQuoteSelection"),
+			filePath: (editor) => {
+				let path: string | null = null;
+				this.app.workspace.iterateAllLeaves((leaf) => {
+					if (leaf.view.containerEl.contains(editor.dom)) path = this.getLeafFilePath(leaf);
+				});
+				return path;
+			},
+			onQuote: (quote) => { void this.activateAIChatView(quote); },
+		});
+	}
+
+	async activateAIChatView(quote?: SelectionQuote): Promise<void> {
+		if (!Platform.isDesktop || !this.settings.enableAIChat) return;
 		const { workspace } = this.app;
 		let leaf = workspace.getLeavesOfType(VIEW_TYPE_AI_CHAT)[0];
+		if (leaf && !(leaf.view instanceof AIChatView)) {
+			// A development reload can leave a placeholder for the previous view instance.
+			await leaf.setViewState({ type: "empty" });
+			await leaf.setViewState({ type: VIEW_TYPE_AI_CHAT, active: true });
+		}
 		if (!leaf) {
 			const rightLeaf = workspace.getRightLeaf(false);
 			if (rightLeaf) {
@@ -5758,6 +5784,7 @@ export default class VaultCodePlugin extends Plugin {
 		if (leaf) {
 			workspace.setActiveLeaf(leaf, { focus: true });
 			if (leaf.view instanceof AIChatView) {
+				if (quote) leaf.view.attachSelection(quote);
 				leaf.view.focusInput();
 			}
 		}
@@ -8322,6 +8349,12 @@ class VaultCodeSettingTab extends PluginSettingTab {
 		return [];
 	}
 
+	private refreshSettings(anchorSelector?: string): void {
+		const restoreScroll = preserveSettingsScroll(this.containerEl, anchorSelector);
+		this.display();
+		restoreScroll();
+	}
+
 	display(): void {
 		this.plugin.settingsTab = this;
 		const { containerEl } = this;
@@ -8345,7 +8378,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 						this.plugin.settings.language = value;
 						setLanguage(value);
 						await this.plugin.saveSettings();
-						this.display();
+						this.refreshSettings();
 					});
 			});
 
@@ -8757,6 +8790,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 			createSectionHeading(t("settingsGroupAI"), "sparkles");
 
 			new Setting(containerEl)
+				.setClass("vault-code-ai-enable-setting")
 				.setName(t("settingsEnableAIName"))
 				.setDesc(t("settingsEnableAIDesc"))
 				.addToggle((toggle) =>
@@ -8774,7 +8808,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 								this.app.workspace.detachLeavesOfType(VIEW_TYPE_AI_CHAT);
 							}
 							this.plugin.updateAllLeafHeaderActions();
-							this.display();
+							this.refreshSettings(".vault-code-ai-enable-setting");
 						}),
 				);
 
@@ -8816,7 +8850,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 			});
 			const refreshProvidersButton = titleRow.createEl("button", {
 				cls: "clickable-icon vault-code-agent-refresh",
-				attr: { type: "button", "aria-label": "Refresh providers", title: "Refresh providers" },
+				attr: { type: "button", "aria-label": "Refresh providers" },
 			});
 			setIcon(refreshProvidersButton, "refresh-cw");
 			sectionHeader.createDiv({
@@ -9315,7 +9349,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 							}
 						});
 
-						this.display();
+						this.refreshSettings(".vault-code-reset-setting");
 						new Notice(t("noticeAllSettingsReset"));
 					}),
 			);

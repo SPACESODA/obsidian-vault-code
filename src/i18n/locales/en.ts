@@ -209,6 +209,9 @@ export const en = {
 
 	// AI / Agent Chat
 	aiChatWithAgent: "Chat with Agent",
+	aiChatQuoteSelection: "Send to chat",
+	aiChatRemoveQuote: "Remove quote",
+	aiChatSelectionPlaceholder: "Ask about this selection...",
 	aiChatViewTitle: "Agent chat",
 	aiChatNewChat: "New chat",
 	aiChatPlaceholder: "Ask Agent anything...",

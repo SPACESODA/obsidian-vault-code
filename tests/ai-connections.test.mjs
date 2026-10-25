@@ -141,3 +141,14 @@ test('local Ollama servers are excluded from the CLI update queue',async()=>{
   h.service.updateAgent=async()=>{throw new Error('Local servers should not be updated from CLI settings')};
   assert.equal((await h.service.updateAllConnectedAgents()).total,0);
 });
+
+test('quoted selection context is sent once without exposing the rest of the source',async()=>{
+  const h=harness();
+  const prompt='Explain this\n\n> **Note/test.md · L2**\n>\n> selected snippet';
+  await h.send({prompt,contextInPrompt:true,activeFile:{path:'Note/test.md'},activeContent:'PRIVATE BEFORE\nselected snippet\nPRIVATE AFTER',selectedText:'selected snippet',mode:'edit'});
+  const messages=h.requests[0].body.messages;
+  assert.equal(messages.at(-1).content,prompt);
+  assert.equal((JSON.stringify(messages).match(/selected snippet/g)||[]).length,1);
+  assert.ok(!JSON.stringify(messages).includes('PRIVATE'));
+  assert.match(messages[0].content,/replace only that snippet/);
+});

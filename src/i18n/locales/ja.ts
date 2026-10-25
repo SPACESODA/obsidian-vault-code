@@ -211,6 +211,9 @@ export const ja: TranslationSchema = {
 
 	// Agent チャット
 	aiChatWithAgent: "Agent とチャット",
+	aiChatQuoteSelection: "チャットに送信",
+	aiChatRemoveQuote: "引用を削除",
+	aiChatSelectionPlaceholder: "選択範囲について質問…",
 	aiChatViewTitle: "Agent チャット",
 	aiChatNewChat: "新しいチャット",
 	aiChatPlaceholder: "Agent に質問を入力...",
