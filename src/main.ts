@@ -9,7 +9,6 @@ import {
 	TFile,
 	TFolder,
 	TAbstractFile,
-	TextAreaComponent,
 	ButtonComponent,
 	Modal,
 	FuzzySuggestModal,
@@ -113,6 +112,8 @@ import { DATA_PREVIEW_EXTENSIONS, PREVIEW_LIMITS } from "./file-preview-data";
 import { FilePreviewRenderer, formatPreviewError } from "./file-preview";
 import { PreviewSaveGuard, previewLineEnding, previewDocumentBytes, decodePreviewBytes, tableEditModel, type CellChange } from "./file-preview-edit";
 import { t, setLanguage, SUPPORTED_LANGUAGES } from "./i18n";
+import { BUILTIN_EXTENSION_COUNT, additionalEditorExtensions, editableEditorExtensions } from "./editor-extensions";
+import { normalizeEditorFontScale } from "./editor-font-scale";
 import { ExternalFolderFeature } from "./external-folders-ui";
 import { GitService } from "./git-service";
 import {
@@ -645,6 +646,7 @@ interface VaultCodeSettings {
 	tabSize: string;
 	indentWithTabs: string;
 	lineWrapping: boolean;
+	editorFontScale: number;
 	enableGitIntegration: boolean;
 	enableAIChat: boolean;
 	aiProvider: AIProvider;
@@ -661,8 +663,6 @@ interface VaultCodeSettings {
 	aiChatAutoClean: "never" | "7d" | "30d" | "90d";
 }
 
-const DEFAULT_EXTENSIONS =
-	"asm, astro, bash, bat, bib, c, c3, cc, cjs, cl, clj, cljc, cljs, cls, cmake, cmd, comp, cpp, cs, css, csv, cts, cu, cuh, cxx, dart, diff, dpk, dpr, edn, el, elm, email, eml, erl, ex, exs, f, f03, f08, f77, f90, f95, fish, for, frag, fs, fsi, fsx, fx, fxh, gd, gdshader, gdshaderinc, geom, gleam, glsl, go, gql, gradle, graphql, groovy, gsh, gvy, gy, h, handlebars, hbs, hcl, hh, hlsl, hpp, hrl, hs, htm, html, hxx, ini, java, jl, js, json, json5, jsonc, jsonl, jsx, kt, kts, less, lhs, liquid, lisp, log, lot, lsp, lua, m, make, mdx, mjml, mjs, mk, ml, mli, mm, mmd, mermaid, mts, ndjson, nim, nimble, nims, nix, odin, pas, patch, php, phtml, pine, pl, pm, pp, prisma, proto, ps1, psd1, psm1, py, pyi, pyw, r, rake, rb, rs, s, sass, sbt, sc, scala, scm, scss, sh, sol, sql, ss, sty, svelte, svg, swift, tex, text, tf, tfvars, toml, tres, ts, tscn, tsrx, tsv, tsx, txt, vert, vue, wat, wgsl, xml, xsd, yaml, yml, zig, zon, zsh";
 
 export const DEFAULT_OBSIDIANIGNORE_CONTENT = `# Obsidian & Git
 .obsidian/
@@ -684,7 +684,7 @@ const DEFAULT_SETTINGS: VaultCodeSettings = {
 	allowEditDotfiles: true,
 	allowEditCodeFiles: true,
 	disableAutoSave: true,
-	customFileExtensions: DEFAULT_EXTENSIONS,
+	customFileExtensions: "",
 	preventAutoOpenUnsupported: true,
 	openUnsupportedOnDoubleClick: false,
 	useObsidianIgnore: true,
@@ -693,6 +693,7 @@ const DEFAULT_SETTINGS: VaultCodeSettings = {
 	tabSize: "auto",
 	indentWithTabs: "auto",
 	lineWrapping: true,
+	editorFontScale: 100,
 	enableGitIntegration: true,
 	enableAIChat: true,
 	aiProvider: "antigravity",
@@ -3258,6 +3259,7 @@ export class DotfileView extends TextFileView {
 			parent: this.editorEl,
 		});
 
+		this.applyFontScale();
 		this.applyLanguage();
 		this.updateViewModeUI();
 
@@ -3820,6 +3822,12 @@ export class DotfileView extends TextFileView {
 			this.previewEl = null;
 		}
 		await super.onClose();
+	}
+
+	applyFontScale(): void {
+		this.editorEl?.setCssProps({ "--vault-code-font-scale": String(normalizeEditorFontScale(this.plugin.settings.editorFontScale) / 100) });
+		// Remeasure glyphs, wrapped lines, gutters, and the selection-to-Agent action.
+		this.editor?.requestMeasure();
 	}
 
 	toggleLineWrapping(wrap?: boolean): void {
@@ -4581,6 +4589,7 @@ export class DotfileView extends TextFileView {
 			}
 		} finally {
 			this.isDiffModePending = false;
+			this.plugin.updateLeafHeaderActions(this.leaf);
 		}
 	}
 
@@ -6274,16 +6283,8 @@ export default class VaultCodePlugin extends Plugin {
 
 	/* ── editability & extension handling ──────────────────── */
 
-	getCustomExtensionsSet(): Set<string> {
-		const raw = this.settings.customFileExtensions || "";
-		const set = new Set<string>();
-		for (const item of raw.split(/[\s,;]+/)) {
-			const cleaned = item.trim().replace(/^\.+/, "").toLowerCase();
-			if (cleaned.length > 0) {
-				set.add(cleaned);
-			}
-		}
-		return set;
+	getEditableExtensionsSet(): Set<string> {
+		return editableEditorExtensions(this.settings.customFileExtensions);
 	}
 
 	isMarkdownFile(file: TFile): boolean {
@@ -6450,23 +6451,10 @@ export default class VaultCodePlugin extends Plugin {
 				void this.toggleCodeEditorForLeaf(leaf);
 			});
 
-			const moreBtn =
-				(view as unknown as { moreOptionsButtonEl?: HTMLElement })
-					.moreOptionsButtonEl ??
-				actionsEl.querySelector(
-					".clickable-icon[aria-label*='options' i], .clickable-icon:last-child",
-				);
-
-			if (moreBtn && moreBtn.parentElement === actionsEl) {
-				actionsEl.insertBefore(btn, moreBtn);
-			} else {
-				actionsEl.appendChild(btn);
-			}
+			actionsEl.appendChild(btn);
 		}
 
-		// Git diff button in leaf header:
-		// DotfileView already has the inline stats button in its custom toolbar.
-		// For other views (e.g. Markdown view), we only show git-compare if the file has uncommitted changes and is supported.
+		// Show Git diff for supported changed files in native and code editor views.
 		const existingDiffBtn = actionsEl.querySelector<HTMLElement>(
 			".vault-code-header-diff-btn",
 		);
@@ -6491,7 +6479,6 @@ export default class VaultCodePlugin extends Plugin {
 			file && this.cachedModifiedFiles.has(file.path),
 		);
 		const shouldShowHeaderDiffBtn =
-			!(view instanceof DotfileView) &&
 			isGitReady &&
 			isSupportedForDiff &&
 			hasChanges;
@@ -6510,26 +6497,34 @@ export default class VaultCodePlugin extends Plugin {
 					evt.stopPropagation();
 					const currentFile =
 						(leaf.view as { file?: TFile }).file ?? file;
-					if (currentFile) {
+					if (leaf.view instanceof DotfileView) {
+						void leaf.view.toggleDiffMode();
+					} else if (currentFile) {
 						void this.openFileInDiffView(currentFile);
 					}
 				});
 
-				const moreBtn =
-					(view as unknown as { moreOptionsButtonEl?: HTMLElement })
-						.moreOptionsButtonEl ??
-					actionsEl.querySelector(
-						".clickable-icon[aria-label*='options' i], .clickable-icon:last-child",
-					);
-
-				if (moreBtn && moreBtn.parentElement === actionsEl) {
-					actionsEl.insertBefore(diffBtn, moreBtn);
-				} else {
-					actionsEl.appendChild(diffBtn);
-				}
+				actionsEl.appendChild(diffBtn);
 			}
 		} else if (existingDiffBtn) {
 			existingDiffBtn.remove();
+		}
+
+		const headerDiffButton = actionsEl.querySelector<HTMLElement>(".vault-code-header-diff-btn");
+		if (headerDiffButton) {
+			const active = view instanceof DotfileView && view.isDiffMode;
+			headerDiffButton.toggleClass("is-active", active);
+			headerDiffButton.setAttribute("aria-label", t(active ? "gitHideChanges" : "gitViewChanges"));
+		}
+
+		// Keep plugin actions together before native actions, in keyboard and visual order.
+		let previous: HTMLElement | null = null;
+		for (const selector of [".vault-code-header-ai-chat-btn", ".vault-code-header-diff-btn", ".vault-code-header-toggle-btn"]) {
+			const button = actionsEl.querySelector<HTMLElement>(selector);
+			if (!button) continue;
+			const anchor: ChildNode | null = previous ? previous.nextSibling : actionsEl.firstChild;
+			if (button !== anchor) actionsEl.insertBefore(button, anchor);
+			previous = button;
 		}
 	}
 
@@ -6556,7 +6551,7 @@ export default class VaultCodePlugin extends Plugin {
 		}
 
 		if (this.settings.allowEditCodeFiles && ext) {
-			return this.getCustomExtensionsSet().has(ext);
+			return this.getEditableExtensionsSet().has(ext);
 		}
 
 		return false;
@@ -6574,7 +6569,7 @@ export default class VaultCodePlugin extends Plugin {
 			return this.settings.allowEditDotfiles;
 		}
 		if (this.settings.allowEditCodeFiles) {
-			return this.getCustomExtensionsSet().has(ext);
+			return this.getEditableExtensionsSet().has(ext);
 		}
 		return false;
 	}
@@ -6941,6 +6936,7 @@ export default class VaultCodePlugin extends Plugin {
 	async loadSettings() {
 		const loaded = (await this.loadData()) as Partial<VaultCodeSettings> | null;
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, loaded ?? {});
+		this.settings.editorFontScale = normalizeEditorFontScale(loaded?.editorFontScale);
 		this.settings.aiConnections = normalizeConnections(loaded?.aiConnections);
 		if (this.settings.aiProvider === "ollama") {
 			const id = "local-ollama";
@@ -6949,30 +6945,9 @@ export default class VaultCodePlugin extends Plugin {
 			this.settings.aiProvider = connectionProvider(id);
 		}
 
-		// Ensure newly supported default extensions are available even with an existing saved configuration
-		if (loaded && typeof loaded.customFileExtensions === "string") {
-			const existingSet = new Set(
-				loaded.customFileExtensions
-					.split(/[\s,;]+/)
-					.map((s) => s.trim().toLowerCase().replace(/^\./, ""))
-					.filter(Boolean),
-			);
-			const defaultList = DEFAULT_EXTENSIONS
-				.split(/[\s,;]+/)
-				.map((s) => s.trim().toLowerCase().replace(/^\./, ""))
-				.filter(Boolean);
-			let updated = false;
-			for (const ext of defaultList) {
-				if (!existingSet.has(ext)) {
-					existingSet.add(ext);
-					updated = true;
-				}
-			}
-			if (updated) {
-				this.settings.customFileExtensions = Array.from(existingSet).sort().join(", ");
-				void this.saveSettings();
-			}
-		}
+		// Migrate the old full list to additions without losing user-defined extensions.
+		this.settings.customFileExtensions = additionalEditorExtensions(loaded?.customFileExtensions);
+		if (loaded && loaded.customFileExtensions !== this.settings.customFileExtensions) await this.saveSettings();
 
 		setLanguage(this.settings.language);
 	}
@@ -7633,7 +7608,7 @@ export default class VaultCodePlugin extends Plugin {
 		}
 		if (SUPPORTED_EXTENSIONS.has(lower)) return true;
 		if (BINARY_EXTENSIONS.has(lower)) return true;
-		if (this.getCustomExtensionsSet().has(lower)) return true;
+		if (this.getEditableExtensionsSet().has(lower)) return true;
 		const viewRegistry = (
 			this.app as unknown as {
 				viewRegistry?: {
@@ -8578,6 +8553,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 		// Group 2: Code editor
 		createSectionHeading(t("settingsGroupCodeEditor"), "code-xml");
 
+
 		const allowEditSetting = new Setting(containerEl)
 			.setName(t("settingsAllowEditDotfilesName"));
 		allowEditSetting.descEl.createDiv({
@@ -8618,38 +8594,23 @@ class VaultCodeSettingTab extends PluginSettingTab {
 					}),
 			);
 
-		let extensionsTextArea: TextAreaComponent | null = null;
-
 		new Setting(containerEl)
 			.setName(t("settingsCustomExtensionsName"))
-			.setDesc(t("settingsCustomExtensionsDesc"))
+			.setDesc(t("settingsCustomExtensionsDesc", BUILTIN_EXTENSION_COUNT))
 			.setClass("hidden-files-extensions-setting")
 			.addTextArea((text) => {
-				extensionsTextArea = text;
 				text
 					.setPlaceholder(t("settingsCustomExtensionsPlaceholder"))
 					.setValue(this.plugin.settings.customFileExtensions)
 					.onChange(async (value) => {
-						this.plugin.settings.customFileExtensions = value;
+						this.plugin.settings.customFileExtensions = additionalEditorExtensions(value);
 						await this.plugin.saveSettings();
 					});
+				text.inputEl.addEventListener("blur", () => { text.setValue(this.plugin.settings.customFileExtensions); });
 				text.inputEl.addClass("hidden-files-extensions-textarea");
-				text.inputEl.rows = 4;
+				text.inputEl.rows = 2;
 				text.inputEl.cols = 35;
-			})
-			.addButton((button) =>
-				button
-					.setButtonText(t("settingsButtonResetDefault"))
-					.setTooltip(t("settingsTooltipResetExtensions"))
-					.onClick(async () => {
-						this.plugin.settings.customFileExtensions = DEFAULT_EXTENSIONS;
-						await this.plugin.saveSettings();
-						if (extensionsTextArea) {
-							extensionsTextArea.setValue(DEFAULT_EXTENSIONS);
-						}
-						new Notice(t("noticeExtensionsReset"));
-					}),
-			);
+			});
 
 		new Setting(containerEl)
 			.setName(t("settingsTabSizeName"))
@@ -8737,6 +8698,30 @@ class VaultCodeSettingTab extends PluginSettingTab {
 					);
 				}),
 		);
+
+		const fontSetting = new Setting(containerEl).setName(t("settingsEditorFontSize"));
+		let fallbackFontValue: HTMLElement | undefined;
+		let resetFontScale = () => {};
+		const applyFontScale = (value: number) => {
+			this.plugin.settings.editorFontScale = normalizeEditorFontScale(value);
+			fallbackFontValue?.setText(`${this.plugin.settings.editorFontScale}%`);
+			this.app.workspace.iterateAllLeaves(leaf => { if (leaf.view instanceof DotfileView) leaf.view.applyFontScale(); });
+			void this.plugin.saveSettings();
+		};
+		fontSetting.addExtraButton(button => button.setIcon("rotate-ccw").setTooltip(t("settingsButtonResetDefault")).onClick(() => resetFontScale()));
+		fontSetting.addSlider(slider => {
+			slider.getValuePretty = () => `${slider.getValue()}%`;
+			slider.setLimits(100, 150, 5).setInstant(true).setValue(this.plugin.settings.editorFontScale).onChange(applyFontScale);
+			// Older Obsidian versions expose only a tooltip instead of a persistent value.
+			if (!fontSetting.controlEl.querySelector(".slider-value")) {
+				fallbackFontValue = fontSetting.controlEl.createSpan({ cls: "slider-value", text: slider.getValuePretty() });
+				slider.sliderEl.before(fallbackFontValue);
+			}
+			resetFontScale = () => {
+				slider.setValue(100);
+				if (this.plugin.settings.editorFontScale !== 100) applyFontScale(100);
+			};
+		});
 
 		// Group 3: Git (Desktop only)
 		if (Platform.isDesktop) {
@@ -8846,10 +8831,10 @@ class VaultCodeSettingTab extends PluginSettingTab {
 				attr: { type: "button", "aria-label": t("settingsAICLIRefreshProviders") },
 			});
 			setIcon(refreshProvidersButton, "refresh-cw");
-			sectionHeader.createDiv({
-				cls: "vault-code-agent-section-desc",
-				text: t("settingsAIAgentsDesc"),
-			});
+			const description = sectionHeader.createDiv({ cls: "vault-code-agent-section-desc" });
+			description.createSpan({ text: t("settingsAIAgentsDesc") });
+			description.appendText(" ");
+			description.createSpan({ cls: "vault-code-agent-subscription", text: t("settingsAIAgentsSubscription") });
 
 			const gridEl = agentSection.createDiv({ cls: "vault-code-agent-grid" });
 			const activityPanel = agentSection.createDiv({ cls: "vault-code-cli-activity" });
@@ -8906,6 +8891,12 @@ class VaultCodeSettingTab extends PluginSettingTab {
 				}>,
 				isChecking = false,
 			) => {
+				const statusLabels: Record<string, string> = {
+					"Installed": t("settingsAIAgentInstalled"),
+					"Signed in": t("settingsAIAgentSignedIn"),
+					"Sign-in required": t("settingsAIAgentSignInRequired"),
+					"Version check failed": t("settingsAIAgentVersionFailed"),
+				};
 				gridEl.empty();
 				providerBadges.clear();
 				for (const agent of agents.filter((a) => a.id !== "ollama")) {
@@ -8924,11 +8915,11 @@ class VaultCodeSettingTab extends PluginSettingTab {
 					const isInstalled = !!agent.isInstalled;
 					if (!isChecking) {
 						const versionText = isInstalled
-							? (agent.version || t("settingsAIAgentNotDetected"))
+							? (agent.version ? statusLabels[agent.version] ?? agent.version : t("settingsAIAgentNotDetected"))
 							: t("settingsAIAgentMissing");
 						const versionEl = textEl.createDiv({ cls: "vault-code-agent-card-version", text: versionText });
 						if (agent.diagnostic) versionEl.setAttribute("title", agent.diagnostic);
-						if (agent.connectionStatus) textEl.createDiv({ cls: "vault-code-agent-card-version", text: agent.connectionStatus });
+						if (agent.connectionStatus) textEl.createDiv({ cls: "vault-code-agent-card-version", text: statusLabels[agent.connectionStatus] ?? agent.connectionStatus });
 					}
 
 					const handleInstallAgent = async (
@@ -9317,6 +9308,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 						// Re-apply editor preferences (line wrapping) across all open editor leaves
 						this.app.workspace.iterateAllLeaves((leaf) => {
 							const view = leaf.view;
+							if (view instanceof DotfileView) view.applyFontScale();
 							if (view && "toggleLineWrapping" in view && typeof view.toggleLineWrapping === "function") {
 								(view as { toggleLineWrapping: (wrap: boolean) => void }).toggleLineWrapping(
 									this.plugin.settings.lineWrapping ?? true,

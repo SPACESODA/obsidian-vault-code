@@ -222,10 +222,11 @@ test('a broken executable after installation is reported as failure', async () =
 });
 
 test('native Claude update targets its detected executable', async () => {
-  const h = harness({ bins:{claude:process.execPath} });
+  const installedPath='/fake/native/claude';
+  const h = harness({ bins:{claude:installedPath}, filesystem:{existsSync:p=>p===installedPath,realpathSync:p=>p} });
   const r = await h.service.updateAgent('claude');
   assert.equal(r.success,true);
-  assert.ok(h.calls.some(c=>c.file===process.execPath && c.args[0]==='update'));
+  assert.ok(h.calls.some(c=>c.file===installedPath && c.args[0]==='update'));
 });
 
 test('cancelling during asynchronous setup never launches a process', async () => {

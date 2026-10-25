@@ -195,3 +195,13 @@ test('permission recovery opens the mode menu only on click and never resends',a
   action.children[0].events.click({});
   assert.equal(opened,1);assert.equal(view.mode,'safe');assert.equal(requests.length,1);
 });
+
+test('selection action repositions from measured glyphs when font geometry changes',()=>{
+  const h=toolbar();
+  h.view.coordsAtPos=()=>({top:120,bottom:150});
+  h.plugin.update({geometryChanged:true});
+  assert.equal(h.button.styles['--selection-agent-top'],'120px');
+  h.view.coordsAtPos=()=>({top:120,bottom:165});
+  h.plugin.update({geometryChanged:true});
+  assert.equal(h.button.styles['--selection-agent-top'],'127.5px');
+});
