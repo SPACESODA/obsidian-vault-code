@@ -1,0 +1,10 @@
+diff --git a/settings.json b/settings.json
+--- a/settings.json
++++ b/settings.json
+@@ -1,4 +1,5 @@
+ {
+-  "preview": false,
++  "preview": true,
++  "renderOnDemand": true,
+   "theme": "system"
+ }

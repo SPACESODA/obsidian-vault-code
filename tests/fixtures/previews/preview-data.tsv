@@ -1,0 +1,4 @@
+Name	Type	Enabled	Notes
+Ollama	Local	true	Runs on this device
+OpenRouter	API	true	Multiple providers
+Antigravity	CLI	true	Tool-enabled chat

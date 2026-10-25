@@ -1,0 +1,3 @@
+{"time": "09:00", "event": "Vault opened", "status": "Ready", "duration_ms": 120}
+{"time": "09:01", "event": "模型已連接", "status": "Ready", "duration_ms": 48}
+{"time": "09:02", "event": "Preview rendered", "status": "Complete", "duration_ms": 12}

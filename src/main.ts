@@ -105,6 +105,8 @@ import {
 	rejectChunk,
 } from "@codemirror/merge";
 import mjml2html from "mjml-browser";
+import { DATA_PREVIEW_EXTENSIONS } from "./file-preview-data";
+import { FilePreviewRenderer } from "./file-preview";
 import { t, setLanguage, SUPPORTED_LANGUAGES } from "./i18n";
 import { GitService } from "./git-service";
 import {
@@ -174,10 +176,12 @@ export function openInDefaultBrowser(url: string): void {
 export const VIEW_TYPE_DOTFILE = "vault-code-editor";
 
 /** Formats that support visual live-preview toggling inside the editor. */
-export const PREVIEWABLE_EXTENSIONS = new Set(["svg", "html", "htm", "mjml"]);
+export const PREVIEWABLE_EXTENSIONS = new Set(["svg", "html", "htm", "mjml", ...DATA_PREVIEW_EXTENSIONS]);
 
 /** All code and data file extensions supported for direct opening and editing. */
 export const SUPPORTED_EXTENSIONS = new Set([
+	"mmd",
+	"mermaid",
 	"asm",
 	"astro",
 	"bash",
@@ -652,7 +656,7 @@ interface VaultCodeSettings {
 }
 
 const DEFAULT_EXTENSIONS =
-	"asm, astro, bash, bat, bib, c, c3, cc, cjs, cl, clj, cljc, cljs, cls, cmake, cmd, comp, cpp, cs, css, csv, cts, cu, cuh, cxx, dart, diff, dpk, dpr, edn, el, elm, email, eml, erl, ex, exs, f, f03, f08, f77, f90, f95, fish, for, frag, fs, fsi, fsx, fx, fxh, gd, gdshader, gdshaderinc, geom, gleam, glsl, go, gql, gradle, graphql, groovy, gsh, gvy, gy, h, handlebars, hbs, hcl, hh, hlsl, hpp, hrl, hs, htm, html, hxx, ini, java, jl, js, json, json5, jsonc, jsonl, jsx, kt, kts, less, lhs, liquid, lisp, log, lot, lsp, lua, m, make, mdx, mjml, mjs, mk, ml, mli, mm, mts, ndjson, nim, nimble, nims, nix, odin, pas, patch, php, phtml, pine, pl, pm, pp, prisma, proto, ps1, psd1, psm1, py, pyi, pyw, r, rake, rb, rs, s, sass, sbt, sc, scala, scm, scss, sh, sol, sql, ss, sty, svelte, svg, swift, tex, text, tf, tfvars, toml, tres, ts, tscn, tsrx, tsv, tsx, txt, vert, vue, wat, wgsl, xml, xsd, yaml, yml, zig, zon, zsh";
+	"asm, astro, bash, bat, bib, c, c3, cc, cjs, cl, clj, cljc, cljs, cls, cmake, cmd, comp, cpp, cs, css, csv, cts, cu, cuh, cxx, dart, diff, dpk, dpr, edn, el, elm, email, eml, erl, ex, exs, f, f03, f08, f77, f90, f95, fish, for, frag, fs, fsi, fsx, fx, fxh, gd, gdshader, gdshaderinc, geom, gleam, glsl, go, gql, gradle, graphql, groovy, gsh, gvy, gy, h, handlebars, hbs, hcl, hh, hlsl, hpp, hrl, hs, htm, html, hxx, ini, java, jl, js, json, json5, jsonc, jsonl, jsx, kt, kts, less, lhs, liquid, lisp, log, lot, lsp, lua, m, make, mdx, mjml, mjs, mk, ml, mli, mm, mmd, mermaid, mts, ndjson, nim, nimble, nims, nix, odin, pas, patch, php, phtml, pine, pl, pm, pp, prisma, proto, ps1, psd1, psm1, py, pyi, pyw, r, rake, rb, rs, s, sass, sbt, sc, scala, scm, scss, sh, sol, sql, ss, sty, svelte, svg, swift, tex, text, tf, tfvars, toml, tres, ts, tscn, tsrx, tsv, tsx, txt, vert, vue, wat, wgsl, xml, xsd, yaml, yml, zig, zon, zsh";
 
 export const DEFAULT_OBSIDIANIGNORE_CONTENT = `# Obsidian & Git
 .obsidian/
@@ -2573,6 +2577,7 @@ export class DotfileView extends TextFileView {
 	public editor: EditorView | null = null;
 	private editorEl: HTMLElement | null = null;
 	private previewEl: HTMLElement | null = null;
+	private filePreviewRenderer: FilePreviewRenderer | null = null;
 	private langEl: HTMLElement | null = null;
 	private lineWrapBtnEl: HTMLButtonElement | null = null;
 	private searchBtnEl: HTMLButtonElement | null = null;
@@ -2691,6 +2696,8 @@ export class DotfileView extends TextFileView {
 			this.initialDiffRequested = s.diff;
 		}
 		await super.setState(state, result);
+		// File loading can update the UI before the saved preview flag is restored.
+		this.updateViewModeUI();
 
 		if (
 			this.initialDiffRequested &&
@@ -3133,7 +3140,7 @@ export class DotfileView extends TextFileView {
 		});
 		this.gitDiffStatsBtnEl.hide();
 
-		// View / Code toggle button for previewable files (svg, html, htm)
+		// Code / Preview toggle for supported visual and data formats
 		this.viewToggleBtnEl = rightEl.createEl("button", {
 			cls: "hidden-files-editor-view-toggle-btn",
 		});
@@ -3712,6 +3719,7 @@ export class DotfileView extends TextFileView {
 	}
 
 	override async onUnloadFile(file: TFile): Promise<void> {
+		this.filePreviewRenderer?.clear();
 		if (this.diffToolbarEl) {
 			this.diffToolbarEl.remove();
 			this.diffToolbarEl = null;
@@ -3727,6 +3735,7 @@ export class DotfileView extends TextFileView {
 			this.diffToolbarEl = null;
 		}
 		this.isDiffMode = false;
+		this.filePreviewRenderer?.clear();
 		if (this.editor) {
 			this.editor.destroy();
 			this.editor = null;
@@ -3778,6 +3787,7 @@ export class DotfileView extends TextFileView {
 		const previewable = this.isPreviewable();
 
 		if (!previewable) {
+			this.filePreviewRenderer?.clear();
 			this.isPreviewMode = false;
 			if (this.viewToggleBtnEl) this.viewToggleBtnEl.hide();
 			if (this.previewEl) this.previewEl.hide();
@@ -3815,6 +3825,7 @@ export class DotfileView extends TextFileView {
 				void this.renderPreview();
 			}
 		} else {
+			this.filePreviewRenderer?.clear();
 			if (this.previewEl) this.previewEl.hide();
 			if (this.searchBtnEl) this.searchBtnEl.show();
 			if (this.lineWrapBtnEl) this.lineWrapBtnEl.show();
@@ -3829,12 +3840,16 @@ export class DotfileView extends TextFileView {
 
 	private async renderPreview(): Promise<void> {
 		if (!this.previewEl || !this.file) return;
+		this.filePreviewRenderer?.clear();
 		this.previewEl.empty();
 
 		const ext = this.file.extension?.toLowerCase() ?? "";
 		const rawContent = this.getViewData();
 
-		if (ext === "svg") {
+		if (DATA_PREVIEW_EXTENSIONS.has(ext)) {
+			this.filePreviewRenderer ??= new FilePreviewRenderer(this.app, this);
+			await this.filePreviewRenderer.render(this.previewEl, ext, rawContent, this.file.path);
+		} else if (ext === "svg") {
 			this.renderSvgPreview(rawContent);
 		} else if (ext === "html" || ext === "htm") {
 			await this.renderHtmlPreview(rawContent);

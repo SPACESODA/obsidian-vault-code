@@ -1,0 +1,12 @@
+diff --git a/README.md b/README.md
+--- a/README.md
++++ b/README.md
+@@ -1,5 +1,6 @@
+ # Vault Code
+ 
+-A file manager and code editor.
++A lightweight workspace for code and notes.
+ 
+-Preview HTML and SVG.
++Preview HTML, SVG, and MJML.
++Explore tables, JSON, diagrams, and patches.

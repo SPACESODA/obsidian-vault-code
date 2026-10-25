@@ -1,0 +1,8 @@
+sequenceDiagram
+    actor User
+    participant Editor as Vault Code
+    participant Renderer as Preview
+    User->>Editor: Open a diagram
+    User->>Editor: Click Preview
+    Editor->>Renderer: Render current content
+    Renderer-->>User: Show diagram

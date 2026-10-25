@@ -1,0 +1,27 @@
+{
+  "name": "Vault Code",
+  "version": "2.1.3",
+  "enabled": true,
+  "description": "A lightweight code editor inside Obsidian.",
+  "features": [
+    "Tables",
+    "JSON trees",
+    "Diagrams",
+    "Patches"
+  ],
+  "connections": {
+    "cli": {
+      "provider": "Antigravity",
+      "ready": true
+    },
+    "local": {
+      "provider": "Ollama",
+      "url": "http://127.0.0.1:11434/v1"
+    }
+  },
+  "limits": {
+    "rows": 500,
+    "optional": null
+  },
+  "安全測試": "<b>This stays plain text.</b>"
+}

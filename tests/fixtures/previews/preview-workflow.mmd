@@ -1,0 +1,6 @@
+flowchart LR
+    A[Open a file] --> B{Code or Preview?}
+    B -->|Code| C[Edit the source]
+    B -->|Preview| D[Render on demand]
+    C --> B
+    D --> E[Review and share]
