@@ -8442,6 +8442,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 		this.updateButtonState = updateButtonState;
 
 		new Setting(containerEl)
+			.setClass("vault-code-setting-with-actions")
 			.setName(
 				createSettingNameWithFilename(
 					t("settingsObsidianIgnoreName"),

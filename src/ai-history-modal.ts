@@ -184,7 +184,7 @@ export class AIChatHistoryModal extends Modal {
 
 	private formatDate(file: TFile): string {
 		const cache = this.app.metadataCache.getFileCache(file);
-		const last = chatProperty((cache?.frontmatter ?? {}) as Record<string, unknown>, "last_chat");
+		const last = chatProperty(cache?.frontmatter ?? {}, "last_chat");
 		const lastChat = typeof last === "string" ? last.trim() : "";
 		if (lastChat) {
 			return lastChat.replace(/^(\d{4}-\d{2}-\d{2})\s+/, "$1  ");

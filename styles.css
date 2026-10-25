@@ -180,10 +180,13 @@ body .workspace-leaf-content .view-content.hidden-files-editor-container,
 	flex-shrink: 0;
 	/* Center within one inherited text line, never the full wrapped block. */
 	height: 1.55em;
-	height: 1lh;
 	color: var(--collapse-icon-color, var(--text-faint));
 	transition: color 0.15s ease;
 	line-height: inherit;
+}
+
+@supports (height: 1lh) {
+	.hidden-files-editor-wrapper .cm-fold-marker { height: 1lh; }
 }
 
 .hidden-files-editor-wrapper .cm-fold-marker svg {
@@ -857,7 +860,7 @@ body .hidden-files-editor-wrapper .cm-searchMatch-selected {
 .hidden-files-settings { container-type: inline-size; }
 @container (max-width: 600px) {
 	.hidden-files-settings .setting-item:not(.mod-toggle):not(.setting-item-heading),
-	.hidden-files-settings .setting-item.mod-toggle:has(.setting-item-control button) {
+	.hidden-files-settings .setting-item.vault-code-setting-with-actions {
 		flex-direction: column;
 		align-items: stretch;
 		gap: 10px;
@@ -2620,7 +2623,6 @@ input[type="text"].vault-code-chat-title-input:focus-visible {
 .vault-code-chat-markdown.markdown-rendered .task-list-item {
 	list-style: none;
 	position: relative;
-	text-indent: 0;
 	padding-inline-start: 0.2em;
 }
 .vault-code-chat-markdown.markdown-rendered .task-list-item > .task-list-item-checkbox,
@@ -3826,12 +3828,15 @@ svg.vault-code-spin {
 .vault-code-chat-quote summary::marker {
 	display: none;
 }
-.vault-code-chat-quote summary:focus,
-.vault-code-chat-quote summary:focus-visible,
-.vault-code-chat-quote:focus,
-.vault-code-chat-quote:focus-visible {
-	outline: none !important;
-	box-shadow: none !important;
+.vault-code-ai-chat-view .vault-code-chat-quote summary:focus:not(:focus-visible),
+.vault-code-ai-chat-view .vault-code-chat-quote:focus:not(:focus-visible) {
+	outline: none;
+	box-shadow: none;
+}
+.vault-code-ai-chat-view .vault-code-chat-quote summary:focus-visible {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: 2px;
+	box-shadow: none;
 }
 .vault-code-chat-quote-chevron {
 	display: inline-flex;
