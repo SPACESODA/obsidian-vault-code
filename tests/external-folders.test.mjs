@@ -133,3 +133,15 @@ test('aliases are validated separately when their logical ignore rules differ',a
   await assert.rejects(f.service.add('','External',f.target),code('loop'));
   await assert.rejects(fs.lstat(path.join(f.vault,'External')),error=>error.code==='ENOENT');
 });
+
+test('an internal destination alias cannot conceal a folder loop or protected location',async t=>{
+  const f=await fixture(t);const inside=path.join(f.vault,'Inside');await fs.mkdir(inside);
+  await fs.symlink(inside,path.join(f.vault,'Alias'),'dir');
+  await assert.rejects(f.service.add('Alias','Loop',inside),code('loop'));
+  await assert.rejects(fs.lstat(path.join(inside,'Loop')),error=>error.code==='ENOENT');
+  await fs.mkdir(path.join(f.vault,'.obsidian'));
+  await fs.symlink(path.join(f.vault,'.obsidian'),path.join(f.vault,'SettingsAlias'),'dir');
+  await assert.rejects(f.service.add('SettingsAlias','External',f.target),code('location'));
+  await f.service.add('Alias','External',f.target);
+  assert.equal(await fs.readFile(path.join(inside,'External','original.txt'),'utf8'),'Original');
+});

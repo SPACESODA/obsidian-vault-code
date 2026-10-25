@@ -2,7 +2,7 @@
 
 <span style="color: #8a5cf5; font-weight: bold; font-size: 1.15em;">Vault Code turns your Obsidian vault into a workspace for notes, code, and files.</span>
 
-View hidden files, create and organize files of any kind, and edit code in a beautiful editor. Preview HTML, SVG, and MJML files and collaborate with AI agents, without leaving Obsidian.
+View hidden files, create and organize files of any kind, and edit code in a beautiful editor. Preview web pages, diagrams, and data, or work with AI agents—all without leaving Obsidian.
 
 Vault Code follows your Obsidian theme and display language: English, 繁體中文, 简体中文, 日本語, 한국어, Español, Français, Italiano, Deutsch, and Русский.
 
@@ -63,7 +63,7 @@ Right-click a file or folder in the explorer:
 * **New folder here**: Name a folder directly in the explorer.
 * **New file here (any extension)**: Create any file type, including dotfiles and nested paths such as `src/components/Button.tsx`.
 * **Edit file name and extension...**: Rename files or change their extensions with built-in validation.
-* **Add external folder by symlink (Desktop)**: Choose a disk folder to add by symlink. Edits affect the originals; deleting the symlink leaves them intact. Overlapping targets are allowed; Obsidian may omit unsupported symlinks.
+* **Add external folder by symlink (Desktop)**: Bring a folder from your disk into the explorer. Edits affect the originals; deleting the symlink keeps the original folder intact.
 
 ### 🌿 Review changes with Git (Desktop)
 

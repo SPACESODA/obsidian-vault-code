@@ -27,12 +27,16 @@ export class ExternalFolders {
 	private async location(relative: string): Promise<{ root: string; absolute: string }> {
 		if (this.path.isAbsolute(relative) || relative.split(/[\\/]/).some(part => part === "..")) throw new ExternalFolderError("location");
 		const root = await this.fs.realpath(this.vault);
-		const absolute = this.path.resolve(root, relative);
-		if (absolute === root || !this.inside(root, absolute)) throw new ExternalFolderError("location");
-		const segments = relative.split(/[\\/]/);
-		if (segments.includes(".git") || segments.includes(".trash") || this.inside(this.path.resolve(root, this.configDir), absolute)) throw new ExternalFolderError("location");
-		const parent = await this.fs.realpath(this.path.dirname(absolute));
+		const requested = this.path.resolve(root, relative);
+		if (requested === root || !this.inside(root, requested)) throw new ExternalFolderError("location");
+		const parent = await this.fs.realpath(this.path.dirname(requested));
 		if (!this.inside(root, parent)) throw new ExternalFolderError("location");
+		// Resolve parent aliases before checking loops, protected locations, or concurrent changes.
+		const absolute = this.path.join(parent, this.path.basename(requested));
+		for (const candidate of [requested, absolute]) {
+			const segments = this.path.relative(root, candidate).split(/[\\/]/);
+			if (segments.includes(".git") || segments.includes(".trash") || this.inside(this.path.resolve(root, this.configDir), candidate)) throw new ExternalFolderError("location");
+		}
 		return { root, absolute };
 	}
 
