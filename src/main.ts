@@ -5066,7 +5066,7 @@ export default class VaultCodePlugin extends Plugin {
 
 			if (Platform.isDesktop) {
 				if (this.settings.enableAIChat) {
-					void this.initAIChatLeaf();
+					await this.reloadAIChatLeaves();
 					if (this.settings.aiChatAutoClean !== "never") {
 						void this.aiStorage.runAutoCleanup(
 							this.settings.aiChatFolder,
@@ -5081,6 +5081,9 @@ export default class VaultCodePlugin extends Plugin {
 
 		if (this.app.workspace.layoutReady) {
 			void this.reloadCodeEditorLeaves();
+			if (Platform.isDesktop && this.settings.enableAIChat) {
+				void this.reloadAIChatLeaves();
+			}
 			if (Platform.isDesktop && this.isGitAvailable()) {
 				void this.gitService.getRepoRoot().then(() => {
 					this.updateAllLeafHeaderActions();
@@ -5725,10 +5728,65 @@ export default class VaultCodePlugin extends Plugin {
 		}
 	}
 
+	private async reloadAIChatLeaves(): Promise<void> {
+		if (!Platform.isDesktop) return;
+
+		if (!this.settings.enableAIChat) {
+			this.app.workspace.detachLeavesOfType(VIEW_TYPE_AI_CHAT);
+			return;
+		}
+
+		const leavesToReload: WorkspaceLeaf[] = [];
+		this.app.workspace.iterateAllLeaves((leaf) => {
+			const viewState = leaf.getViewState();
+			if (viewState && viewState.type === VIEW_TYPE_AI_CHAT) {
+				const view = leaf.view;
+				const isDeadOrStale =
+					!(view instanceof AIChatView) ||
+					view.plugin !== this ||
+					view.containerEl.children.length === 0;
+
+				if (isDeadOrStale) {
+					leavesToReload.push(leaf);
+				}
+			}
+		});
+
+		for (const leaf of leavesToReload) {
+			const viewState = leaf.getViewState();
+			const wasActive = this.app.workspace.getActiveViewOfType(AIChatView) === leaf.view;
+
+			// Clear view state first so Obsidian purges the dead placeholder and invokes
+			// the newly registered AIChatView constructor cleanly
+			await leaf.setViewState({ type: "empty" });
+			await leaf.setViewState({
+				type: VIEW_TYPE_AI_CHAT,
+				state: viewState?.state ?? {},
+				active: wasActive,
+			});
+		}
+
+		if (this.app.workspace.getLeavesOfType(VIEW_TYPE_AI_CHAT).length === 0) {
+			await this.initAIChatLeaf();
+		}
+	}
+
 	async initAIChatLeaf(): Promise<void> {
 		if (!Platform.isDesktop || !this.settings.enableAIChat) return;
 		const { workspace } = this.app;
-		if (workspace.getLeavesOfType(VIEW_TYPE_AI_CHAT).length > 0) {
+		const existingLeaves = workspace.getLeavesOfType(VIEW_TYPE_AI_CHAT);
+		if (existingLeaves.length > 0) {
+			for (const leaf of existingLeaves) {
+				if (!(leaf.view instanceof AIChatView) || leaf.view.plugin !== this) {
+					const viewState = leaf.getViewState();
+					await leaf.setViewState({ type: "empty" });
+					await leaf.setViewState({
+						type: VIEW_TYPE_AI_CHAT,
+						state: viewState?.state ?? {},
+						active: false,
+					});
+				}
+			}
 			return;
 		}
 		const rightLeaf = workspace.getRightLeaf(false);

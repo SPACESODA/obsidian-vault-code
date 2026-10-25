@@ -98,7 +98,7 @@ export class ModelSuggestModal extends SuggestModal<AgyModelInfo> {
 }
 
 export class AIChatView extends ItemView {
-	private plugin: VaultCodePlugin;
+	public plugin: VaultCodePlugin;
 	private messages: ChatMessage[] = [];
 	private conversationId?: string;
 	private selectedProvider: AIProvider;
@@ -209,6 +209,25 @@ export class AIChatView extends ItemView {
 		}
 
 		this.updateModelBtnLabel();
+	}
+
+	override getState(): Record<string, unknown> {
+		return {
+			chatPath: this.currentChatFile?.path || null,
+		};
+	}
+
+	override async setState(state: Record<string, unknown>, result: unknown): Promise<void> {
+		const superSetState = (ItemView.prototype as unknown as { setState?: (s: unknown, r: unknown) => Promise<void> }).setState;
+		if (superSetState) {
+			await superSetState.call(this, state, result);
+		}
+		if (typeof state?.chatPath === "string" && state.chatPath) {
+			const file = this.app.vault.getAbstractFileByPath(state.chatPath);
+			if (file instanceof TFile) {
+				await this.loadChatFromFile(file);
+			}
+		}
 	}
 
 	async onClose(): Promise<void> {
