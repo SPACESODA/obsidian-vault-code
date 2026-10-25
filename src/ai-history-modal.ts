@@ -3,7 +3,6 @@ import type VaultCodePlugin from "./main";
 import { t } from "./i18n";
 import { createCustomMenu } from "./custom-menu";
 
-import { chatProperty } from "./ai-chat-properties";
 
 export class AIChatHistoryModal extends Modal {
 	private plugin: VaultCodePlugin;
@@ -183,19 +182,7 @@ export class AIChatHistoryModal extends Modal {
 	}
 
 	private formatDate(file: TFile): string {
-		const cache = this.app.metadataCache.getFileCache(file);
-		const last = chatProperty(cache?.frontmatter ?? {}, "last_chat");
-		const lastChat = typeof last === "string" ? last.trim() : "";
-		if (lastChat) {
-			return lastChat.replace(/^(\d{4}-\d{2}-\d{2})\s+/, "$1  ");
-		}
-		const created = typeof cache?.frontmatter?.created === "string" ? cache.frontmatter.created.trim() : "";
-		if (created) {
-			return created.replace(/^(\d{4}-\d{2}-\d{2})\s+/, "$1  ");
-		}
-		const d = new Date(file.stat.mtime);
-		const pad = (n: number) => String(n).padStart(2, "0");
-		return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}  ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+		return this.plugin.aiStorage.formatDateTime(new Date(this.plugin.aiStorage.getLastChatTime(file))).replace(" ", "  ");
 	}
 
 	private updateCount(): void {

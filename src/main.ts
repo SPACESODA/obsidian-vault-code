@@ -114,6 +114,7 @@ import { PreviewSaveGuard, previewLineEnding, previewDocumentBytes, decodePrevie
 import { t, setLanguage, SUPPORTED_LANGUAGES } from "./i18n";
 import { BUILTIN_EXTENSION_COUNT, additionalEditorExtensions, editableEditorExtensions } from "./editor-extensions";
 import { normalizeEditorFontScale } from "./editor-font-scale";
+import { ensureChatPropertyTypes } from "./ai-chat-property-types";
 import { ExternalFolderFeature } from "./external-folders-ui";
 import { GitService } from "./git-service";
 import {
@@ -619,6 +620,7 @@ declare module "obsidian" {
 
 /** Internal adapter methods that exist at runtime but aren't typed. */
 interface PrivateAdapter {
+	fsPromises?: { stat(path: string): Promise<{ isDirectory(): boolean }> };
 	_exists(fullPath: string, path: string): Promise<boolean>;
 	getFullPath(path: string): string;
 	getFullRealPath(realPath: string): string;
@@ -4958,6 +4960,7 @@ export default class VaultCodePlugin extends Plugin {
 	private aiChatRibbonIconEl: HTMLElement | null = null;
 	private externalFolders?: ExternalFolderFeature;
 	private aiChatLeaves = new ChatLeafManager<WorkspaceLeaf>();
+	private chatPropertyTypesTask: Promise<void> | null = null;
 
 	async onload() {
 		this.aiService = new AIService(this.app, this);
@@ -5762,7 +5765,12 @@ export default class VaultCodePlugin extends Plugin {
 		await this.ensureAIChatLeaf();
 	}
 
-	private ensureAIChatLeaf(): Promise<WorkspaceLeaf | null> {
+	private async ensureAIChatLeaf(): Promise<WorkspaceLeaf | null> {
+		if (!Platform.isDesktop || !this.settings.enableAIChat || this.unloading) return null;
+		// Startup enters here after layout is ready; enabling chat later uses the same path.
+		await (this.chatPropertyTypesTask ??= ensureChatPropertyTypes(this.app)
+			.catch((error: unknown) => { console.warn("Vault Code: Could not register chat date types", error); })
+			.finally(() => { this.chatPropertyTypesTask = null; }));
 		const { workspace } = this.app;
 		return this.aiChatLeaves.ensure({
 			enabled: () => Platform.isDesktop && this.settings.enableAIChat && !this.unloading,
@@ -7103,7 +7111,20 @@ export default class VaultCodePlugin extends Plugin {
 			path: string,
 		) => {
 			if (this.settings.showHiddenFiles) {
-				if (this.isPathIgnored(path)) {
+				let ignored = this.isPathIgnored(path);
+				// An unindexed hidden folder looks like a file to the vault. Resolve its type
+				// only when a directory-only rule would change the ignore decision.
+				if (ignored !== this.isPathIgnored(path, true)) {
+					try {
+						// This callback may already be inside the adapter queue. Calling its
+						// public stat() here would enqueue work behind the scan awaiting us.
+						if (adapter.fsPromises && adapter.getFullPath) {
+							const stat = await adapter.fsPromises.stat(adapter.getFullPath(path));
+							ignored = this.isPathIgnored(path, stat.isDirectory());
+						}
+					} catch { /* Preserve the existing decision for missing or unreadable paths. */ }
+				}
+				if (ignored) {
 					this.hiddenPaths.delete(path);
 					return origReconcileDeletion(realPath, path);
 				}

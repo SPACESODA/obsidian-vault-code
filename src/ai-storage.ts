@@ -2,6 +2,7 @@ import { App, TFile, TFolder, normalizePath, parseYaml, stringifyYaml } from "ob
 import type { ChatMessage } from "./ai-chat-view";
 import { type AIProvider, type ReasoningEffort, supportsReasoningEffort } from "./ai-service";
 
+import { parseChatTimestamp } from "./ai-chat-dates";
 import { parseChatTurns } from "./ai-chat-turns";
 import { CHAT_PROPERTIES, chatProperty, migrateChatProperties } from "./ai-chat-properties";
 
@@ -117,14 +118,20 @@ export class AIStorage {
 	 * Serializes chat metadata and message transcript into a clean Markdown string.
 	 * Writes namespaced YAML chat properties (no title H1 in body) and uses '##### You' and '##### Agent' (H5).
 	 */
+	private formatPropertyDateTime(value: unknown): string | null {
+		const timestamp = parseChatTimestamp(value);
+		return timestamp === null ? null : this.formatDateTime(new Date(timestamp)).replace(" ", "T");
+	}
+
 	public serializeChat(metadata: ChatMetadata, messages: ChatMessage[]): string {
-		const lastChat = metadata.last_chat || this.formatDateTime();
+		const lastChat = this.formatPropertyDateTime(metadata.last_chat) ?? this.formatDateTime().replace(" ", "T");
+		const created = this.formatPropertyDateTime(metadata.created);
 		const yamlLines = [
 			"---",
 			"type: Agent Chat",
 			`title: ${JSON.stringify(metadata.title)}`,
-			`created: ${JSON.stringify(metadata.created)}`,
-			`chat_last: ${JSON.stringify(lastChat)}`,
+			`chat_created: ${created ?? JSON.stringify(metadata.created)}`,
+			`chat_last: ${lastChat}`,
 			`chat_scope: ${JSON.stringify(metadata.scope)}`,
 			`chat_mode: ${JSON.stringify(metadata.mode)}`,
 		];
@@ -180,9 +187,12 @@ export class AIStorage {
 			bodyContent = frontmatter.body;
 			const fm = frontmatter.properties;
 			if (typeof fm.title === "string") metadata.title = fm.title;
-			if (typeof fm.created === "string") metadata.created = fm.created;
+			const created = chatProperty(fm, "created");
+			if (typeof created === "string") metadata.created = created;
+			else if (created instanceof Date && parseChatTimestamp(created) !== null) metadata.created = this.formatPropertyDateTime(created)!;
 			const last = chatProperty(fm, "last_chat");
 			if (typeof last === "string") metadata.last_chat = last;
+			else if (last instanceof Date && parseChatTimestamp(last) !== null) metadata.last_chat = this.formatDateTime(last).replace(" ", "T");
 			const provider = chatProperty(fm, "provider");
 			if (typeof provider === "string") metadata.provider = provider as AIProvider;
 			const model = chatProperty(fm, "model");
@@ -348,14 +358,19 @@ export class AIStorage {
 			// Preserve user properties and the original creation date while replacing owned metadata.
 			for (const key of Object.values(CHAT_PROPERTIES)) delete properties[key];
 			Object.assign(properties, serialized.properties);
-			if (previous && Object.prototype.hasOwnProperty.call(previous.properties, "created")) properties.created = previous.properties.created;
+			const originalCreated = previous ? chatProperty(previous.properties, "created") : undefined;
+			if (originalCreated !== undefined) properties.chat_created = this.formatPropertyDateTime(originalCreated) ?? originalCreated;
 			return `---\n${stringifyYaml(properties).trimEnd()}\n---\n${serialized.body}`;
 		});
 	}
 
-	/**
-	 * Lists all chat notes in the vault, sorted by last modified (newest first).
-	 */
+	/** Shared by history sorting and its visible date; renaming a note does not count as chatting. */
+	public getLastChatTime(file: TFile): number {
+		const properties = this.app.metadataCache.getFileCache(file)?.frontmatter ?? {};
+		return parseChatTimestamp(chatProperty(properties, "last_chat")) ?? file.stat.mtime;
+	}
+
+	/** Lists chat notes by last chat time, newest first; older notes fall back to modification time. */
 	public async listChatNotes(folderPath: string): Promise<TFile[]> {
 		const normalized = normalizePath(folderPath).replace(/^\/+|\/+$/g, "");
 		const allFiles = this.app.vault.getMarkdownFiles();
@@ -380,7 +395,8 @@ export class AIStorage {
 			}
 		}
 
-		return chatFiles.sort((a, b) => b.stat.mtime - a.stat.mtime);
+		const timestamps = new Map(chatFiles.map(file => [file, this.getLastChatTime(file)]));
+		return chatFiles.sort((a, b) => timestamps.get(b)! - timestamps.get(a)! || a.path.localeCompare(b.path));
 	}
 
 	/**
