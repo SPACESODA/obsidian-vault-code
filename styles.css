@@ -2542,6 +2542,13 @@ input[type="text"].vault-code-chat-title-input:focus-visible {
 }
 .vault-code-chat-markdown blockquote > :first-child { margin-top: 0; }
 .vault-code-chat-markdown blockquote > :last-child { margin-bottom: 0; }
+.vault-code-chat-markdown blockquote pre {
+	margin: 0.5em 0 0 0;
+	padding: 8px 10px;
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	font-size: 0.9em;
+}
 .vault-code-chat-markdown :is(ul, ol) { margin: 0.65em 0; padding-inline-start: 1.8em; }
 .vault-code-chat-markdown li { margin: 0.25em 0; }
 .vault-code-chat-markdown li > :is(ul, ol) { margin: 0.25em 0; }

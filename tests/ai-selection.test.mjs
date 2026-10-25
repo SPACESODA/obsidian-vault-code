@@ -40,6 +40,28 @@ test('quoted messages preserve Markdown safely inside a blockquote and omit unse
   assert.ok(!message.includes('PRIVATE'));
 });
 
+test('quoteMessage wraps snippets in code fences with language detection for dotfiles and extensionless files', () => {
+  const qDot = { path: '.gitignore', startLine: 1, endLine: 2, text: 'node_modules/\n.obsidian/' };
+  const mDot = quoteMessage('What is this?', qDot);
+  assert.ok(mDot.includes('> ```gitignore\n> node_modules/\n> .obsidian/\n> ```'));
+
+  const qDocker = { path: 'Dockerfile', startLine: 1, endLine: 1, text: 'FROM node:20' };
+  const mDocker = quoteMessage('Explain', qDocker);
+  assert.ok(mDocker.includes('> ```dockerfile\n> FROM node:20\n> ```'));
+
+  const qEnv = { path: '.env.local', startLine: 1, endLine: 1, text: 'API_KEY=xyz' };
+  const mEnv = quoteMessage('Check env', qEnv);
+  assert.ok(mEnv.includes('> ```bash\n> API_KEY=xyz\n> ```'));
+
+  const qPlain = { path: 'LICENSE', startLine: 1, endLine: 1, text: 'MIT License' };
+  const mPlain = quoteMessage('License', qPlain);
+  assert.ok(mPlain.includes('> ```\n> MIT License\n> ```'));
+
+  const qNested = { path: 'demo.md', startLine: 1, endLine: 3, text: '```js\nconst a = 1;\n```' };
+  const mNested = quoteMessage('Code inside code', qNested);
+  assert.ok(mNested.includes('> ````markdown\n> ```js\n> const a = 1;\n> ```\n> ````'));
+});
+
 const {agentSelectionExtension}=await load('src/ai-selection-extension.ts',{
   'obsidian':'export const setIcon = () => {};',
   '@codemirror/view':'export const ViewPlugin = { fromClass: klass => klass };',
