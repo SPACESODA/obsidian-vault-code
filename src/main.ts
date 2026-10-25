@@ -121,6 +121,9 @@ import { preserveSettingsScroll } from "./settings-scroll";
 import { agentSelectionExtension } from "./ai-selection-extension";
 import type { SelectionQuote } from "./ai-selection";
 import { createCustomMenu } from "./custom-menu";
+import { observeExplorerIgnore, filterExplorerRows } from "./explorer-ignore";
+import { IgnoreMatcher, parseGitignore, type IgnoreRule, EMPTY_IGNORE_RULES } from "./ignore-rules";
+import { guardIgnoredTraversal, CoalescedScan, scanFolderTree } from "./vault-scan";
 
 /* ── View type constants ───────────────────────────────────── */
 
@@ -706,119 +709,6 @@ const DEFAULT_SETTINGS: VaultCodeSettings = {
 	aiChatFolder: "Agent-Chats",
 	aiChatAutoClean: "never",
 };
-
-interface IgnoreRule {
-	dirOnly: boolean;
-	negate: boolean;
-	exactRegex: RegExp;
-	childRegex: RegExp;
-	fullRegex: RegExp;
-}
-
-function parseGitignore(text: string): IgnoreRule[] {
-	const rules: IgnoreRule[] = [];
-	const lines = text.split(/\r?\n/);
-	for (let line of lines) {
-		line = line.trim();
-		if (!line || line.startsWith("#")) continue;
-
-		let negate = false;
-		if (line.startsWith("!")) {
-			negate = true;
-			line = line.slice(1).trim();
-			if (!line) continue;
-		}
-
-		let dirOnly = false;
-		if (line.endsWith("/")) {
-			dirOnly = true;
-			line = line.slice(0, -1).trim();
-			if (!line) continue;
-		}
-
-		const hasSlash = line.includes("/");
-		if (line.startsWith("/")) {
-			line = line.slice(1);
-		}
-
-		let regexStr = "";
-		let i = 0;
-		while (i < line.length) {
-			const c = line[i];
-			if (!c) break;
-			if (c === "*") {
-				if (line[i + 1] === "*") {
-					if (line[i + 2] === "/") {
-						regexStr += "(?:.*/)?";
-						i += 3;
-						continue;
-					} else {
-						regexStr += ".*";
-						i += 2;
-						continue;
-					}
-				} else {
-					regexStr += "[^/]*";
-					i++;
-					continue;
-				}
-			} else if (c === "?") {
-				regexStr += "[^/]";
-				i++;
-				continue;
-			} else if (c === "[") {
-				// Character class range notation e.g. [a-zA-Z] or [tT]
-				const closeIdx = line.indexOf("]", i + 1);
-				if (closeIdx > i + 1 && !line.slice(i, closeIdx).includes("/")) {
-					const classContent = line.slice(i + 1, closeIdx);
-					regexStr += "[" + classContent + "]";
-					i = closeIdx + 1;
-					continue;
-				} else {
-					regexStr += "\\[";
-					i++;
-					continue;
-				}
-			} else if (/[.+^$(){}|\\]/.test(c)) {
-				regexStr += "\\" + c;
-				i++;
-				continue;
-			} else {
-				regexStr += c;
-				i++;
-				continue;
-			}
-		}
-
-		let exactRegex: RegExp;
-		let childRegex: RegExp;
-		let fullRegex: RegExp;
-
-		// Strictly case-sensitive matching matching official .gitignore specification
-		if (hasSlash) {
-			exactRegex = new RegExp("^" + regexStr + "$");
-			childRegex = new RegExp("^" + regexStr + "/.*$");
-			fullRegex = new RegExp("^" + regexStr + "(?:/.*)?$");
-		} else {
-			exactRegex = new RegExp("(?:^|/)" + regexStr + "$");
-			childRegex = new RegExp("(?:^|/)" + regexStr + "/.*$");
-			fullRegex = new RegExp("(?:^|/)" + regexStr + "(?:/.*)?$");
-		}
-
-		try {
-			rules.push({
-				dirOnly,
-				negate,
-				exactRegex,
-				childRegex,
-				fullRegex,
-			});
-		} catch {
-			// Skip invalid regex pattern
-		}
-	}
-	return rules;
-}
 
 /** Check if any segment of a path is a dotfile or dotfolder. */
 function isDotPath(path: string): boolean {
@@ -4946,6 +4836,11 @@ export default class VaultCodePlugin extends Plugin {
 	private lastUnsupportedClickTime = 0;
 	cachedObsidianIgnoreRules: IgnoreRule[] = [];
 	cachedGitIgnoreRules: IgnoreRule[] = [];
+	private ignoreMatcher = new IgnoreMatcher();
+	private explorerObservers = new Map<HTMLElement, () => void>();
+	private unloading = false;
+	private initializingIgnoreFiltering = true;
+	private rescanRunner = new CoalescedScan(() => this.scanVaultFolders());
 	settingsTab: VaultCodeSettingTab | null = null;
 	aiService!: AIService;
 	aiStorage!: AIStorage;
@@ -4964,7 +4859,7 @@ export default class VaultCodePlugin extends Plugin {
 			(leaf) => new AIChatView(leaf, this),
 		);
 
-		await this.loadSettings();
+		await this.initializeIgnoreFiltering();
 
 		if (Platform.isDesktop) {
 			this.statusBarGitEl = this.addStatusBarItem();
@@ -4986,12 +4881,6 @@ export default class VaultCodePlugin extends Plugin {
 				console.error("Vault Code: Failed to auto-create .obsidianignore", e);
 			}
 		}
-		await this.reloadAllIgnoreRules();
-
-		// Immediately patch file explorer and apply filtering as early as possible on startup
-		this.patchFileExplorer();
-		this.applyFileExplorerFiltering();
-
 		this.previousShowUnsupportedFiles =
 			(this.app.vault.getConfig("showUnsupportedFiles") as boolean) ??
 			false;
@@ -5036,11 +4925,10 @@ export default class VaultCodePlugin extends Plugin {
 
 		this.app.workspace.onLayoutReady(async () => {
 			this.patchFileExplorer();
-			this.applyFileExplorerFiltering();
 			if (this.settings.showHiddenFiles) {
 				this.patchAdapter();
 				this.suppressDotfileWarning();
-				await this.rescanVault();
+				void this.rescanVault();
 			}
 
 			if (Platform.isDesktop && this.isGitAvailable()) {
@@ -5085,7 +4973,6 @@ export default class VaultCodePlugin extends Plugin {
 		this.registerEvent(
 			this.app.workspace.on("layout-change", () => {
 				this.patchFileExplorer();
-				this.applyFileExplorerFiltering();
 				this.updateAllLeafHeaderActions();
 			}),
 		);
@@ -5677,6 +5564,7 @@ export default class VaultCodePlugin extends Plugin {
 	}
 
 	onunload() {
+		this.unloading = true;
 		if (this.gitStatusDebounceTimer !== null) {
 			window.clearTimeout(this.gitStatusDebounceTimer);
 			this.gitStatusDebounceTimer = null;
@@ -7036,6 +6924,34 @@ export default class VaultCodePlugin extends Plugin {
 		return this.app.vault.adapter as unknown as PrivateAdapter;
 	}
 
+	private async initializeIgnoreFiltering(): Promise<void> {
+		// Prevent existing explorer rows flashing while settings and ignore files are read.
+		const body = document.body;
+		body.addClass("vault-code-ignore-loading");
+		this.register(() => body.removeClass("vault-code-ignore-loading"));
+		try {
+			await this.loadSettings();
+			await this.reloadAllIgnoreRules();
+			this.patchFileExplorer();
+		} finally {
+			this.initializingIgnoreFiltering = false;
+			body.removeClass("vault-code-ignore-loading");
+		}
+	}
+
+	private configuredIgnoreMatcher(): IgnoreMatcher {
+		this.ignoreMatcher.configure(
+			this.settings.useGitIgnore ? this.cachedGitIgnoreRules : EMPTY_IGNORE_RULES,
+			this.settings.useObsidianIgnore ? this.cachedObsidianIgnoreRules : EMPTY_IGNORE_RULES,
+		);
+		return this.ignoreMatcher;
+	}
+
+	private canPruneIgnoredDirectory(path: string): boolean {
+		const normalized = normalizePath(path).replace(/^\/+|\/+$/g, "");
+		return this.configuredIgnoreMatcher().canPrune(normalized);
+	}
+
 	async loadObsidianIgnoreRules(): Promise<void> {
 		if (!this.settings.useObsidianIgnore) {
 			this.cachedObsidianIgnoreRules = [];
@@ -7048,7 +6964,7 @@ export default class VaultCodePlugin extends Plugin {
 				const content = await this.app.vault.adapter.read(".obsidianignore");
 				this.cachedObsidianIgnoreRules = parseGitignore(content);
 			} else {
-				this.cachedObsidianIgnoreRules = [];
+				this.cachedObsidianIgnoreRules = this.initializingIgnoreFiltering ? parseGitignore(DEFAULT_OBSIDIANIGNORE_CONTENT) : [];
 			}
 		} catch (e) {
 			console.error("Vault Code: Failed to read .obsidianignore", e);
@@ -7096,43 +7012,7 @@ export default class VaultCodePlugin extends Plugin {
 			isDirectory ??
 			(this.app.vault.getAbstractFileByPath(normalized) instanceof TFolder);
 
-		const matchRule = (rule: IgnoreRule): boolean => {
-			if (rule.dirOnly) {
-				if (rule.exactRegex.test(normalized)) {
-					return isDir;
-				}
-				if (rule.childRegex.test(normalized)) {
-					return true;
-				}
-				return false;
-			}
-			return rule.fullRegex.test(normalized);
-		};
-
-		let ignored = false;
-
-		// 1. Check .gitignore rules if enabled
-		if (this.settings.useGitIgnore && this.cachedGitIgnoreRules.length > 0) {
-			for (const rule of this.cachedGitIgnoreRules) {
-				if (matchRule(rule)) {
-					ignored = !rule.negate;
-				}
-			}
-		}
-
-		// 2. Check .obsidianignore rules if enabled (takes precedence over .gitignore)
-		if (
-			this.settings.useObsidianIgnore &&
-			this.cachedObsidianIgnoreRules.length > 0
-		) {
-			for (const rule of this.cachedObsidianIgnoreRules) {
-				if (matchRule(rule)) {
-					ignored = !rule.negate;
-				}
-			}
-		}
-
-		return ignored;
+		return this.configuredIgnoreMatcher().ignored(normalized, isDir);
 	}
 
 	async handleIgnoreFileEvent(path: string): Promise<void> {
@@ -7154,22 +7034,8 @@ export default class VaultCodePlugin extends Plugin {
 	}
 
 	applyFileExplorerFiltering(): void {
-		const leaves = this.app.workspace.getLeavesOfType("file-explorer");
-		for (const leaf of leaves) {
-			const view = leaf.view as unknown as {
-				fileItems?: Record<
-					string,
-					{ el?: HTMLElement; file?: TAbstractFile }
-				>;
-			};
-			if (view?.fileItems) {
-				for (const [path, item] of Object.entries(view.fileItems)) {
-					if (!item.el) continue;
-					const isDir = item.file instanceof TFolder;
-					const isIgnored = this.isPathIgnored(path, isDir);
-					item.el.toggleClass("is-ignored-hidden", isIgnored);
-				}
-			}
+		for (const leaf of this.app.workspace.getLeavesOfType("file-explorer")) {
+			filterExplorerRows(leaf.view.containerEl, (path, directory) => this.isPathIgnored(path, directory));
 		}
 	}
 
@@ -7248,61 +7114,30 @@ export default class VaultCodePlugin extends Plugin {
 		}
 	}
 
-	/** Trigger a full vault rescan so all dotfiles and dotfolders across root and subfolders are revealed. */
-	async rescanVault(): Promise<void> {
+	/** Share concurrent requests and walk the folder tree without repeatedly collecting every file. */
+	rescanVault(): Promise<void> {
+		return this.rescanRunner.run();
+	}
+
+	private async scanVaultFolders(): Promise<void> {
 		const adapter = this.adapter();
-		if (!adapter.listRecursive) return;
-
-		// 1. Scan root directory first
+		if (!adapter.listRecursive || !this.settings.showHiddenFiles || this.unloading) return;
+		const restoreTraversal = guardIgnoredTraversal(adapter, (path) => !this.unloading && this.settings.showHiddenFiles && this.canPruneIgnoredDirectory(path));
 		try {
-			await adapter.listRecursive("");
-		} catch {
-			// Ignore read error on root
-		}
-
-		// 2. Scan all subfolders in the vault to reveal hidden dotfiles and dotfolders inside them
-		const scanned = new Set<string>(["", "/"]);
-		let queue = this.app.vault
-			.getAllLoadedFiles()
-			.filter(
-				(f): f is TFolder =>
-					f instanceof TFolder && !scanned.has(f.path),
-			);
-
-		while (queue.length > 0) {
-			const current = queue;
-			queue = [];
-
-			for (const folder of current) {
-				if (scanned.has(folder.path)) continue;
-				scanned.add(folder.path);
-
-				if (this.isPathIgnored(folder.path, true)) {
-					continue;
-				}
-
-				try {
-					await adapter.listRecursive(folder.path);
-				} catch {
-					// Ignore unreadable folders
-				}
-			}
-
-			// Check for newly discovered folders created during this pass
-			const allFolders = this.app.vault
-				.getAllLoadedFiles()
-				.filter((f): f is TFolder => f instanceof TFolder);
-
-			for (const f of allFolders) {
-				if (!scanned.has(f.path)) {
-					if (!this.isPathIgnored(f.path, true)) {
-						queue.push(f);
-					}
-				}
-			}
-		}
-
-		this.applyFileExplorerFiltering();
+			await scanFolderTree({
+				scan: (path) => adapter.listRecursive(path),
+				children: (path) => {
+					const folder = path ? this.app.vault.getAbstractFileByPath(path) : this.app.vault.getRoot();
+					return folder instanceof TFolder
+						? folder.children.filter((child): child is TFolder => child instanceof TFolder).map((child) => child.path)
+						: [];
+				},
+				shouldPrune: (path) => this.canPruneIgnoredDirectory(path),
+				active: () => !this.unloading && this.settings.showHiddenFiles,
+				yield: () => new Promise<void>((resolve) => window.setTimeout(resolve, 0)),
+			});
+		} finally { restoreTraversal(); }
+		if (!this.unloading) this.applyFileExplorerFiltering();
 	}
 
 	getActiveOrSelectedFolder(): TFolder {
@@ -7851,8 +7686,18 @@ export default class VaultCodePlugin extends Plugin {
 
 	private patchFileExplorer(): void {
 		const leaves = this.app.workspace.getLeavesOfType("file-explorer");
-		if (!leaves.length) return;
 
+		const containers = new Set(leaves.map((leaf) => leaf.view.containerEl));
+		for (const [container, disconnect] of this.explorerObservers) {
+			if (!containers.has(container)) { disconnect(); this.explorerObservers.delete(container); }
+		}
+		for (const container of containers) {
+			if (!this.explorerObservers.has(container)) {
+				this.explorerObservers.set(container, observeExplorerIgnore(container, (path, directory) => this.isPathIgnored(path, directory)));
+			}
+		}
+
+		if (!leaves.length) return;
 		const fileExplorerView = leaves[0]?.view as unknown as
 			| Record<string, unknown>
 			| undefined;
@@ -7866,6 +7711,7 @@ export default class VaultCodePlugin extends Plugin {
 			unknown
 		> | null;
 		if (viewProto) {
+			this.fileExplorerTargetProto = viewProto;
 			if (
 				!this.originalCreateFileItem &&
 				typeof viewProto.createFileItem === "function"
@@ -8120,7 +7966,7 @@ export default class VaultCodePlugin extends Plugin {
 	}
 
 	private patchFileItemPrototype(fileExplorerView: unknown): void {
-		if (!fileExplorerView) return;
+		if (!fileExplorerView || (this.fileItemProtoPatched && this.originalPOGetTitle)) return;
 
 		const view = fileExplorerView as {
 			fileItems?: Record<string, unknown>;
@@ -8309,6 +8155,8 @@ export default class VaultCodePlugin extends Plugin {
 	}
 
 	private restoreFileExplorer(): void {
+		for (const disconnect of this.explorerObservers.values()) disconnect();
+		this.explorerObservers.clear();
 		if (this.originalPOGetTitle && this.poTargetProto) {
 			this.poTargetProto.getTitle = this.originalPOGetTitle;
 			this.originalPOGetTitle = null;
@@ -8354,6 +8202,7 @@ export default class VaultCodePlugin extends Plugin {
 			if (view.fileItems) {
 				for (const item of Object.values(view.fileItems)) {
 					(item as { updateTitle?: () => void })?.updateTitle?.();
+					(item as { el?: HTMLElement }).el?.removeClass("is-ignored-hidden");
 				}
 			}
 		}

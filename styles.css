@@ -3852,3 +3852,6 @@ svg.vault-code-spin {
 	background: var(--background-modifier-border-hover);
 	border-radius: 4px;
 }
+
+/* Keep explorer rows out of the first paint until startup ignore rules are applied. */
+body.vault-code-ignore-loading .nav-files-container { visibility: hidden; }
