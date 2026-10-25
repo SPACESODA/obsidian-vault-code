@@ -150,6 +150,7 @@ export const en = {
 	commandToggleAllowEditDotfiles: "Toggle dotfile and extensionless file editing",
 	commandToggleAllowEditCodeFiles: "Toggle code and data file editing",
 	commandToggleLineWrapping: "Toggle line wrapping in code editor",
+	commandTogglePreview: "Toggle code / preview in code editor",
 	commandGotoLine: "Go to line in code editor",
 
 	// Git & Diff

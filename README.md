@@ -44,7 +44,7 @@ Open scripts, styles, and configuration files alongside your notes.
 
 Build a web page, adjust an SVG, or work on an email template right in your vault.
 
-* Press <kbd>Cmd</kbd> / <kbd>Ctrl</kbd> + <kbd>E</kbd> in an HTML, SVG, or MJML file to switch between code and preview.
+* Switch between code and live rendered preview using the **Preview** header button or the **Toggle code / preview** command.
 * Use relative paths to local CSS, scripts, and images. Remote stylesheets and CSS imports can also be loaded.
 * Render MJML email templates with the built-in compiler.
 
@@ -108,11 +108,10 @@ Some providers require a subscription or credits. API keys use Obsidian's secret
 | <kbd>Shift</kbd> + <kbd>Option</kbd> / <kbd>Alt</kbd> + <kbd>↑</kbd> / <kbd>↓</kbd> | Duplicate line | Code editor |
 | <kbd>Cmd</kbd> / <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>K</kbd> | Delete line | Code editor |
 | <kbd>Alt</kbd> + <kbd>Z</kbd> | Toggle line wrapping | Code editor |
-| <kbd>Cmd</kbd> / <kbd>Ctrl</kbd> + <kbd>E</kbd> | Toggle code / preview | HTML, SVG & MJML |
 | <kbd>Cmd</kbd> / <kbd>Ctrl</kbd> + <kbd>S</kbd> | Save file | Code editor |
 | <kbd>Esc</kbd> | Close search or dismiss a popup | Relevant editor or dialog |
 
-Assign a shortcut to **Vault Code: Chat with Agent** in **Settings → Hotkeys**.
+Assign custom shortcuts to **Vault Code: Chat with Agent** or **Vault Code: Toggle code / preview in code editor** in **Settings → Hotkeys**.
 
 ---
 

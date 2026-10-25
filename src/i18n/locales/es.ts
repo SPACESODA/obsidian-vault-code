@@ -152,6 +152,7 @@ export const es: TranslationSchema = {
 	commandToggleAllowEditDotfiles: "Alternar edición de archivos ocultos y sin extensión",
 	commandToggleAllowEditCodeFiles: "Alternar edición de archivos de código y datos",
 	commandToggleLineWrapping: "Alternar ajuste de línea en el editor de código",
+	commandTogglePreview: "Alternar código / vista previa en el editor de código",
 	commandGotoLine: "Ir a la línea en el editor de código",
 
 	// Git & Diff

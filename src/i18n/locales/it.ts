@@ -152,6 +152,7 @@ export const it: TranslationSchema = {
 	commandToggleAllowEditDotfiles: "Attiva/disattiva modifica file nascosti e senza estensione",
 	commandToggleAllowEditCodeFiles: "Attiva/disattiva modifica file di codice e dati",
 	commandToggleLineWrapping: "Attiva/disattiva a capo automatico nell'editor di codice",
+	commandTogglePreview: "Attiva/disattiva codice / anteprima nell'editor di codice",
 	commandGotoLine: "Vai alla riga nell'editor di codice",
 
 	// Git & Diff

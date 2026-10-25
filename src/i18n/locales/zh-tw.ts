@@ -152,6 +152,7 @@ export const zhTw: TranslationSchema = {
 	commandToggleAllowEditDotfiles: "切換隱藏檔案與無副檔名檔案編輯狀態",
 	commandToggleAllowEditCodeFiles: "切換程式碼與資料檔案編輯狀態",
 	commandToggleLineWrapping: "在程式碼編輯器中切換自動換行",
+	commandTogglePreview: "在程式碼編輯器中切換程式碼與預覽",
 	commandGotoLine: "在程式碼編輯器中跳轉至指定行",
 
 	// Git & Diff

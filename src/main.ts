@@ -3423,16 +3423,6 @@ export class DotfileView extends TextFileView {
 						},
 					},
 					{
-						key: "Mod-e",
-						run: () => {
-							if (this.isPreviewable()) {
-								this.toggleViewMode();
-								return true;
-							}
-							return false;
-						},
-					},
-					{
 						key: "Alt-z",
 						run: () => {
 							this.toggleLineWrapping();
@@ -3881,13 +3871,13 @@ export class DotfileView extends TextFileView {
 		this.lineWrapBtnEl.setAttribute("aria-label", t("editorLineWrapToggle"));
 	}
 
-	private isPreviewable(): boolean {
+	public isPreviewable(): boolean {
 		if (!this.file) return false;
 		const ext = this.file.extension?.toLowerCase() ?? "";
 		return PREVIEWABLE_EXTENSIONS.has(ext);
 	}
 
-	private toggleViewMode(): void {
+	public toggleViewMode(): void {
 		if (!this.isPreviewable()) return;
 		this.isPreviewMode = !this.isPreviewMode;
 		this.updateViewModeUI();
@@ -5468,6 +5458,22 @@ export default class VaultCodePlugin extends Plugin {
 				if (activeView) {
 					if (!checking) {
 						activeView.toggleLineWrapping();
+					}
+					return true;
+				}
+				return false;
+			},
+		});
+
+		this.addCommand({
+			id: "toggle-preview-code-editor",
+			name: t("commandTogglePreview"),
+			checkCallback: (checking: boolean) => {
+				const activeView =
+					this.app.workspace.getActiveViewOfType(DotfileView);
+				if (activeView && activeView.isPreviewable()) {
+					if (!checking) {
+						activeView.toggleViewMode();
 					}
 					return true;
 				}
