@@ -141,7 +141,7 @@ Open **Settings → Community plugins → Vault Code**:
 
 To test pre-release builds or update directly from GitHub:
 
-1. Install and enable the [BRAT](https://github.com/TfTHacker/obsidian42-brat) plugin from Community Plugins.
+1. Install and enable the [BRAT](https://community.obsidian.md/plugins/obsidian42-brat) plugin from Community Plugins.
 2. In BRAT settings, click **Add Beta plugin** and enter `SPACESODA/obsidian-vault-code`.
 
 ### Manual installation
