@@ -1234,6 +1234,7 @@ export class AIChatView extends ItemView {
 			scope: quote ? "active-note" : this.chatScope,
 			mode: this.mode,
 			conversationId: this.conversationId,
+			currentChatPath: this.currentChatFile?.path,
 			activeFile,
 			activeContent,
 			selectedText,

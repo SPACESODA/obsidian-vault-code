@@ -126,6 +126,7 @@ export interface SendMessageOptions {
 	scope: "active-note" | "vault";
 	mode: "safe" | "edit";
 	conversationId?: string;
+	currentChatPath?: string;
 	activeFile?: TFile | null;
 	activeContent?: string;
 	selectedText?: string;
@@ -1261,13 +1262,11 @@ export class AIService {
 			}
 		};
 
-		// 1. Critical obsidian, git, trash, and chat storage locations
+		// 1. Critical obsidian, git, and trash storage locations
 		const configDir = this.app.vault.configDir;
 		if (configDir) addPattern(configDir);
 		addPattern(".git");
 		addPattern(".trash");
-		const chatFolder = this.plugin?.settings.aiChatFolder || "Agent-Chats";
-		addPattern(chatFolder);
 
 		// 2. Default ignore items (OS metadata & cache)
 		addPattern(".DS_Store");
@@ -1309,7 +1308,6 @@ export class AIService {
 			const isDirPattern =
 				!p.includes(".") ||
 				p === configDir ||
-				p === chatFolder ||
 				p === ".git" ||
 				p === ".trash" ||
 				p === "ignore" ||
@@ -1327,8 +1325,22 @@ export class AIService {
 		return expanded;
 	}
 
-	private async buildEffectivePrompt(options: SendMessageOptions): Promise<string> {
+	private async buildEffectivePrompt(options: SendMessageOptions, forCli = false): Promise<string> {
 		let effectivePrompt = options.prompt.trim();
+
+		// Chat history transcript (available whether entire vault is on or off)
+		const historyTranscript: string[] = [];
+		if (forCli && options.history && options.history.length > 0) {
+			historyTranscript.push("[Current Conversation Transcript]");
+			for (const msg of options.history) {
+				const speaker = msg.role === "user" ? "User" : "Agent";
+				historyTranscript.push(`${speaker}: ${msg.content.trim()}`);
+			}
+			historyTranscript.push("--- End of Current Conversation Transcript ---");
+		}
+		if (options.currentChatPath) {
+			historyTranscript.push(`[Active Chat File: "${options.currentChatPath}"]`);
+		}
 
 		if (options.scope === "active-note" && options.activeFile && !options.contextInPrompt) {
 			const contextHeader = [
@@ -1349,6 +1361,9 @@ export class AIService {
 					"```",
 				);
 			}
+			if (historyTranscript.length > 0) {
+				contextHeader.push(...historyTranscript);
+			}
 			contextHeader.push("--- User Question / Request ---", effectivePrompt);
 			effectivePrompt = contextHeader.join("\n");
 		} else if (options.scope === "vault") {
@@ -1362,12 +1377,17 @@ export class AIService {
 				"- NEVER propose edits to or modify any files in these ignored paths.",
 				"- When performing searches, file listings, or directory scans, filter out all results located inside these ignored paths.",
 				"- If the user asks about an ignored file or folder, state that it is excluded by vault ignore settings.",
+				"- Chat History Exception: The current conversation transcript and chat history notes are active conversation context and MUST remain fully referenceable.",
 				"Ignored paths & patterns:",
 				ignoreListText,
-				"--- User Question / Request ---",
-				effectivePrompt,
 			];
+			if (historyTranscript.length > 0) {
+				vaultHeader.push(...historyTranscript);
+			}
+			vaultHeader.push("--- User Question / Request ---", effectivePrompt);
 			effectivePrompt = vaultHeader.join("\n");
+		} else if (historyTranscript.length > 0) {
+			effectivePrompt = [...historyTranscript, "--- User Question / Request ---", effectivePrompt].join("\n");
 		}
 
 		return effectivePrompt;
@@ -1428,7 +1448,7 @@ export class AIService {
 
 			const vaultPath = this.getVaultPath() || "";
 			const env = this.getEnv();
-			const effectivePrompt = await this.buildEffectivePrompt(options);
+			const effectivePrompt = await this.buildEffectivePrompt(options, true);
 
 			let binPath: string | null = null;
 			let args: string[] = [];
