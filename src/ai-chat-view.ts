@@ -598,7 +598,8 @@ export class AIChatView extends ItemView {
 			? this.pinnedContextFile
 			: this.app.workspace.getActiveFile();
 
-		const hasAttachedNote = !this.contextExcluded && this.chatScope === "active-note" && activeFile;
+		const isIgnored = activeFile && this.plugin ? this.plugin.isPathIgnored(activeFile.path) : false;
+		const hasAttachedNote = !this.contextExcluded && !isIgnored && this.chatScope === "active-note" && activeFile;
 
 		if (hasAttachedNote && activeFile) {
 			this.contextChipEl.show();
@@ -1179,7 +1180,8 @@ export class AIChatView extends ItemView {
 			activeFile = (this.isContextPinned && this.pinnedContextFile)
 				? this.pinnedContextFile
 				: this.app.workspace.getActiveFile();
-			if (activeFile) {
+			const isIgnored = activeFile && this.plugin ? this.plugin.isPathIgnored(activeFile.path) : false;
+			if (activeFile && !isIgnored) {
 				try {
 					activeContent = await this.app.vault.read(activeFile);
 				} catch {
@@ -1190,6 +1192,8 @@ export class AIChatView extends ItemView {
 					selectedText = editor.getSelection();
 					selectionStart = editor.posToOffset(editor.getCursor("from"));
 				}
+			} else {
+				activeFile = null;
 			}
 		}
 

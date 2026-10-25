@@ -1248,41 +1248,83 @@ export class AIService {
 	}
 
 	public async getVaultIgnorePatterns(): Promise<string[]> {
+		const rawPatterns: string[] = [];
+		const addPattern = (p: string) => {
+			let trimmed = p.trim();
+			if (!trimmed || trimmed.startsWith("#") || trimmed.startsWith("!")) return;
+			// Strip inline comments if any (e.g. "path/ # comment")
+			trimmed = trimmed.replace(/\s+#.*$/, "").trim();
+			if (!trimmed || trimmed.startsWith("!")) return;
+			const norm = trimmed.replace(/^[/\\]+|[/\\]+$/g, "");
+			if (norm && !rawPatterns.includes(norm)) {
+				rawPatterns.push(norm);
+			}
+		};
+
+		// 1. Critical obsidian, git, trash, and chat storage locations
 		const configDir = this.app.vault.configDir;
-		const patterns: string[] = [configDir, ".trash", ".git"].filter(Boolean);
-		try {
-			if (await this.app.vault.adapter.exists(".obsidianignore")) {
-				const content = await this.app.vault.adapter.read(".obsidianignore");
-				const lines = content
-					.split(/\r?\n/)
-					.map((l) => l.trim())
-					.filter((l) => l.length > 0 && !l.startsWith("#"));
-				for (const line of lines) {
-					if (!patterns.includes(line)) {
-						patterns.push(line);
+		if (configDir) addPattern(configDir);
+		addPattern(".git");
+		addPattern(".trash");
+		const chatFolder = this.plugin?.settings.aiChatFolder || "Agent-Chats";
+		addPattern(chatFolder);
+
+		// 2. Default ignore items (OS metadata & cache)
+		addPattern(".DS_Store");
+		addPattern("._*");
+		addPattern("Thumbs.db");
+		addPattern("desktop.ini");
+
+		// 3. User .obsidianignore (if enabled in settings or present)
+		const useObsidianIgnore = this.plugin?.settings.useObsidianIgnore ?? true;
+		if (useObsidianIgnore) {
+			try {
+				if (await this.app.vault.adapter.exists(".obsidianignore")) {
+					const content = await this.app.vault.adapter.read(".obsidianignore");
+					for (const line of content.split(/\r?\n/)) {
+						addPattern(line);
 					}
 				}
+			} catch {
+				// ignore
 			}
-		} catch {
-			// ignore
 		}
+
+		// 4. User .gitignore
 		try {
 			if (await this.app.vault.adapter.exists(".gitignore")) {
 				const content = await this.app.vault.adapter.read(".gitignore");
-				const lines = content
-					.split(/\r?\n/)
-					.map((l) => l.trim())
-					.filter((l) => l.length > 0 && !l.startsWith("#"));
-				for (const line of lines) {
-					if (!patterns.includes(line)) {
-						patterns.push(line);
-					}
+				for (const line of content.split(/\r?\n/)) {
+					addPattern(line);
 				}
 			}
 		} catch {
 			// ignore
 		}
-		return patterns;
+
+		// 5. Expand directory patterns so agents and models know all subfiles are excluded
+		const expanded: string[] = [];
+		for (const p of rawPatterns) {
+			if (!expanded.includes(p)) expanded.push(p);
+			const isDirPattern =
+				!p.includes(".") ||
+				p === configDir ||
+				p === chatFolder ||
+				p === ".git" ||
+				p === ".trash" ||
+				p === "ignore" ||
+				p === "dist" ||
+				p === "node_modules";
+			const cleanBase = p.replace(/\/+$/, "");
+			if (isDirPattern) {
+				const star = `${cleanBase}/**`;
+				if (!expanded.includes(star)) {
+					expanded.push(star);
+				}
+			}
+		}
+
+		return expanded;
 	}
 
 	private async buildEffectivePrompt(options: SendMessageOptions): Promise<string> {
@@ -1314,7 +1356,13 @@ export class AIService {
 			const ignoreListText = ignorePatterns.map((p) => `- ${p}`).join("\n");
 			const vaultHeader = [
 				"[Context: Entire Vault]",
-				"Strict Ignore Rule: You MUST strictly ignore and skip all files and folders matching the following patterns (do NOT read, search, index, list, or modify them under any circumstances):",
+				"Strict Workspace Boundaries & Ignore Policy:",
+				"You have access to the vault as a whole, BUT you MUST strictly exclude and ignore all files, directories, and paths matching the ignore list below.",
+				"- NEVER read, open, inspect, grep, search, list, summarize, quote, or reference any files within these ignored paths or their subdirectories.",
+				"- NEVER propose edits to or modify any files in these ignored paths.",
+				"- When performing searches, file listings, or directory scans, filter out all results located inside these ignored paths.",
+				"- If the user asks about an ignored file or folder, state that it is excluded by vault ignore settings.",
+				"Ignored paths & patterns:",
 				ignoreListText,
 				"--- User Question / Request ---",
 				effectivePrompt,

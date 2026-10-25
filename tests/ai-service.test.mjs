@@ -331,3 +331,36 @@ test('socket lookup falls back when the renderer module is malformed', async () 
     assert.equal(typeof (await h.service.resolveNet()).createConnection, 'function');
   }
 });
+
+test('Entire Vault option excludes ignored files and formats strict boundaries', async () => {
+  const h = harness({
+    bins: { 'cursor-agent': '/fake/cursor-agent' },
+    output: '{"type":"assistant","message":{"content":[{"type":"text","text":"OK"}]}}\n',
+  });
+  // Mock vault adapter with ignore files
+  h.service.app.vault.adapter.exists = async (p) => p === '.obsidianignore' || p === '.gitignore';
+  h.service.app.vault.adapter.read = async (p) => {
+    if (p === '.obsidianignore') return 'node_modules/\nprojects/secret\n# Comment\n';
+    if (p === '.gitignore') return 'dist/\n!.env.example\n.env\n';
+    return '';
+  };
+
+  const patterns = await h.service.getVaultIgnorePatterns();
+  assert.ok(patterns.includes('.obsidian/**'));
+  assert.ok(patterns.includes('.git/**'));
+  assert.ok(patterns.includes('.trash/**'));
+  assert.ok(patterns.includes('Agent-Chats/**'));
+  assert.ok(patterns.includes('node_modules/**'));
+  assert.ok(patterns.includes('projects/secret/**'));
+  assert.ok(patterns.includes('dist/**'));
+  assert.ok(patterns.includes('.env'));
+  assert.ok(!patterns.some(p => p.startsWith('!')), 'Negations like !.env.example should not be in ignore list');
+  assert.ok(!patterns.some(p => p.startsWith('#')), 'Comments should not be in ignore list');
+
+  await h.send('cursor', { scope: 'vault', prompt: 'List all vault files' });
+  const promptArg = h.spawned[0].args.find(a => a.includes('[Context: Entire Vault]'));
+  assert.ok(promptArg, 'Prompt should include [Context: Entire Vault]');
+  assert.ok(promptArg.includes('Strict Workspace Boundaries & Ignore Policy:'));
+  assert.ok(promptArg.includes('- projects/secret/**'));
+  assert.ok(promptArg.includes('List all vault files'));
+});
