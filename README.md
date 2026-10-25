@@ -137,6 +137,13 @@ Open **Settings → Community plugins → Vault Code**:
 2. Click **Browse** and search for `Vault Code`.
 3. Click **Install**, then **Enable**.
 
+### Via BRAT
+
+To test pre-release builds or update directly from GitHub:
+
+1. Install and enable the [BRAT](https://github.com/TfTHacker/obsidian42-brat) plugin from Community Plugins.
+2. In BRAT settings, click **Add Beta plugin** and enter `SPACESODA/obsidian-vault-code`.
+
 ### Manual installation
 
 1. Download `main.js`, `manifest.json`, and `styles.css` from the latest [GitHub Release](https://github.com/SPACESODA/obsidian-vault-code/releases).
