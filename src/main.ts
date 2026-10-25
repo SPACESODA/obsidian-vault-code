@@ -700,7 +700,7 @@ const DEFAULT_SETTINGS: VaultCodeSettings = {
 		pi: "default",
 	},
 	aiScope: "active-note",
-	aiMode: "edit",
+	aiMode: "safe",
 	aiCustomPath: "",
 	aiCodexPath: "",
 	aiChatFolder: "Agent-Chats",

@@ -154,7 +154,7 @@ export class AIChatView extends ItemView {
 				: resolveOptimalModel(this.selectedProvider);
 		this.selectedReasoningEffort = plugin.settings.aiReasoningEffort || "auto";
 		this.chatScope = plugin.settings.aiScope || "active-note";
-		this.mode = plugin.settings.aiMode || "edit";
+		this.mode = plugin.settings.aiMode || "safe";
 	}
 
 	getViewType(): string {
@@ -913,7 +913,8 @@ export class AIChatView extends ItemView {
 		this.headerTitleEl?.removeAttribute("title");
 		this.headerTitleEl?.removeClass("is-editable");
 		this.openNoteBtnEl?.hide();
-		this.chatScope = "active-note";
+		this.chatScope = this.plugin.settings.aiScope || "active-note";
+		this.mode = this.plugin.settings.aiMode || "safe";
 		this.selectedProvider = this.plugin.settings.aiProvider || "antigravity";
 		const remembered = this.plugin.settings.aiProviderLastModel?.[this.selectedProvider];
 		this.selectedModel =
@@ -924,6 +925,7 @@ export class AIChatView extends ItemView {
 		this.updateProviderBtnLabel();
 		this.updateModelBtnLabel();
 		this.updateEffortBtn();
+		this.updateModeBtnLabel();
 		void this.loadModelsForProvider(this.selectedProvider);
 		this.updateVaultToggleState();
 		this.updateContextChip();

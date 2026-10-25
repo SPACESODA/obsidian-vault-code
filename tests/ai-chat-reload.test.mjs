@@ -127,3 +127,20 @@ test("stale AI chat leaves are revived by cycling view state", async () => {
 		{ type: VIEW_TYPE_AI_CHAT, state: { chatPath: "test.md" }, active: false },
 	]);
 });
+
+test("AIChatView defaults to safe mode (Vault safe)", async () => {
+	const leaf = {};
+	const plugin = {
+		settings: {
+			aiProvider: "antigravity",
+			aiProviderLastModel: {},
+			aiReasoningEffort: "auto",
+			aiScope: "active-note",
+			aiMode: "safe",
+		},
+		aiService: { getModelsForProvider: async () => [] },
+		saveSettings: async () => {},
+	};
+	const view = new AIChatView(leaf, plugin);
+	assert.equal(view.mode, "safe");
+});
