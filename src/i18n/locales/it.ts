@@ -222,7 +222,7 @@ export const it: TranslationSchema = {
 	aiChatStop: "Interrompi generazione",
 	aiChatScopeActiveNote: "Nota attiva",
 	aiChatScopeVault: "Intero vault",
-	aiChatModeSafe: "Vault sicuro",
+	aiChatModeSafe: "Modalità sicura",
 	aiChatModeEdit: "Modalità modifica",
 	aiChatContextPin: "Fissa nota di contesto",
 	aiChatContextUnpin: "Sblocca nota di contesto",
@@ -253,7 +253,7 @@ export const it: TranslationSchema = {
 	settingsAIDefaultScopeName: "Ambito di contesto predefinito",
 	settingsAIDefaultScopeDesc: "Se l'Agent si concentra sulla nota attiva o sull'intero vault per impostazione predefinita.",
 	settingsAIDefaultModeName: "Modalità di autorizzazione predefinita",
-	settingsAIDefaultModeDesc: "Vault sicuro (sola lettura) o modalità modifica (l'Agent può modificare i file).",
+	settingsAIDefaultModeDesc: "Modalità sicura (sola lettura) o modalità modifica (l'Agent può modificare i file).",
 	settingsAICustomPathName: "Percorso di Antigravity CLI",
 	settingsAICustomPathDesc: "Percorso dell'eseguibile agy. Lascia vuoto per il rilevamento automatico.",
 	settingsAIChatFolderName: "Cartella cronologia chat",
@@ -419,8 +419,11 @@ export const it: TranslationSchema = {
 
 	aiChatErrorLabel: "Errore",
 	aiChatChooseMode: "Scegli modalità",
-	aiChatSafePermissionHelp: "La modalità sicura richiede l’approvazione dello strumento. Per consentire modifiche ai file e comandi, scegli la modalità modifica e invia di nuovo la richiesta. Altrimenti verifica i permessi della CLI nel terminale.",
-	aiChatPermissionHelp: "Questa CLI richiede l’approvazione dello strumento. Verifica i permessi nel terminale, poi invia di nuovo la richiesta.",
+	aiChatSafePermissionHelp: "La modalità sicura richiede l’approvazione dello strumento. Per consentire modifiche ai file e comandi, scegli la modalità modifica e ripeti la richiesta. Altrimenti verifica i permessi della CLI nel terminale.",
+	aiChatPermissionHelp: "Questa CLI richiede l’approvazione dello strumento. Verifica i permessi nel terminale, poi ripeti la richiesta.",
+	aiChatContinue: "Continua",
+	aiChatContinueRequest: "Esegui la mia richiesta precedente in modalità modifica.",
+	aiChatReadOnlyHint: "{0} è di sola lettura. Scegli {1} e ripeti la richiesta per applicare le modifiche.",
 	aiChatStopped: "Risposta interrotta.",
 
 };

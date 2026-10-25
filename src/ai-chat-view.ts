@@ -25,7 +25,7 @@ import { isConnectionProvider, connectionProvider, extractEditProposal } from ".
 import { AIEditReviewModal } from "./ai-edit-review";
 import { chatErrorContent, isChatPermissionError } from "./ai-chat-feedback";
 import { renderChatMarkdown, disposeChatMarkdown } from "./ai-chat-markdown";
-import { type SelectionQuote, selectionLabel, quoteMessage } from "./ai-selection";
+import { type SelectionQuote, selectionLabel, quoteMessage, captureSelection } from "./ai-selection";
 
 export const VIEW_TYPE_AI_CHAT = "vault-code-ai-chat";
 
@@ -109,7 +109,9 @@ export class AIChatView extends ItemView {
 	private mode: "safe" | "edit";
 	private isGenerating = false;
 	private followOutput = true;
+	private messageResizeObserver: ResizeObserver | null = null;
 	private submissionId = 0;
+	private safeRequest: { userId: string; file: TFile | null; quote: SelectionQuote | null; scope: "active-note" | "vault" } | null = null;
 	private activeProcessHandle: AIProcessHandle | null = null;
 	private availableModels: AgyModelInfo[] = [];
 
@@ -134,6 +136,7 @@ export class AIChatView extends ItemView {
 	private modelBtnEl!: HTMLElement;
 	private effortBtnEl!: HTMLElement;
 	private modeBtnEl!: HTMLElement;
+	private continueBtnEl?: HTMLButtonElement;
 	private vaultToggle: ToggleComponent | null = null;
 	private vaultToggleWrapper!: HTMLElement;
 	private contextChipEl!: HTMLElement;
@@ -348,6 +351,9 @@ export class AIChatView extends ItemView {
 	}
 
 	private buildMessageList(container: HTMLElement): void {
+		// Markdown, images and diagrams can change height after the initial render.
+		this.messageResizeObserver?.disconnect();
+		this.messageResizeObserver = new ResizeObserver(() => this.scrollToBottom());
 		this.messagesContainerEl = container.createDiv({
 			cls: "vault-code-chat-messages",
 		});
@@ -476,6 +482,12 @@ export class AIChatView extends ItemView {
 			attr: { "aria-label": t("settingsAIDefaultModeName") },
 		});
 		this.modeBtnEl.addEventListener("click", (e) => this.showModeMenu(e));
+		this.continueBtnEl = bottomRow.createEl("button", {
+			cls: "vault-code-chat-pill",
+			text: t("aiChatContinue"),
+			attr: { type: "button", hidden: "" },
+		});
+		this.continueBtnEl.addEventListener("click", () => this.prepareContinuation());
 
 		// Entire Vault toggle (default off)
 		this.vaultToggleWrapper = bottomRow.createDiv({ cls: "vault-code-chat-toggle-vault" });
@@ -509,9 +521,37 @@ export class AIChatView extends ItemView {
 		if (this.mode === newMode) return;
 		this.mode = newMode;
 		this.updateModeBtnLabel();
+		this.updateContinueAction();
 		if (this.currentChatFile) {
 			void this.plugin.aiStorage.updateChatMode(this.currentChatFile, newMode);
 		}
+	}
+
+	private updateContinueAction(): void {
+		if (!this.continueBtnEl) return;
+		const latestUser = [...this.messages].reverse().find(message => message.role === "user");
+		this.continueBtnEl.hidden = this.mode !== "edit" || this.isGenerating || !!this.inputEl?.value.trim() || !!this.pendingQuote
+			|| !this.safeRequest || latestUser?.id !== this.safeRequest.userId;
+	}
+
+	private prepareContinuation(): void {
+		this.updateContinueAction();
+		if (!this.continueBtnEl || this.continueBtnEl.hidden || !this.safeRequest) return;
+		const request = this.safeRequest;
+		this.safeRequest = null;
+		// Prepare a visible follow-up; switching mode or choosing Continue never sends it.
+		this.inputEl.value = t("aiChatContinueRequest");
+		this.pendingQuote = request.quote;
+		this.chatScope = request.scope;
+		this.pinnedContextFile = request.file;
+		this.isContextPinned = !!request.file;
+		this.contextExcluded = !request.file;
+		this.renderSelectionQuote();
+		this.updateVaultToggleState();
+		this.updateContextChip();
+		this.autoResizeTextarea();
+		this.updateSendButtonState();
+		this.inputEl.focus();
 	}
 
 	public setChatScope(newScope: "active-note" | "vault"): void {
@@ -946,6 +986,7 @@ export class AIChatView extends ItemView {
 	}
 
 	public async loadChatFromFile(file: TFile): Promise<void> {
+		this.safeRequest = null;
 		this.stopGenerating();
 		this.pendingQuote = null;
 		this.renderSelectionQuote();
@@ -1028,6 +1069,7 @@ export class AIChatView extends ItemView {
 	}
 
 	public startNewChat(): void {
+		this.safeRequest = null;
 		this.stopGenerating();
 		this.pendingQuote = null;
 		this.renderSelectionQuote();
@@ -1124,6 +1166,7 @@ export class AIChatView extends ItemView {
 	}
 
 	private disposeMessageRendering(): void {
+		this.messageResizeObserver?.disconnect();
 		for (const body of this.messagesContainerEl?.querySelectorAll<HTMLElement>(".vault-code-chat-msg-body") ?? []) disposeChatMarkdown(body, this);
 	}
 
@@ -1224,7 +1267,10 @@ export class AIChatView extends ItemView {
 	}
 
 	private renderMessageBody(markdown: string, bodyEl: HTMLElement): Promise<void> {
-		return renderChatMarkdown(this.app, markdown, bodyEl, this.currentChatFile?.path || "", this);
+		this.messageResizeObserver?.observe(bodyEl);
+		return renderChatMarkdown(this.app, markdown, bodyEl, this.currentChatFile?.path || "", this).then(() => {
+			if (this.messagesContainerEl?.contains(bodyEl)) this.scrollToBottom();
+		});
 	}
 
 	private scheduleStreamingRender(msg: ChatMessage, bodyEl: HTMLElement): void {
@@ -1250,6 +1296,7 @@ export class AIChatView extends ItemView {
 		const text = this.inputEl.value.trim();
 		if (!text) return;
 		const submission = ++this.submissionId;
+		this.safeRequest = null;
 		const quote = this.pendingQuote;
 		const messageText = quote ? quoteMessage(text, quote) : text;
 		this.pendingQuote = null;
@@ -1376,6 +1423,11 @@ export class AIChatView extends ItemView {
 
 		if (submission !== this.submissionId || !this.isGenerating) return;
 		const requestMode = this.mode;
+		if (requestMode === "safe") {
+			const contextQuote = quote || (activeFile && selectedText && selectionStart !== undefined
+				? captureSelection(activeFile.path, activeContent, selectionStart, selectionStart + selectedText.length) : null);
+			this.safeRequest = { userId: userMsg.id, file: activeFile, quote: contextQuote, scope: this.chatScope };
+		}
 		this.activeProcessHandle = this.plugin.aiService.sendMessage({
 			prompt: messageText,
 			contextInPrompt: Boolean(quote),
@@ -1527,6 +1579,7 @@ export class AIChatView extends ItemView {
 	}
 
 	private stopGenerating(): void {
+		this.safeRequest = null;
 		this.submissionId++;
 		if (this.renderRafId !== null) {
 			window.cancelAnimationFrame(this.renderRafId);
@@ -1562,6 +1615,7 @@ export class AIChatView extends ItemView {
 	}
 
 	private updateSendButtonState(): void {
+		this.updateContinueAction();
 		if (!this.sendBtnEl) return;
 		this.sendBtnEl.empty();
 

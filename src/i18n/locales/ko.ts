@@ -222,7 +222,7 @@ export const ko: TranslationSchema = {
 	aiChatStop: "생성 중지",
 	aiChatScopeActiveNote: "현재 노트",
 	aiChatScopeVault: "보관함 전체",
-	aiChatModeSafe: "보관함 안전",
+	aiChatModeSafe: "안전 모드",
 	aiChatModeEdit: "편집 모드",
 	aiChatContextPin: "컨텍스트 노트 고정",
 	aiChatContextUnpin: "컨텍스트 노트 고정 해제",
@@ -253,7 +253,7 @@ export const ko: TranslationSchema = {
 	settingsAIDefaultScopeName: "기본 컨텍스트 범위",
 	settingsAIDefaultScopeDesc: "Agent의 기본 대상(현재 노트 또는 보관함 전체).",
 	settingsAIDefaultModeName: "기본 권한 모드",
-	settingsAIDefaultModeDesc: "보관함 안전(읽기 전용) 또는 편집 모드(Agent가 파일 수정 가능).",
+	settingsAIDefaultModeDesc: "안전 모드(읽기 전용) 또는 편집 모드(Agent가 파일 수정 가능).",
 	settingsAICustomPathName: "Antigravity CLI 경로",
 	settingsAICustomPathDesc: "agy 실행 파일 경로입니다. 비워두면 자동 감지됩니다.",
 	settingsAIChatFolderName: "대화 기록 폴더",
@@ -419,8 +419,11 @@ export const ko: TranslationSchema = {
 
 	aiChatErrorLabel: "오류",
 	aiChatChooseMode: "모드 선택",
-	aiChatSafePermissionHelp: "보관함 안전 모드에서는 도구 승인이 필요합니다. 파일 수정과 명령 실행을 허용하려면 편집 모드를 선택한 뒤 다시 보내세요. 그렇지 않으면 터미널에서 CLI 권한을 확인하세요.",
-	aiChatPermissionHelp: "이 CLI는 도구 승인이 필요합니다. 터미널에서 권한을 확인한 뒤 다시 보내세요.",
+	aiChatSafePermissionHelp: "안전 모드에서는 도구 승인이 필요합니다. 파일 수정과 명령 실행을 허용하려면 편집 모드를 선택한 뒤 다시 요청하세요. 그렇지 않으면 터미널에서 CLI 권한을 확인하세요.",
+	aiChatPermissionHelp: "이 CLI는 도구 승인이 필요합니다. 터미널에서 권한을 확인한 뒤 다시 요청하세요.",
+	aiChatContinue: "계속",
+	aiChatContinueRequest: "편집 모드에서 이전 요청을 실행해 주세요.",
+	aiChatReadOnlyHint: "{0}에서는 읽기만 가능합니다. 변경하려면 {1}로 전환한 뒤 다시 요청하세요.",
 	aiChatStopped: "응답이 중지되었습니다.",
 
 };

@@ -222,7 +222,7 @@ export const ja: TranslationSchema = {
 	aiChatStop: "生成を停止",
 	aiChatScopeActiveNote: "現在のノート",
 	aiChatScopeVault: "保管庫全体",
-	aiChatModeSafe: "保管庫セーフ",
+	aiChatModeSafe: "セーフモード",
 	aiChatModeEdit: "編集モード",
 	aiChatContextPin: "コンテキストノートを固定",
 	aiChatContextUnpin: "コンテキストノートの固定を解除",
@@ -253,7 +253,7 @@ export const ja: TranslationSchema = {
 	settingsAIDefaultScopeName: "デフォルトのコンテキスト範囲",
 	settingsAIDefaultScopeDesc: "Agent が現在のノートまたは保管庫全体を対象にするかどうかのデフォルト設定。",
 	settingsAIDefaultModeName: "デフォルトの権限モード",
-	settingsAIDefaultModeDesc: "保管庫セーフ（読み取り専用）または編集モード（Agent によるファイル変更を許可）。",
+	settingsAIDefaultModeDesc: "セーフモード（読み取り専用）または編集モード（Agent によるファイル変更を許可）。",
 	settingsAICustomPathName: "Antigravity CLI パス",
 	settingsAICustomPathDesc: "agy 実行可能ファイルのパス。空欄の場合は自動検出します。",
 	settingsAIChatFolderName: "チャット履歴フォルダー",
@@ -419,8 +419,11 @@ export const ja: TranslationSchema = {
 
 	aiChatErrorLabel: "エラー",
 	aiChatChooseMode: "モードを選択",
-	aiChatSafePermissionHelp: "保管庫の安全モードではツールの承認が必要です。ファイルの編集やコマンドの実行を許可する場合は、編集モードを選択してから再送信してください。それ以外の場合は、ターミナルで CLI の権限を確認してください。",
-	aiChatPermissionHelp: "この CLI にはツールの承認が必要です。ターミナルで権限を確認してから再送信してください。",
+	aiChatSafePermissionHelp: "セーフモードではツールの承認が必要です。ファイルの編集やコマンドの実行を許可する場合は、編集モードを選択してからもう一度依頼してください。それ以外の場合は、ターミナルで CLI の権限を確認してください。",
+	aiChatPermissionHelp: "この CLI にはツールの承認が必要です。ターミナルで権限を確認してからもう一度依頼してください。",
+	aiChatContinue: "続ける",
+	aiChatContinueRequest: "編集モードで先ほどの依頼を実行してください。",
+	aiChatReadOnlyHint: "{0}は読み取り専用です。変更を適用するには、{1}に切り替えてもう一度依頼してください。",
 	aiChatStopped: "応答を停止しました。",
 
 };

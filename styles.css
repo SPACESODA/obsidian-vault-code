@@ -2627,6 +2627,7 @@ input[type="text"].vault-code-chat-title-input:focus-visible {
 }
 .vault-code-chat-error-actions { margin-top: 0.6em; }
 .vault-code-chat-error-actions button { font-size: var(--font-ui-small); }
+.vault-code-chat-pill[hidden] { display: none; }
 
 .vault-code-chat-markdown pre {
 	margin: 0.8em 0;
@@ -2959,6 +2960,7 @@ textarea.vault-code-chat-input:active {
 
 .vault-code-chat-bottom-row-bottom {
 	display: flex;
+	flex-wrap: wrap;
 	align-items: center;
 	justify-content: space-between;
 	gap: 8px;

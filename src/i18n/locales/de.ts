@@ -222,7 +222,7 @@ export const de: TranslationSchema = {
 	aiChatStop: "Generierung stoppen",
 	aiChatScopeActiveNote: "Aktive Notiz",
 	aiChatScopeVault: "Gesamter Vault",
-	aiChatModeSafe: "Vault-Sicher",
+	aiChatModeSafe: "Sicherer Modus",
 	aiChatModeEdit: "Bearbeitungsmodus",
 	aiChatContextPin: "Kontextnotiz anheften",
 	aiChatContextUnpin: "Kontextnotiz lösen",
@@ -253,7 +253,7 @@ export const de: TranslationSchema = {
 	settingsAIDefaultScopeName: "Standard-Kontextbereich",
 	settingsAIDefaultScopeDesc: "Ob der Agent standardmäßig auf die aktive Notiz oder den gesamten Vault fokussiert.",
 	settingsAIDefaultModeName: "Standard-Berechtigungsmodus",
-	settingsAIDefaultModeDesc: "Vault-Sicher (schreibgeschützt) oder Bearbeitungsmodus (Agent darf Dateien ändern).",
+	settingsAIDefaultModeDesc: "Sicherer Modus (schreibgeschützt) oder Bearbeitungsmodus (Agent darf Dateien ändern).",
 	settingsAICustomPathName: "Antigravity CLI-Pfad",
 	settingsAICustomPathDesc: "Pfad zur ausführbaren agy-Datei. Leer lassen für automatische Erkennung.",
 	settingsAIChatFolderName: "Ordner für Chat-Verlauf",
@@ -419,8 +419,11 @@ export const de: TranslationSchema = {
 
 	aiChatErrorLabel: "Fehler",
 	aiChatChooseMode: "Modus wählen",
-	aiChatSafePermissionHelp: "Im sicheren Modus ist eine Werkzeugfreigabe erforderlich. Wähle den Bearbeitungsmodus, um Dateiänderungen und Befehle zu erlauben, und sende die Anfrage erneut. Prüfe andernfalls die CLI-Berechtigungen im Terminal.",
-	aiChatPermissionHelp: "Diese CLI benötigt eine Werkzeugfreigabe. Prüfe die Berechtigungen im Terminal und sende die Anfrage erneut.",
+	aiChatSafePermissionHelp: "Im sicheren Modus ist eine Werkzeugfreigabe erforderlich. Wähle den Bearbeitungsmodus, um Dateiänderungen und Befehle zu erlauben, und frage noch einmal. Prüfe andernfalls die CLI-Berechtigungen im Terminal.",
+	aiChatPermissionHelp: "Diese CLI benötigt eine Werkzeugfreigabe. Prüfe die Berechtigungen im Terminal und frage noch einmal.",
+	aiChatContinue: "Fortfahren",
+	aiChatContinueRequest: "Führe meine vorherige Anfrage im Bearbeitungsmodus aus.",
+	aiChatReadOnlyHint: "{0} ist schreibgeschützt. Wähle {1} und frage noch einmal, um Änderungen anzuwenden.",
 	aiChatStopped: "Antwort gestoppt.",
 
 };

@@ -133,7 +133,7 @@ test("stale AI chat leaves are revived by cycling view state", async () => {
 	]);
 });
 
-test("AIChatView defaults to safe mode (Vault safe)", async () => {
+test("AIChatView defaults to safe mode (Safe mode)", async () => {
 	const leaf = {};
 	const plugin = {
 		settings: {
@@ -520,4 +520,85 @@ test("Stop invalidates pending submissions and labels an otherwise empty reply",
 	assert.equal(view.isGenerating, false);
 	assert.equal(message.content, "Response stopped.");
 	assert.equal(rendered.target, body);
+});
+
+test("late message layout follows the latest reply unless the reader scrolls up", () => {
+	const previousObserver = globalThis.ResizeObserver;
+	let notifyResize;
+	let disconnected = 0;
+	globalThis.ResizeObserver = class {
+		constructor(callback) { notifyResize = callback; }
+		disconnect() { disconnected++; }
+	};
+	try {
+		const view = Object.create(AIChatView.prototype);
+		const listeners = {};
+		const list = { scrollTop: 0, scrollHeight: 100, clientHeight: 100,
+			addEventListener: (name, callback) => { listeners[name] = callback; },
+			querySelectorAll: () => [],
+		};
+		view.renderMessages = () => {};
+		view.followOutput = true;
+		view.buildMessageList({ createDiv: () => list });
+		list.scrollHeight = 900;
+		notifyResize();
+		assert.equal(list.scrollTop, 900);
+		list.scrollTop = 50;
+		listeners.scroll();
+		list.scrollHeight = 1200;
+		notifyResize();
+		assert.equal(list.scrollTop, 50);
+		list.scrollTop = 1100;
+		listeners.scroll();
+		list.scrollHeight = 1400;
+		notifyResize();
+		assert.equal(list.scrollTop, 1400);
+		view.disposeMessageRendering();
+		assert.equal(disconnected, 1);
+	} finally { globalThis.ResizeObserver = previousObserver; }
+});
+
+test("Continue prepares a follow-up with the original context and never sends or overwrites drafts", () => {
+	const view = Object.create(AIChatView.prototype);
+	const original = { path: "Note/original.md" };
+	view.messages = [{ id: "user-1", role: "user", content: "Add a translation" }];
+	view.safeRequest = { userId: "user-1", file: original, quote: null, scope: "active-note" };
+	view.mode = "safe"; view.isGenerating = false;
+	view.continueBtnEl = { hidden: true };
+	view.inputEl = { value: "", focus() {} };
+	view.updateModeBtnLabel = () => {};
+	view.renderSelectionQuote = () => {};
+	view.updateVaultToggleState = () => {};
+	view.updateContextChip = () => {};
+	view.autoResizeTextarea = () => {};
+	view.updateSendButtonState = () => view.updateContinueAction();
+	let sent = 0; view.handleSubmit = () => { sent++; };
+	view.updateContinueAction();
+	assert.equal(view.continueBtnEl.hidden, true);
+	view.setMode("edit");
+	assert.equal(sent, 0);
+	assert.equal(view.continueBtnEl.hidden, false);
+	view.inputEl.value = "My unsent draft";
+	view.prepareContinuation();
+	assert.equal(view.inputEl.value, "My unsent draft");
+	view.inputEl.value = "";
+	view.prepareContinuation();
+	assert.equal(view.inputEl.value, "Please carry out my previous request in edit mode.");
+	assert.equal(view.pinnedContextFile, original);
+	assert.equal(view.isContextPinned, true);
+	assert.equal(view.safeRequest, null);
+	assert.equal(view.continueBtnEl.hidden, true);
+	assert.equal(sent, 0);
+});
+
+test("Continue is unavailable during generation or after another user request", () => {
+	const view = Object.create(AIChatView.prototype);
+	view.mode = "edit"; view.isGenerating = true;
+	view.continueBtnEl = { hidden: false }; view.inputEl = { value: "" };
+	view.messages = [{ id: "user-1", role: "user" }];
+	view.safeRequest = { userId: "user-1" };
+	view.updateContinueAction(); assert.equal(view.continueBtnEl.hidden, true);
+	view.isGenerating = false;
+	view.messages.push({ id: "user-2", role: "user" });
+	view.updateContinueAction(); assert.equal(view.continueBtnEl.hidden, true);
 });

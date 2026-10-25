@@ -222,7 +222,7 @@ export const zhTw: TranslationSchema = {
 	aiChatStop: "停止生成",
 	aiChatScopeActiveNote: "目前筆記",
 	aiChatScopeVault: "整個保管庫",
-	aiChatModeSafe: "保管庫安全",
+	aiChatModeSafe: "安全模式",
 	aiChatModeEdit: "編輯模式",
 	aiChatContextPin: "釘選上下文筆記",
 	aiChatContextUnpin: "取消釘選上下文筆記",
@@ -253,7 +253,7 @@ export const zhTw: TranslationSchema = {
 	settingsAIDefaultScopeName: "預設上下文範圍",
 	settingsAIDefaultScopeDesc: "預設以目前筆記還是整個保管庫作為 Agent 對話上下文。",
 	settingsAIDefaultModeName: "預設權限模式",
-	settingsAIDefaultModeDesc: "保管庫安全（唯讀）或編輯模式（Agent 可修改檔案）。",
+	settingsAIDefaultModeDesc: "安全模式（唯讀）或編輯模式（Agent 可修改檔案）。",
 	settingsAICustomPathName: "Antigravity CLI 路徑",
 	settingsAICustomPathDesc: "agy 執行檔的路徑。留空則自動偵測。",
 	settingsAIChatFolderName: "對話紀錄資料夾",
@@ -419,8 +419,11 @@ export const zhTw: TranslationSchema = {
 
 	aiChatErrorLabel: "錯誤",
 	aiChatChooseMode: "選擇模式",
-	aiChatSafePermissionHelp: "保管庫安全模式下，此工具需要授權。若要允許編輯檔案和執行指令，請選擇編輯模式，再重新送出請求。否則，請在終端機中檢查 CLI 權限。",
-	aiChatPermissionHelp: "此 CLI 需要工具授權。請在終端機中檢查權限，再重新送出請求。",
+	aiChatSafePermissionHelp: "安全模式下，此工具需要授權。若要允許編輯檔案和執行指令，請切換至編輯模式後，再次發出要求。否則，請在終端機中檢查 CLI 權限。",
+	aiChatPermissionHelp: "此 CLI 需要工具授權。請在終端機中檢查權限後，再次發出要求。",
+	aiChatContinue: "繼續",
+	aiChatContinueRequest: "請在編輯模式下執行我先前的要求。",
+	aiChatReadOnlyHint: "{0}僅供讀取。若要套用變更，請切換至{1}後，再次發出要求。",
 	aiChatStopped: "回覆已停止。",
 
 };

@@ -222,7 +222,7 @@ export const es: TranslationSchema = {
 	aiChatStop: "Detener generación",
 	aiChatScopeActiveNote: "Nota activa",
 	aiChatScopeVault: "Bóveda completa",
-	aiChatModeSafe: "Bóveda segura",
+	aiChatModeSafe: "Modo seguro",
 	aiChatModeEdit: "Modo de edición",
 	aiChatContextPin: "Fijar nota de contexto",
 	aiChatContextUnpin: "Desfijar nota de contexto",
@@ -253,7 +253,7 @@ export const es: TranslationSchema = {
 	settingsAIDefaultScopeName: "Ámbito de contexto predeterminado",
 	settingsAIDefaultScopeDesc: "Si el Agent se enfoca en la nota activa o en toda la bóveda de forma predeterminada.",
 	settingsAIDefaultModeName: "Modo de permisos predeterminado",
-	settingsAIDefaultModeDesc: "Bóveda segura (solo lectura) o modo de edición (el Agent puede modificar archivos).",
+	settingsAIDefaultModeDesc: "Modo seguro (solo lectura) o modo de edición (el Agent puede modificar archivos).",
 	settingsAICustomPathName: "Ruta de Antigravity CLI",
 	settingsAICustomPathDesc: "Ruta al ejecutable agy. Dejar en blanco para detección automática.",
 	settingsAIChatFolderName: "Carpeta del historial de chat",
@@ -419,8 +419,11 @@ export const es: TranslationSchema = {
 
 	aiChatErrorLabel: "Error",
 	aiChatChooseMode: "Elegir modo",
-	aiChatSafePermissionHelp: "El modo seguro requiere aprobar esta herramienta. Para permitir cambios en archivos y comandos, elige el modo de edición y vuelve a enviar la solicitud. Si no, revisa los permisos de la CLI en Terminal.",
-	aiChatPermissionHelp: "Esta CLI requiere aprobar la herramienta. Revisa sus permisos en Terminal y vuelve a enviar la solicitud.",
+	aiChatSafePermissionHelp: "El modo seguro requiere aprobar esta herramienta. Para permitir cambios en archivos y comandos, elige el modo de edición y vuelve a pedirlo. Si no, revisa los permisos de la CLI en Terminal.",
+	aiChatPermissionHelp: "Esta CLI requiere aprobar la herramienta. Revisa sus permisos en Terminal y vuelve a pedirlo.",
+	aiChatContinue: "Continuar",
+	aiChatContinueRequest: "Realiza mi solicitud anterior en modo de edición.",
+	aiChatReadOnlyHint: "{0} es de solo lectura. Elige {1} y vuelve a pedirlo para aplicar los cambios.",
 	aiChatStopped: "Respuesta detenida.",
 
 };

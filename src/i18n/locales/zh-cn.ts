@@ -222,7 +222,7 @@ export const zhCn: TranslationSchema = {
 	aiChatStop: "停止生成",
 	aiChatScopeActiveNote: "当前笔记",
 	aiChatScopeVault: "整个仓库",
-	aiChatModeSafe: "仓库安全",
+	aiChatModeSafe: "安全模式",
 	aiChatModeEdit: "编辑模式",
 	aiChatContextPin: "固定上下文笔记",
 	aiChatContextUnpin: "取消固定上下文笔记",
@@ -253,7 +253,7 @@ export const zhCn: TranslationSchema = {
 	settingsAIDefaultScopeName: "默认上下文范围",
 	settingsAIDefaultScopeDesc: "默认以当前笔记还是整个仓库作为 Agent 对话上下文。",
 	settingsAIDefaultModeName: "默认权限模式",
-	settingsAIDefaultModeDesc: "仓库安全（只读）或编辑模式（Agent 可修改文件）。",
+	settingsAIDefaultModeDesc: "安全模式（只读）或编辑模式（Agent 可修改文件）。",
 	settingsAICustomPathName: "Antigravity CLI 路径",
 	settingsAICustomPathDesc: "agy 可执行文件的路径。留空则自动检测。",
 	settingsAIChatFolderName: "对话记录文件夹",
@@ -419,8 +419,11 @@ export const zhCn: TranslationSchema = {
 
 	aiChatErrorLabel: "错误",
 	aiChatChooseMode: "选择模式",
-	aiChatSafePermissionHelp: "保险库安全模式下，此工具需要授权。如需允许编辑文件和执行命令，请选择编辑模式，再重新发送请求。否则，请在终端中检查 CLI 权限。",
-	aiChatPermissionHelp: "此 CLI 需要工具授权。请在终端中检查权限，再重新发送请求。",
+	aiChatSafePermissionHelp: "安全模式下，此工具需要授权。如需允许编辑文件和执行命令，请切换至编辑模式后，再次提出要求。否则，请在终端中检查 CLI 权限。",
+	aiChatPermissionHelp: "此 CLI 需要工具授权。请在终端中检查权限后，再次提出要求。",
+	aiChatContinue: "继续",
+	aiChatContinueRequest: "请在编辑模式下执行我之前的要求。",
+	aiChatReadOnlyHint: "{0}为只读模式。如需应用更改，请切换至{1}后，再次提出要求。",
 	aiChatStopped: "回复已停止。",
 
 };

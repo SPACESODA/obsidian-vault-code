@@ -222,7 +222,7 @@ export const fr: TranslationSchema = {
 	aiChatStop: "Arrêter la génération",
 	aiChatScopeActiveNote: "Note active",
 	aiChatScopeVault: "Coffre entier",
-	aiChatModeSafe: "Coffre sécurisé",
+	aiChatModeSafe: "Mode sécurisé",
 	aiChatModeEdit: "Mode édition",
 	aiChatContextPin: "Épingler la note de contexte",
 	aiChatContextUnpin: "Désépingler la note de contexte",
@@ -253,7 +253,7 @@ export const fr: TranslationSchema = {
 	settingsAIDefaultScopeName: "Portée de contexte par défaut",
 	settingsAIDefaultScopeDesc: "Définir si l'Agent se concentre par défaut sur la note active ou tout le coffre.",
 	settingsAIDefaultModeName: "Mode d'autorisation par défaut",
-	settingsAIDefaultModeDesc: "Coffre sécurisé (lecture seule) ou mode édition (l'Agent peut modifier les fichiers).",
+	settingsAIDefaultModeDesc: "Mode sécurisé (lecture seule) ou mode édition (l'Agent peut modifier les fichiers).",
 	settingsAICustomPathName: "Chemin d'Antigravity CLI",
 	settingsAICustomPathDesc: "Chemin vers l'exécutable agy. Laisser vide pour la détection automatique.",
 	settingsAIChatFolderName: "Dossier de l'historique des discussions",
@@ -419,8 +419,11 @@ export const fr: TranslationSchema = {
 
 	aiChatErrorLabel: "Erreur",
 	aiChatChooseMode: "Choisir le mode",
-	aiChatSafePermissionHelp: "Le mode sûr nécessite l’approbation de cet outil. Pour autoriser les modifications de fichiers et les commandes, choisissez le mode édition puis renvoyez la demande. Sinon, vérifiez les permissions de la CLI dans le terminal.",
-	aiChatPermissionHelp: "Cette CLI nécessite l’approbation de l’outil. Vérifiez ses permissions dans le terminal, puis renvoyez la demande.",
+	aiChatSafePermissionHelp: "Le mode sécurisé nécessite l’approbation de cet outil. Pour autoriser les modifications de fichiers et les commandes, choisissez le mode édition puis faites à nouveau votre demande. Sinon, vérifiez les permissions de la CLI dans le terminal.",
+	aiChatPermissionHelp: "Cette CLI nécessite l’approbation de l’outil. Vérifiez ses permissions dans le terminal, puis faites à nouveau votre demande.",
+	aiChatContinue: "Continuer",
+	aiChatContinueRequest: "Exécutez ma demande précédente en mode édition.",
+	aiChatReadOnlyHint: "{0} est en lecture seule. Choisissez {1} et faites à nouveau votre demande pour appliquer les modifications.",
 	aiChatStopped: "Réponse arrêtée.",
 
 };

@@ -490,3 +490,37 @@ test('Antigravity structured errors are failures even after partial output and e
   const h = harness({bins:{agy:'/fake/agy'},output});
   assert.match((await h.send('antigravity')).error.message, /Model unavailable/);
 });
+
+test('CLI interface guidance keeps plans visible and conversational approval read-only', async () => {
+  const h = harness({bins:{agy:'/fake/agy'}});
+  await h.send('antigravity',{mode:'safe',conversationId:'existing-conversation',prompt:'Yes, proceed'});
+  const args=h.spawned[0].args;
+  const prompt=args[args.indexOf('-p')+1];
+  assert.ok(prompt.includes('Current mode: Safe mode (read-only)'));
+  assert.ok(prompt.includes('show the proposed text inline'));
+  assert.ok(prompt.includes('A conversational yes or approval does not change the mode'));
+  assert.ok(prompt.includes('cannot see provider-side plan artifacts'));
+  assert.ok(prompt.includes('Yes, proceed'));
+  assert.ok(args.includes('--sandbox'));
+  assert.ok(!args.includes('--dangerously-skip-permissions'));
+  await h.send('antigravity',{mode:'edit'});
+  const edit=h.spawned[1].args;
+  const editPrompt=edit[edit.indexOf('-p')+1];
+  assert.ok(editPrompt.includes('Current mode: Edit mode.'));
+  assert.ok(!editPrompt.includes('Current mode: Safe mode'));
+});
+
+test('API and local connections receive interface guidance without losing their edit protocol', async () => {
+  const h=harness();
+  h.service.getConnection=()=>({models:['test-model']});
+  let system;
+  h.service.requestDirectModel=async(_connection,_model,_messages,instructions)=>{system=instructions;return 'Proposed text';};
+  await h.send('connection:test',{mode:'safe'});
+  assert.ok(system.includes('cannot see provider-side plan artifacts'));
+  assert.ok(system.includes('Current mode: Safe mode (read-only)'));
+  assert.ok(system.includes('Do not emit edit proposals'));
+  await h.send('connection:test',{mode:'edit',activeFile:{path:'Note/test.md'},activeContent:'Original'});
+  assert.ok(system.includes('Current mode: Edit mode.'));
+  assert.ok(system.includes('fenced vault-code-edit block'));
+  assert.ok(system.includes('The user must review and apply it'));
+});

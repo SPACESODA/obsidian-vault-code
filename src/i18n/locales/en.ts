@@ -220,7 +220,7 @@ export const en = {
 	aiChatStop: "Stop generating",
 	aiChatScopeActiveNote: "Active note",
 	aiChatScopeVault: "Entire vault",
-	aiChatModeSafe: "Vault safe",
+	aiChatModeSafe: "Safe mode",
 	aiChatModeEdit: "Edit mode",
 	aiChatContextPin: "Pin context note",
 	aiChatContextUnpin: "Unpin context note",
@@ -251,7 +251,7 @@ export const en = {
 	settingsAIDefaultScopeName: "Default context scope",
 	settingsAIDefaultScopeDesc: "Whether the Agent focuses on the active note or the entire vault by default.",
 	settingsAIDefaultModeName: "Default permission mode",
-	settingsAIDefaultModeDesc: "Vault safe (read-only) or edit mode (Agent can modify files).",
+	settingsAIDefaultModeDesc: "Safe mode (read-only) or edit mode (Agent can modify files).",
 	settingsAICustomPathName: "Antigravity CLI path",
 	settingsAICustomPathDesc: "Path to the agy executable. Leave empty to auto-detect.",
 	settingsAIChatFolderName: "Chat history folder",
@@ -417,8 +417,11 @@ export const en = {
 
 	aiChatErrorLabel: "Error",
 	aiChatChooseMode: "Choose mode",
-	aiChatSafePermissionHelp: "Tool approval is required in safe mode. To allow file edits and commands, choose edit mode, then resend your request. Otherwise, review the CLI permissions in your terminal.",
-	aiChatPermissionHelp: "This CLI requires tool approval. Review its permissions in your terminal, then resend your request.",
+	aiChatSafePermissionHelp: "Tool approval is required in safe mode. To allow file edits and commands, choose edit mode, then ask again. Otherwise, review the CLI permissions in your terminal.",
+	aiChatPermissionHelp: "This CLI requires tool approval. Review its permissions in your terminal, then ask again.",
+	aiChatContinue: "Continue",
+	aiChatContinueRequest: "Please carry out my previous request in edit mode.",
+	aiChatReadOnlyHint: "{0} is read-only. Choose {1}, then ask again to apply changes.",
 	aiChatStopped: "Response stopped.",
 
 };
