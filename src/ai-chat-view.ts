@@ -1107,6 +1107,10 @@ export class AIChatView extends ItemView {
 		});
 	}
 
+	public hasPendingChatContent(): boolean {
+		return this.isGenerating || this.messages.length > 0 || Boolean(this.inputEl?.value.trim()) || Boolean(this.pendingQuote);
+	}
+
 	public focusInput(): void {
 		this.inputEl?.focus();
 	}

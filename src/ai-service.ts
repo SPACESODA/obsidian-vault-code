@@ -409,11 +409,16 @@ export class AIService {
 	private app: App;
 	private plugin?: VaultCodePlugin;
 	private cachedCp: NodeChildProcess | null = null;
-	private cachedPaths = new Map<string, string | null>();
+	private cachedPaths = new Map<string, string>();
+	private pathLookups = new Map<string, Promise<string | null>>();
+	private cacheGeneration = 0;
+	private agentsCheck?: Promise<DetectedAgentInfo[]>;
+	private agentsCheckedAt = 0;
 	private detectedAgentsCache: DetectedAgentInfo[] | null = null;
 	private providerModelsCache = new Map<string, AgyModelInfo[]>();
 	private shellPath: string | null = null;
 	private shellPathPromise?: Promise<void>;
+	private shellPathRetryAfter = 0;
 
 	constructor(app: App, plugin?: VaultCodePlugin) {
 		this.app = app;
@@ -429,9 +434,7 @@ export class AIService {
 	}
 
 	public clearCache(): void {
-		this.cachedPaths.clear();
-		this.detectedAgentsCache = null;
-		this.providerModelsCache.clear();
+		this.refreshAgentsCache();
 	}
 
 	private async resolveChildProcess(): Promise<NodeChildProcess | null> {
@@ -547,7 +550,7 @@ export class AIService {
 	}
 
 	private async loadShellPath(cp: NodeChildProcess): Promise<void> {
-		if (Platform.isWin) return;
+		if (Platform.isWin || Date.now() < this.shellPathRetryAfter) return;
 		if (!this.shellPathPromise) {
 			this.shellPathPromise = new Promise<void>((resolve) => {
 				const env = this.getEnv();
@@ -555,12 +558,15 @@ export class AIService {
 				cp.execFile(shell, ["-ilc", "printf '\nVAULT_CODE_PATH=%s\n' \"$PATH\""],
 					{ env, timeout: 5000, maxBuffer: 1024 * 1024 }, (_err, stdout) => {
 						const match = stdout?.toString().match(/^VAULT_CODE_PATH=(.+)$/m);
-						if (match?.[1]) this.shellPath = match[1].trim();
+						if (match?.[1]) { this.shellPath = match[1].trim(); this.shellPathRetryAfter = 0; }
+						else this.shellPathRetryAfter = Date.now() + 3000;
 						resolve();
 					});
 			});
 		}
 		await this.shellPathPromise;
+		// A startup timeout must not poison PATH discovery for the rest of the session.
+		if (this.shellPathRetryAfter) this.shellPathPromise = undefined;
 	}
 
 	private getEnv(): Record<string, string> {
@@ -666,6 +672,20 @@ export class AIService {
 		const cached = this.cachedPaths.get(binary);
 		if (cached !== undefined) return cached;
 
+		const pending = this.pathLookups.get(binary);
+		if (pending) return pending;
+		const generation = this.cacheGeneration;
+		const lookup = this.findBinaryPath(binary, fallbackCandidates).then((path) => {
+			// Missing executables can recover without opening settings. Do not cache misses.
+			if (path && generation === this.cacheGeneration) this.cachedPaths.set(binary, path);
+			return path;
+		});
+		this.pathLookups.set(binary, lookup);
+		try { return await lookup; }
+		finally { if (this.pathLookups.get(binary) === lookup) this.pathLookups.delete(binary); }
+	}
+
+	private async findBinaryPath(binary: string, fallbackCandidates: string[]): Promise<string | null> {
 		const cp = await this.resolveChildProcess();
 		if (!cp) return null;
 
@@ -736,7 +756,6 @@ export class AIService {
 			);
 		});
 
-		this.cachedPaths.set(binary, detected);
 		return detected;
 	}
 
@@ -805,58 +824,80 @@ export class AIService {
 			return [];
 		}
 
-		if (this.detectedAgentsCache) return this.detectedAgentsCache;
+		if (this.detectedAgentsCache && Date.now() - this.agentsCheckedAt < 30000) return this.detectedAgentsCache;
+		if (this.agentsCheck) return this.agentsCheck;
+		const generation = this.cacheGeneration;
+		const check = this.checkAllAgents();
+		this.agentsCheck = check;
+		try {
+			const results = await check;
+			if (generation === this.cacheGeneration) {
+				this.detectedAgentsCache = results;
+				this.agentsCheckedAt = Date.now();
+			}
+			return results;
+		} finally { if (this.agentsCheck === check) this.agentsCheck = undefined; }
+	}
 
+	private async checkAllAgents(): Promise<DetectedAgentInfo[]> {
 		const cp = await this.resolveChildProcess();
 		const env = this.getEnv();
-		const results: DetectedAgentInfo[] = [];
+		const results: DetectedAgentInfo[] = new Array<DetectedAgentInfo>(ALL_AGENT_DEFS.length);
+		let next = 0;
+		const worker = async () => {
+			while (next < ALL_AGENT_DEFS.length) {
+				const index = next++;
+				const def = ALL_AGENT_DEFS[index]!;
+				const binPath = await this.detectProviderPath(def.id);
+				let version = "";
+				let isInstalled = false;
+				let diagnostic: string | undefined;
 
-		for (const def of ALL_AGENT_DEFS) {
-			const binPath = await this.detectProviderPath(def.id);
-			let version = "";
-			let isInstalled = false;
-			let diagnostic: string | undefined;
+				if (binPath && cp) {
+					isInstalled = true;
+					version = await new Promise<string>((resolve) => {
+						cp.execFile(
+							binPath,
+							def.versionArgs,
+							{ env, timeout: 10000, shell: Platform.isWin },
+							(err, stdout, stderr) => {
+								const text = (stdout || stderr || "").toString().trim();
+								const match = def.id === "ollama" ? text.match(/version (?:is )?([0-9.]+)/i) : null;
+								const firstLine = match?.[1] ? `ollama ${match[1]}` : (text.split("\n")[0]?.trim() || "");
+								if (err) diagnostic = firstLine || err.message;
+								resolve(err ? "Version check failed" : firstLine || "Installed");
+							},
+						);
+					});
+				}
 
-			if (binPath && cp) {
-				isInstalled = true;
-				version = await new Promise<string>((resolve) => {
-					cp.execFile(
-						binPath,
-						def.versionArgs,
-						{ env, timeout: 3000, shell: Platform.isWin },
-						(err, stdout, stderr) => {
-							const text = (stdout || stderr || "").toString().trim();
-							const match = def.id === "ollama" ? text.match(/version (?:is )?([0-9.]+)/i) : null;
-							const firstLine = match?.[1] ? `ollama ${match[1]}` : (text.split("\n")[0]?.trim() || "");
-							if (err) diagnostic = firstLine || err.message;
-							resolve(err ? "Version check failed" : firstLine || "Installed");
-						},
-					);
-				});
+				const connectionStatus = binPath && !diagnostic ? await this.checkConnection(def.id, binPath) : undefined;
+				results[index] = {
+					id: def.id,
+					name: def.name,
+					binary: def.binary,
+					icon: def.icon,
+					isInstalled,
+					version,
+					path: binPath,
+					defaultModel: def.defaultModel,
+					models: def.models,
+					diagnostic,
+					connectionStatus,
+				};
 			}
-
-			const connectionStatus = binPath && !diagnostic ? await this.checkConnection(def.id, binPath) : undefined;
-			results.push({
-				id: def.id,
-				name: def.name,
-				binary: def.binary,
-				icon: def.icon,
-				isInstalled,
-				version,
-				path: binPath,
-				defaultModel: def.defaultModel,
-				models: def.models,
-				diagnostic,
-				connectionStatus,
-			});
-		}
-
-		this.detectedAgentsCache = results;
+		};
+		// Bound process pressure while avoiding a slow serial check of every provider.
+		await Promise.all(Array.from({ length: 3 }, () => worker()));
 		return results;
 	}
 
 	public refreshAgentsCache(): void {
+		this.cacheGeneration++;
+		this.shellPathRetryAfter = 0;
 		this.shellPathPromise = undefined;
+		this.agentsCheck = undefined;
+		this.pathLookups.clear();
 		this.detectedAgentsCache = null;
 		this.cachedPaths.clear();
 		this.providerModelsCache.clear();
@@ -1100,7 +1141,7 @@ export class AIService {
 		if (!def) return false;
 		if (this.detectedAgentsCache) {
 			const detected = this.detectedAgentsCache.find((a) => a.id === provider);
-			if (detected) return detected.isInstalled;
+			if (detected?.isInstalled) return true;
 		}
 		const path = await this.detectProviderPath(def.id);
 		return Boolean(path);
@@ -1498,7 +1539,7 @@ export class AIService {
 					args.push("--model", options.model.trim());
 				}
 				if (options.mode === "safe") {
-					args.push("--sandbox");
+					args.push("--mode", "plan", "--sandbox");
 				} else {
 					args.push("--mode", "accept-edits", "--dangerously-skip-permissions");
 				}
@@ -1694,8 +1735,11 @@ export class AIService {
 							event?: string;
 							conversation_id?: string;
 							step_update?: { text_delta?: string };
-							result?: { response?: string };
+							result?: { response?: string; error?: string };
+							error?: string | { message?: string };
 						};
+						const error = typeof parsed.error === "string" ? parsed.error : parsed.error?.message;
+						if (error || parsed.result?.error) protocolError = error || parsed.result?.error || "Antigravity request failed";
 						if (parsed.event === "init" && parsed.conversation_id) {
 							activeConversationId = parsed.conversation_id;
 							options.onInit?.(parsed.conversation_id);
@@ -1816,6 +1860,8 @@ export class AIService {
 					let errMsg = protocolError || stderrOutput.trim() || accumulatedText.trim();
 					if (!errMsg) {
 						errMsg = code === 0 ? `${agentName} returned no response. Check sign-in, model access, and CLI configuration.` : `${agentName} exited with code ${code}. Please check that the agent is authenticated and up to date.`;
+					} else if (/headless.*(?:permission|prompt)|permission.*(?:auto.denied|headless)|tool required the .* permission/i.test(errMsg)) {
+						errMsg = `${agentName} could not run a tool because it requires approval. Headless chat cannot show the CLI approval prompt. Review the provider’s tool permissions in Terminal and retry.`;
 					} else if (/rate.?limit|too many requests|429/i.test(errMsg)) {
 						errMsg += "\n\n> 💡 **Tip**: Rate limit reached. You can switch to another agent using the bottom bar or retry in a moment.";
 					} else if (/quota|credit|insufficient|balance|token limit|exceeded/i.test(errMsg)) {
@@ -1829,6 +1875,7 @@ export class AIService {
 
 			spawned.on("error", (err: Error) => {
 				if (isKilled) return;
+				if ("code" in err && (err.code === "ENOENT" || err.code === "EACCES")) this.refreshAgentsCache();
 				fail(err);
 			});
 			// Print-mode CLIs must see EOF; otherwise they can wait indefinitely for input.

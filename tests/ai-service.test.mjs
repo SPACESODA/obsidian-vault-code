@@ -21,16 +21,20 @@ const mod = { exports: {} };
 new Function('module', 'exports', 'require', compiled.outputFiles[0].text)(mod, mod.exports, require);
 const { AIService, AGENT_INSTALL_CONFIGS } = mod.exports;
 
-function harness({ bins = {}, execute, output = 'Hello\n', stderr = '', code = 0, filesystem } = {}) {
+function harness({ bins = {}, execute, output = 'Hello\n', stderr = '', code = 0, filesystem, shellExecute } = {}) {
   const calls = [];
   const spawned = [];
   const cp = {
     execFile(file, args, options, callback) {
       calls.push({ file, args, options });
-      if (args[0] === '-ilc') return callback(null, '\nVAULT_CODE_PATH=/custom/node/bin:/usr/bin\n', '');
+      if (args[0] === '-ilc') {
+        const answer = shellExecute?.() || { stdout: '\nVAULT_CODE_PATH=/custom/node/bin:/usr/bin\n' };
+        return callback(answer.error || null, answer.stdout || '', '');
+      }
       if (file === 'which') return callback(bins[args[0]] ? null : new Error('missing'), bins[args[0]] || '', '');
       if (execute) {
         const answer = execute(file, args, options);
+        if (answer?.then) { void answer.then(r => callback(r.error || null, r.stdout || '', r.stderr || '')); return; }
         if (answer) return callback(answer.error || null, answer.stdout || '', answer.stderr || '');
       }
       callback(null, '1.2.3\n', '');
@@ -385,4 +389,104 @@ test('Entire Vault option excludes ignored files and formats strict boundaries',
   assert.ok(activePromptArg, 'Transcript should be in prompt when entire vault is OFF');
   assert.ok(activePromptArg.includes('User: Let us use SQLite.'));
   assert.ok(activePromptArg.includes('[Active Chat File: "Agent-Chats/Database.md"]'));
+});
+
+
+test('a startup discovery miss recovers on the next send without settings refresh', async () => {
+  const bins = {};
+  const h = harness({ bins });
+  await h.service.detectAllAgents();
+  assert.equal(await h.service.isProviderAvailable('claude'), false);
+  bins.claude = '/new/claude';
+  assert.equal(await h.service.isProviderAvailable('claude'), true);
+  assert.equal((await h.send('claude')).text, 'Hello\n');
+  assert.equal(h.spawned[0].file, '/new/claude');
+});
+
+test('overlapping provider checks share work and run at most three checks in parallel', async () => {
+  let active = 0; let peak = 0;
+  const bins = Object.fromEntries(['claude','codex','copilot','cursor-agent','opencode','pi','agy','kimi','grok','aider'].map(b => [b, `/fake/${b}`]));
+  const h = harness({ bins, execute: async () => {
+    active++; peak = Math.max(peak, active);
+    await new Promise(resolve => setImmediate(resolve));
+    active--;
+    return { stdout: '1.2.3' };
+  } });
+  const checks = await Promise.all(Array.from({length: 20}, () => h.service.detectAllAgents()));
+  assert.ok(checks.every(result => result === checks[0]));
+  assert.equal(peak, 3);
+  assert.equal(h.calls.filter(c => c.file === '/fake/agy').length, 1);
+  assert.equal(h.calls.filter(c => c.args[0] === '-ilc').length, 1);
+});
+
+test('overlapping binary lookups share one process', async () => {
+  const h = harness({ bins: { claude: '/fake/claude' } });
+  assert.deepEqual(await Promise.all(Array.from({length: 20}, () => h.service.detectBinaryPath('claude'))), Array(20).fill('/fake/claude'));
+  assert.equal(h.calls.filter(c => c.file === 'which').length, 1);
+});
+
+test('refresh during a pending lookup cannot repopulate stale path cache', async () => {
+  const h = harness();
+  let finish;
+  h.service.findBinaryPath = () => new Promise(resolve => { finish = resolve; });
+  const old = h.service.detectBinaryPath('claude');
+  h.service.refreshAgentsCache();
+  h.service.findBinaryPath = async () => '/new/claude';
+  assert.equal(await h.service.detectBinaryPath('claude'), '/new/claude');
+  finish('/old/claude');
+  await old;
+  assert.equal(await h.service.detectBinaryPath('claude'), '/new/claude');
+});
+
+test('refresh during provider checks cannot restore stale results', async () => {
+  const h = harness();
+  let finish;
+  h.service.checkAllAgents = () => new Promise(resolve => { finish = resolve; });
+  const old = h.service.detectAllAgents();
+  h.service.refreshAgentsCache();
+  const fresh = [{id:'claude',isInstalled:true}];
+  h.service.checkAllAgents = async () => fresh;
+  await h.service.detectAllAgents();
+  finish([{id:'claude',isInstalled:false}]);
+  await old;
+  assert.equal(await h.service.detectAllAgents(), fresh);
+});
+
+test('login shell timeout is retried after cooldown without a manual refresh', async () => {
+  let attempts = 0;
+  const h = harness({ bins:{claude:'/fake/claude'}, shellExecute: () => ++attempts === 1
+    ? {error:new Error('timeout')} : {stdout:'\nVAULT_CODE_PATH=/recovered/bin:/usr/bin\n'} });
+  await h.service.detectBinaryPath('claude');
+  assert.equal(attempts, 1);
+  await h.service.detectBinaryPath('codex');
+  assert.equal(attempts, 1);
+  h.service.shellPathRetryAfter = Date.now() - 1;
+  await h.service.detectBinaryPath('pi');
+  assert.equal(attempts, 2);
+  assert.ok(h.calls.findLast(c => c.file === 'which').options.env.PATH.startsWith('/recovered/bin:'));
+});
+
+test('Antigravity Safe mode explicitly plans with sandbox and keeps approvals enabled', async () => {
+  const h = harness({bins:{agy:'/fake/agy'}});
+  await h.send('antigravity');
+  assert.ok(h.spawned[0].args.includes('--sandbox'));
+  assert.equal(h.spawned[0].args[h.spawned[0].args.indexOf('--mode')+1], 'plan');
+  assert.ok(!h.spawned[0].args.includes('--dangerously-skip-permissions'));
+});
+
+test('Antigravity permission denials explain the actual issue without retrying tools', async () => {
+  const h = harness({ bins:{agy:'/fake/agy'}, code:1,
+    stderr:'jetski: no output produced — a tool required the "command" permission that headless mode cannot prompt for, so it was auto-denied. Alternatively, re-run with --dangerously-skip-permissions' });
+  const r = await h.send('antigravity');
+  assert.match(r.error.message, /requires approval/);
+  assert.match(r.error.message, /Terminal/);
+  assert.doesNotMatch(r.error.message, /skip-permissions|settings refresh|Authentication required/);
+  assert.equal(h.spawned.length, 1);
+});
+
+test('Antigravity structured errors are failures even after partial output and exit zero', async () => {
+  const output = [ {event:'step_update',step_update:{text_delta:'partial'}},
+    {event:'error',error:{message:'Model unavailable'}} ].map(JSON.stringify).join('\n');
+  const h = harness({bins:{agy:'/fake/agy'},output});
+  assert.match((await h.send('antigravity')).error.message, /Model unavailable/);
 });

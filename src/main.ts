@@ -114,6 +114,7 @@ import {
 	AGENT_INSTALL_CONFIGS,
 } from "./ai-service";
 import { AIChatView, VIEW_TYPE_AI_CHAT } from "./ai-chat-view";
+import { ChatLeafManager } from "./ai-chat-leaf";
 import { AIStorage } from "./ai-storage";
 import { type AIConnection, connectionProvider, normalizeConnections } from "./ai-connections";
 import { renderConnectionSettings } from "./ai-connections-settings";
@@ -4845,6 +4846,7 @@ export default class VaultCodePlugin extends Plugin {
 	aiService!: AIService;
 	aiStorage!: AIStorage;
 	private aiChatRibbonIconEl: HTMLElement | null = null;
+	private aiChatLeaves = new ChatLeafManager<WorkspaceLeaf>();
 
 	async onload() {
 		this.aiService = new AIService(this.app, this);
@@ -4959,9 +4961,6 @@ export default class VaultCodePlugin extends Plugin {
 
 		if (this.app.workspace.layoutReady) {
 			void this.reloadCodeEditorLeaves();
-			if (Platform.isDesktop && this.settings.enableAIChat) {
-				void this.reloadAIChatLeaves();
-			}
 			if (Platform.isDesktop && this.isGitAvailable()) {
 				void this.gitService.getRepoRoot().then(() => {
 					this.updateAllLeafHeaderActions();
@@ -5624,72 +5623,38 @@ export default class VaultCodePlugin extends Plugin {
 
 	private async reloadAIChatLeaves(): Promise<void> {
 		if (!Platform.isDesktop) return;
-
 		if (!this.settings.enableAIChat) {
 			this.app.workspace.detachLeavesOfType(VIEW_TYPE_AI_CHAT);
 			return;
 		}
+		await this.ensureAIChatLeaf();
+	}
 
-		const leavesToReload: WorkspaceLeaf[] = [];
-		this.app.workspace.iterateAllLeaves((leaf) => {
-			const viewState = leaf.getViewState();
-			if (viewState && viewState.type === VIEW_TYPE_AI_CHAT) {
-				const view = leaf.view;
-				const isDeadOrStale =
-					!(view instanceof AIChatView) ||
-					view.plugin !== this ||
-					view.containerEl.children.length === 0;
-
-				if (isDeadOrStale) {
-					leavesToReload.push(leaf);
-				}
-			}
+	private ensureAIChatLeaf(): Promise<WorkspaceLeaf | null> {
+		const { workspace } = this.app;
+		return this.aiChatLeaves.ensure({
+			enabled: () => Platform.isDesktop && this.settings.enableAIChat && !this.unloading,
+			leaves: () => {
+				const leaves: WorkspaceLeaf[] = [];
+				// Deferred views may not yet appear in getLeavesOfType on startup.
+				workspace.iterateAllLeaves((leaf) => {
+					if (leaf.getViewState()?.type === VIEW_TYPE_AI_CHAT) leaves.push(leaf);
+				});
+				return leaves;
+			},
+			create: () => workspace.getRightLeaf(false),
+			state: (leaf) => leaf.getViewState(),
+			keep: (leaf) => leaf.view instanceof AIChatView && leaf.view.hasPendingChatContent(),
+			current: (leaf) => leaf.view instanceof AIChatView && leaf.view.plugin === this && leaf.view.containerEl.children.length > 0,
+			active: (leaf) => workspace.getActiveViewOfType(AIChatView) === leaf.view,
+			setState: (leaf, state) => leaf.setViewState(state),
+			detach: (leaf) => leaf.detach(),
+			type: VIEW_TYPE_AI_CHAT,
 		});
-
-		for (const leaf of leavesToReload) {
-			const viewState = leaf.getViewState();
-			const wasActive = this.app.workspace.getActiveViewOfType(AIChatView) === leaf.view;
-
-			// Clear view state first so Obsidian purges the dead placeholder and invokes
-			// the newly registered AIChatView constructor cleanly
-			await leaf.setViewState({ type: "empty" });
-			await leaf.setViewState({
-				type: VIEW_TYPE_AI_CHAT,
-				state: viewState?.state ?? {},
-				active: wasActive,
-			});
-		}
-
-		if (this.app.workspace.getLeavesOfType(VIEW_TYPE_AI_CHAT).length === 0) {
-			await this.initAIChatLeaf();
-		}
 	}
 
 	async initAIChatLeaf(): Promise<void> {
-		if (!Platform.isDesktop || !this.settings.enableAIChat) return;
-		const { workspace } = this.app;
-		const existingLeaves = workspace.getLeavesOfType(VIEW_TYPE_AI_CHAT);
-		if (existingLeaves.length > 0) {
-			for (const leaf of existingLeaves) {
-				if (!(leaf.view instanceof AIChatView) || leaf.view.plugin !== this) {
-					const viewState = leaf.getViewState();
-					await leaf.setViewState({ type: "empty" });
-					await leaf.setViewState({
-						type: VIEW_TYPE_AI_CHAT,
-						state: viewState?.state ?? {},
-						active: false,
-					});
-				}
-			}
-			return;
-		}
-		const rightLeaf = workspace.getRightLeaf(false);
-		if (rightLeaf) {
-			await rightLeaf.setViewState({
-				type: VIEW_TYPE_AI_CHAT,
-				active: false,
-			});
-		}
+		await this.ensureAIChatLeaf();
 	}
 
 	public createAgentSelectionExtension(): Extension {
@@ -5710,23 +5675,7 @@ export default class VaultCodePlugin extends Plugin {
 	async activateAIChatView(quote?: SelectionQuote): Promise<void> {
 		if (!Platform.isDesktop || !this.settings.enableAIChat) return;
 		const { workspace } = this.app;
-		let leaf = workspace.getLeavesOfType(VIEW_TYPE_AI_CHAT)[0];
-		if (leaf && !(leaf.view instanceof AIChatView)) {
-			// A development reload can leave a placeholder for the previous view instance.
-			await leaf.setViewState({ type: "empty" });
-			await leaf.setViewState({ type: VIEW_TYPE_AI_CHAT, active: true });
-		}
-		if (!leaf) {
-			const rightLeaf = workspace.getRightLeaf(false);
-			if (rightLeaf) {
-				leaf = rightLeaf;
-				await leaf.setViewState({
-					type: VIEW_TYPE_AI_CHAT,
-					active: true,
-				});
-			}
-		}
-
+		const leaf = await this.ensureAIChatLeaf();
 		// Ensure the right sidebar is expanded if collapsed
 		const rightSplit = workspace.rightSplit;
 		if (rightSplit && "collapsed" in rightSplit && rightSplit.collapsed) {
