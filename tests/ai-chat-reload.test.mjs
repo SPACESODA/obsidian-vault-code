@@ -383,3 +383,105 @@ test("getModelsForProvider caches discovered models to avoid repeating slow CLI 
 	assert.equal(fetchCount, 2);
 	assert.deepEqual(models3, models1);
 });
+
+test("context chip attach, pin, and remove state updates work immediately and reliably", async () => {
+	const leaf = {};
+	const plugin = {
+		settings: {
+			aiProvider: "antigravity",
+			aiProviderLastModel: {},
+			aiReasoningEffort: "auto",
+			aiScope: "active-note",
+			aiMode: "safe",
+			aiConnections: [],
+		},
+		aiService: { getModelsForProvider: async () => [] },
+		isPathIgnored: () => false,
+		saveSettings: async () => {},
+	};
+
+	const view = new AIChatView(leaf, plugin);
+	const noteA = new globalThis.__TestTFile("README Draft.md");
+	noteA.name = "README Draft.md";
+	const noteB = new globalThis.__TestTFile("main.ts");
+	noteB.name = "main.ts";
+
+	let currentActive = noteA;
+	view.app = {
+		workspace: {
+			getActiveFile: () => currentActive,
+		},
+	};
+
+	let emptyCalls = 0;
+	let renderedState = {};
+	view.contextChipEl = {
+		empty: () => { emptyCalls++; renderedState = {}; },
+		show: () => {},
+		hide: () => { renderedState.hidden = true; },
+		addClass: (cls) => { renderedState.cls = cls; },
+		removeClass: () => {},
+		createSpan: (opts) => {
+			if (opts?.text) renderedState.fileName = opts.text;
+			return { title: "" };
+		},
+		createEl: (tag, opts) => {
+			renderedState.tag = tag;
+			if (opts?.cls) renderedState.btnCls = opts.cls;
+			return {
+				addEventListener: () => {},
+				createSpan: (sOpts) => {
+					if (sOpts?.text) renderedState.attachText = sOpts.text;
+					return {};
+				},
+			};
+		},
+	};
+
+	// 1. Initial render attaches noteA
+	view.updateContextChip();
+	assert.equal(emptyCalls, 1);
+	assert.equal(renderedState.fileName, "README Draft.md");
+	assert.equal(view.contextExcluded, false);
+
+	// 2. Second render with same file does NOT empty or rebuild DOM
+	view.updateContextChip();
+	assert.equal(emptyCalls, 1); // No change!
+
+	// 3. Pinning noteA
+	view.togglePinContext(noteA);
+	assert.equal(view.isContextPinned, true);
+	assert.equal(view.pinnedContextFile, noteA);
+	assert.equal(emptyCalls, 2);
+
+	// 4. Switching active note while pinned stays on noteA
+	currentActive = noteB;
+	view.updateContextChip();
+	assert.equal(emptyCalls, 2); // Still noteA pinned, no DOM rebuild!
+
+	// 5. Unpinning
+	view.togglePinContext(noteA);
+	assert.equal(view.isContextPinned, false);
+	assert.equal(emptyCalls, 3);
+	assert.equal(renderedState.fileName, "main.ts");
+
+	// 6. Removing context (clicking x)
+	view.removeContext();
+	assert.equal(view.contextExcluded, true);
+	assert.equal(emptyCalls, 4);
+	assert.ok(renderedState.attachText.includes("Attach: main.ts"));
+
+	// 7. Switching active note while excluded updates attach button, stays detached
+	currentActive = noteA;
+	view.updateContextChip();
+	assert.equal(emptyCalls, 5);
+	assert.ok(renderedState.attachText.includes("Attach: README Draft.md"));
+	assert.equal(view.contextExcluded, true);
+
+	// 8. Re-attaching via attachActiveFile updates immediately back to attached state!
+	view.attachActiveFile(noteA);
+	assert.equal(view.contextExcluded, false);
+	assert.equal(view.chatScope, "active-note");
+	assert.equal(emptyCalls, 6);
+	assert.equal(renderedState.fileName, "README Draft.md");
+});

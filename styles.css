@@ -2780,10 +2780,12 @@ input[type="text"].vault-code-chat-title-input:focus-visible {
 	color: var(--interactive-accent);
 }
 
-.vault-code-context-chip-btn svg {
+.vault-code-context-chip-btn svg,
+.vault-code-context-attach-btn svg {
 	width: 11px;
 	height: 11px;
 	display: block;
+	pointer-events: none;
 }
 
 .vault-code-chat-input-row,

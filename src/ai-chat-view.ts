@@ -118,6 +118,7 @@ export class AIChatView extends ItemView {
 	private pinnedContextFile: TFile | null = null;
 	private isContextPinned = false;
 	private contextExcluded = false;
+	private lastRenderedContextKey = "";
 
 	// UI Elements
 	private titleWrapperEl!: HTMLElement;
@@ -183,7 +184,8 @@ export class AIChatView extends ItemView {
 
 		// Listen to active note changes to update context chip
 		this.registerEvent(
-			this.app.workspace.on("active-leaf-change", () => {
+			this.app.workspace.on("active-leaf-change", (leaf) => {
+				if (leaf === this.leaf || leaf?.view === this) return;
 				this.updateContextChip();
 			}),
 		);
@@ -614,10 +616,16 @@ export class AIChatView extends ItemView {
 		setIcon(chevronSpan, "chevron-down");
 	}
 
-	private updateContextChip(): void {
+	private updateContextChip(force = false): void {
 		if (!this.contextChipEl) return;
-		this.contextChipEl.empty();
-		if (this.pendingQuote) { this.contextChipEl.hide(); return; }
+		if (this.pendingQuote) {
+			if (this.lastRenderedContextKey !== "quote") {
+				this.contextChipEl.empty();
+				this.contextChipEl.hide();
+				this.lastRenderedContextKey = "quote";
+			}
+			return;
+		}
 
 		const activeFile = (this.isContextPinned && this.pinnedContextFile)
 			? this.pinnedContextFile
@@ -625,6 +633,23 @@ export class AIChatView extends ItemView {
 
 		const isIgnored = activeFile && this.plugin ? this.plugin.isPathIgnored(activeFile.path) : false;
 		const hasAttachedNote = !this.contextExcluded && !isIgnored && this.chatScope === "active-note" && activeFile;
+		const currentOpen = this.app.workspace.getActiveFile();
+
+		const cacheKey = JSON.stringify({
+			hasAttached: Boolean(hasAttachedNote && activeFile),
+			filePath: hasAttachedNote && activeFile ? activeFile.path : null,
+			fileName: hasAttachedNote && activeFile ? activeFile.name : null,
+			pinned: this.isContextPinned,
+			openPath: !hasAttachedNote && currentOpen ? currentOpen.path : null,
+			openName: !hasAttachedNote && currentOpen ? currentOpen.name : null,
+		});
+
+		if (!force && this.lastRenderedContextKey === cacheKey) {
+			return;
+		}
+		this.lastRenderedContextKey = cacheKey;
+
+		this.contextChipEl.empty();
 
 		if (hasAttachedNote && activeFile) {
 			this.contextChipEl.show();
@@ -643,6 +668,7 @@ export class AIChatView extends ItemView {
 			this.contextPinBtnEl = this.contextChipEl.createEl("button", {
 				cls: `clickable-icon vault-code-context-chip-btn vault-code-context-pin-btn${this.isContextPinned ? " is-pinned" : ""}`,
 				attr: {
+					type: "button",
 					"aria-label": this.isContextPinned
 						? t("aiChatContextUnpin")
 						: t("aiChatContextPin"),
@@ -650,6 +676,7 @@ export class AIChatView extends ItemView {
 			});
 			setIcon(this.contextPinBtnEl, "pin");
 			this.contextPinBtnEl.addEventListener("click", (e) => {
+				e.preventDefault();
 				e.stopPropagation();
 				this.togglePinContext(activeFile);
 			});
@@ -657,22 +684,28 @@ export class AIChatView extends ItemView {
 			// Remove button
 			const removeBtn = this.contextChipEl.createEl("button", {
 				cls: "clickable-icon vault-code-context-chip-btn vault-code-context-remove-btn",
-				attr: { "aria-label": t("aiChatContextRemove") },
+				attr: {
+					type: "button",
+					"aria-label": t("aiChatContextRemove"),
+				},
 			});
 			setIcon(removeBtn, "x");
 			removeBtn.addEventListener("click", (e) => {
+				e.preventDefault();
 				e.stopPropagation();
 				this.removeContext();
 			});
 		} else {
 			// Detached state: render 1-click re-attach button if an active note exists
-			const currentOpen = this.app.workspace.getActiveFile();
 			if (currentOpen) {
 				this.contextChipEl.show();
 				this.contextChipEl.addClass("is-detached");
 
 				const attachBtn = this.contextChipEl.createEl("button", {
 					cls: "vault-code-context-attach-btn",
+					attr: {
+						type: "button",
+					},
 				});
 				const iconSpan = attachBtn.createSpan({ cls: "vault-code-context-attach-icon" });
 				setIcon(iconSpan, "paperclip");
@@ -682,6 +715,7 @@ export class AIChatView extends ItemView {
 				});
 
 				attachBtn.addEventListener("click", (e) => {
+					e.preventDefault();
 					e.stopPropagation();
 					this.attachActiveFile(currentOpen);
 				});
@@ -695,7 +729,10 @@ export class AIChatView extends ItemView {
 		this.contextExcluded = false;
 		this.isContextPinned = false;
 		this.pinnedContextFile = null;
-		this.setChatScope("active-note");
+		if (this.chatScope !== "active-note") {
+			this.setChatScope("active-note");
+		}
+		this.updateContextChip(true);
 	}
 
 	private togglePinContext(file: TFile): void {
@@ -705,14 +742,14 @@ export class AIChatView extends ItemView {
 		} else {
 			this.pinnedContextFile = null;
 		}
-		this.updateContextChip();
+		this.updateContextChip(true);
 	}
 
 	private removeContext(): void {
 		this.contextExcluded = true;
 		this.isContextPinned = false;
 		this.pinnedContextFile = null;
-		this.updateContextChip();
+		this.updateContextChip(true);
 	}
 
 	private selectProvider(provider: AIProvider): void {
@@ -955,6 +992,10 @@ export class AIChatView extends ItemView {
 			}
 
 			this.messages = parsed.messages;
+			this.isContextPinned = false;
+			this.pinnedContextFile = null;
+			this.contextExcluded = false;
+			this.lastRenderedContextKey = "";
 
 			if (this.headerTitleEl) {
 				this.headerTitleEl.setText(this.currentChatTitle);
@@ -989,6 +1030,7 @@ export class AIChatView extends ItemView {
 		this.isContextPinned = false;
 		this.pinnedContextFile = null;
 		this.contextExcluded = false;
+		this.lastRenderedContextKey = "";
 		this.headerTitleEl?.setText(t("aiChatViewTitle"));
 		this.headerTitleEl?.removeAttribute("title");
 		this.headerTitleEl?.removeClass("is-editable");
