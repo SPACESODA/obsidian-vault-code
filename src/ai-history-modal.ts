@@ -3,6 +3,8 @@ import type VaultCodePlugin from "./main";
 import { t } from "./i18n";
 import { createCustomMenu } from "./custom-menu";
 
+import { chatProperty } from "./ai-chat-properties";
+
 export class AIChatHistoryModal extends Modal {
 	private plugin: VaultCodePlugin;
 	private onSelectChat: (file: TFile) => void;
@@ -182,7 +184,8 @@ export class AIChatHistoryModal extends Modal {
 
 	private formatDate(file: TFile): string {
 		const cache = this.app.metadataCache.getFileCache(file);
-		const lastChat = typeof cache?.frontmatter?.last_chat === "string" ? cache.frontmatter.last_chat.trim() : "";
+		const last = chatProperty((cache?.frontmatter ?? {}) as Record<string, unknown>, "last_chat");
+		const lastChat = typeof last === "string" ? last.trim() : "";
 		if (lastChat) {
 			return lastChat.replace(/^(\d{4}-\d{2}-\d{2})\s+/, "$1  ");
 		}

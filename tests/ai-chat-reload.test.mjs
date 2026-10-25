@@ -16,7 +16,7 @@ async function load(entry, stubs = {}) {
 			setup(b) {
 				for (const [name, contents] of Object.entries(stubs)) {
 					b.onResolve({ filter: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`) }, () => ({ path: name, namespace: "stub" }));
-					b.onLoad({ filter: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`), namespace: "stub" }, () => ({ contents }));
+					b.onLoad({ filter: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`), namespace: "stub" }, () => ({ contents, resolveDir: process.cwd() }));
 				}
 			},
 		}],
@@ -27,6 +27,7 @@ async function load(entry, stubs = {}) {
 }
 
 const OBSIDIAN_STUB = `
+	export { load as parseYaml, dump as stringifyYaml } from "js-yaml";
 	export class ItemView {
 		constructor(leaf) { this.leaf = leaf; this.containerEl = { children: [1] }; this.contentEl = { empty(){}, addClass(){} }; }
 	}
@@ -346,15 +347,16 @@ test("updateChatProvider deletes reasoning_effort when switching to provider wit
 
 	// Switch to Antigravity (does not support reasoning effort)
 	await storage.updateChatProvider(dummyFile, "antigravity", "gemini-3.8-flash-high");
-	assert.equal(frontmatter.provider, "antigravity");
-	assert.equal(frontmatter.model, "gemini-3.8-flash-high");
+	assert.equal(frontmatter.chat_provider, "antigravity");
+	assert.equal(frontmatter.chat_model, "gemini-3.8-flash-high");
 	assert.equal("reasoning_effort" in frontmatter, false);
+	assert.equal("chat_effort" in frontmatter, false);
 
 	// Switch back to Codex (supports reasoning effort)
 	await storage.updateChatProvider(dummyFile, "codex", "o3-mini", "medium");
-	assert.equal(frontmatter.provider, "codex");
-	assert.equal(frontmatter.model, "o3-mini");
-	assert.equal(frontmatter.reasoning_effort, "medium");
+	assert.equal(frontmatter.chat_provider, "codex");
+	assert.equal(frontmatter.chat_model, "o3-mini");
+	assert.equal(frontmatter.chat_effort, "medium");
 });
 
 test("getModelsForProvider caches discovered models to avoid repeating slow CLI calls", async () => {

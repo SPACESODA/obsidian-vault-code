@@ -1,6 +1,16 @@
-import { App, TFile, TFolder, normalizePath } from "obsidian";
+import { App, TFile, TFolder, normalizePath, parseYaml, stringifyYaml } from "obsidian";
 import type { ChatMessage } from "./ai-chat-view";
 import { type AIProvider, type ReasoningEffort, supportsReasoningEffort } from "./ai-service";
+
+import { CHAT_PROPERTIES, chatProperty, migrateChatProperties } from "./ai-chat-properties";
+
+function chatFrontmatter(content: string): { properties: Record<string, unknown>; body: string } | null {
+	const match = content.match(/^\uFEFF?---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)([\s\S]*)$/);
+	if (!match) return null;
+	const parsed: unknown = parseYaml(match[1] ?? "");
+	if (parsed != null && (typeof parsed !== "object" || Array.isArray(parsed))) throw new Error("Chat frontmatter must be a YAML mapping.");
+	return { properties: (parsed ?? {}) as Record<string, unknown>, body: match[2] ?? "" };
+}
 
 export interface ChatMetadata {
 	title: string;
@@ -104,7 +114,7 @@ export class AIStorage {
 
 	/**
 	 * Serializes chat metadata and message transcript into a clean Markdown string.
-	 * Writes YAML properties (no model, no title H1 in body) and uses '##### You' and '##### Agent' (H5).
+	 * Writes namespaced YAML chat properties (no title H1 in body) and uses '##### You' and '##### Agent' (H5).
 	 */
 	public serializeChat(metadata: ChatMetadata, messages: ChatMessage[]): string {
 		const lastChat = metadata.last_chat || this.formatDateTime();
@@ -113,25 +123,25 @@ export class AIStorage {
 			"type: Agent Chat",
 			`title: ${JSON.stringify(metadata.title)}`,
 			`created: ${JSON.stringify(metadata.created)}`,
-			`last_chat: ${JSON.stringify(lastChat)}`,
-			`scope: ${JSON.stringify(metadata.scope)}`,
-			`mode: ${JSON.stringify(metadata.mode)}`,
+			`chat_last: ${JSON.stringify(lastChat)}`,
+			`chat_scope: ${JSON.stringify(metadata.scope)}`,
+			`chat_mode: ${JSON.stringify(metadata.mode)}`,
 		];
 
 		if (metadata.provider) {
-			yamlLines.push(`provider: ${JSON.stringify(metadata.provider)}`);
+			yamlLines.push(`chat_provider: ${JSON.stringify(metadata.provider)}`);
 		}
 
 		if (metadata.model) {
-			yamlLines.push(`model: ${JSON.stringify(metadata.model)}`);
-		}
-
-		if (metadata.reasoning_effort && metadata.reasoning_effort !== "auto") {
-			yamlLines.push(`reasoning_effort: ${JSON.stringify(metadata.reasoning_effort)}`);
+			yamlLines.push(`chat_model: ${JSON.stringify(metadata.model)}`);
 		}
 
 		if (metadata.conversationId) {
-			yamlLines.push(`conversation_id: ${JSON.stringify(metadata.conversationId)}`);
+			yamlLines.push(`chat_id: ${JSON.stringify(metadata.conversationId)}`);
+		}
+
+		if (metadata.reasoning_effort && metadata.reasoning_effort !== "auto") {
+			yamlLines.push(`chat_effort: ${JSON.stringify(metadata.reasoning_effort)}`);
 		}
 
 		yamlLines.push("---", "");
@@ -164,49 +174,26 @@ export class AIStorage {
 
 		let bodyContent = content;
 
-		// Extract Frontmatter
-		const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
-		if (fmMatch && fmMatch[1]) {
-			const fmBlock = fmMatch[1];
-			bodyContent = fmMatch[2] ?? "";
-
-			const titleMatch = fmBlock.match(/title:\s*"?([^"\n\r]+)"?/);
-			if (titleMatch && titleMatch[1]) metadata.title = titleMatch[1].trim();
-
-			const createdMatch = fmBlock.match(/created:\s*"?([^"\n\r]+)"?/);
-			if (createdMatch && createdMatch[1]) metadata.created = createdMatch[1].trim();
-
-			const lastChatMatch = fmBlock.match(/last_chat:\s*"?([^"\n\r]+)"?/);
-			if (lastChatMatch && lastChatMatch[1]) metadata.last_chat = lastChatMatch[1].trim();
-
-			const provMatch = fmBlock.match(/provider:\s*"?([^"\n\r]+)"?/);
-			if (provMatch && provMatch[1]) {
-				metadata.provider = provMatch[1].trim() as AIProvider;
-			}
-
-			const modelMatch = fmBlock.match(/model:\s*"?([^"\n\r]+)"?/);
-			if (modelMatch && modelMatch[1]) metadata.model = modelMatch[1].trim();
-
-			const effortMatch = fmBlock.match(/reasoning_effort:\s*"?([^"\n\r]+)"?/);
-			if (effortMatch && effortMatch[1]) {
-				const effortVal = effortMatch[1].trim();
-				if (effortVal === "auto" || effortVal === "low" || effortVal === "medium" || effortVal === "high") {
-					metadata.reasoning_effort = effortVal;
-				}
-			}
-
-			const scopeMatch = fmBlock.match(/scope:\s*"?([^"\n\r]+)"?/);
-			if (scopeMatch && scopeMatch[1] && (scopeMatch[1] === "active-note" || scopeMatch[1] === "vault")) {
-				metadata.scope = scopeMatch[1];
-			}
-
-			const modeMatch = fmBlock.match(/mode:\s*"?([^"\n\r]+)"?/);
-			if (modeMatch && modeMatch[1] && (modeMatch[1] === "safe" || modeMatch[1] === "edit")) {
-				metadata.mode = modeMatch[1];
-			}
-
-			const convMatch = fmBlock.match(/conversation_id:\s*"?([^"\n\r]+)"?/);
-			if (convMatch && convMatch[1]) metadata.conversationId = convMatch[1].trim();
+		const frontmatter = chatFrontmatter(content);
+		if (frontmatter) {
+			bodyContent = frontmatter.body;
+			const fm = frontmatter.properties;
+			if (typeof fm.title === "string") metadata.title = fm.title;
+			if (typeof fm.created === "string") metadata.created = fm.created;
+			const last = chatProperty(fm, "last_chat");
+			if (typeof last === "string") metadata.last_chat = last;
+			const provider = chatProperty(fm, "provider");
+			if (typeof provider === "string") metadata.provider = provider as AIProvider;
+			const model = chatProperty(fm, "model");
+			if (typeof model === "string") metadata.model = model;
+			const effort = chatProperty(fm, "reasoning_effort");
+			if (effort === "auto" || effort === "low" || effort === "medium" || effort === "high") metadata.reasoning_effort = effort;
+			const scope = chatProperty(fm, "scope");
+			if (scope === "active-note" || scope === "vault") metadata.scope = scope;
+			const mode = chatProperty(fm, "mode");
+			if (mode === "safe" || mode === "edit") metadata.mode = mode;
+			const id = chatProperty(fm, "conversation_id");
+			if (typeof id === "string") metadata.conversationId = id;
 		}
 
 		// Parse Turns (support ##### You / ##### Agent, #### You / #### Agent, as well as legacy formats)
@@ -251,6 +238,7 @@ export class AIStorage {
 	 */
 	public async updateChatTitle(file: TFile, newTitle: string): Promise<void> {
 		await this.app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
+			migrateChatProperties(fm);
 			fm["title"] = newTitle;
 		});
 	}
@@ -261,7 +249,8 @@ export class AIStorage {
 	public async updateChatMode(file: TFile, newMode: "safe" | "edit"): Promise<void> {
 		try {
 			await this.app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
-				fm["mode"] = newMode;
+				migrateChatProperties(fm);
+				fm["chat_mode"] = newMode;
 			});
 		} catch (err) {
 			console.error("Vault Code: Failed to update chat mode frontmatter", err);
@@ -274,7 +263,8 @@ export class AIStorage {
 	public async updateChatScope(file: TFile, newScope: "active-note" | "vault"): Promise<void> {
 		try {
 			await this.app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
-				fm["scope"] = newScope;
+				migrateChatProperties(fm);
+				fm["chat_scope"] = newScope;
 			});
 		} catch (err) {
 			console.error("Vault Code: Failed to update chat scope frontmatter", err);
@@ -292,16 +282,17 @@ export class AIStorage {
 	): Promise<void> {
 		try {
 			await this.app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
-				fm["provider"] = newProvider;
+				migrateChatProperties(fm);
+				fm["chat_provider"] = newProvider;
 				if (newModel !== undefined) {
-					fm["model"] = newModel;
+					fm["chat_model"] = newModel;
 				}
 				if (supportsReasoningEffort(newProvider)) {
 					if (newEffort !== undefined) {
-						fm["reasoning_effort"] = newEffort;
+						fm["chat_effort"] = newEffort;
 					}
 				} else {
-					delete fm["reasoning_effort"];
+					delete fm["chat_effort"];
 				}
 			});
 		} catch (err) {
@@ -315,7 +306,8 @@ export class AIStorage {
 	public async updateChatModel(file: TFile, newModel: string): Promise<void> {
 		try {
 			await this.app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
-				fm["model"] = newModel;
+				migrateChatProperties(fm);
+				fm["chat_model"] = newModel;
 			});
 		} catch (err) {
 			console.error("Vault Code: Failed to update chat model frontmatter", err);
@@ -328,7 +320,8 @@ export class AIStorage {
 	public async updateChatEffort(file: TFile, newEffort: ReasoningEffort): Promise<void> {
 		try {
 			await this.app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
-				fm["reasoning_effort"] = newEffort;
+				migrateChatProperties(fm);
+				fm["chat_effort"] = newEffort;
 			});
 		} catch (err) {
 			console.error("Vault Code: Failed to update chat reasoning effort frontmatter", err);
@@ -373,8 +366,17 @@ export class AIStorage {
 			...metadata,
 			last_chat: this.formatDateTime(),
 		};
-		const content = this.serializeChat(updatedMetadata, messages);
-		await this.app.vault.modify(file, content);
+		const serialized = chatFrontmatter(this.serializeChat(updatedMetadata, messages))!;
+		await this.app.vault.process(file, current => {
+			const previous = chatFrontmatter(current);
+			const properties = { ...previous?.properties };
+			migrateChatProperties(properties);
+			// Preserve user properties and the original creation date while replacing owned metadata.
+			for (const key of Object.values(CHAT_PROPERTIES)) delete properties[key];
+			Object.assign(properties, serialized.properties);
+			if (previous && Object.prototype.hasOwnProperty.call(previous.properties, "created")) properties.created = previous.properties.created;
+			return `---\n${stringifyYaml(properties).trimEnd()}\n---\n${serialized.body}`;
+		});
 	}
 
 	/**
