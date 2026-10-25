@@ -7,7 +7,7 @@ export function parseChatTimestamp(value: unknown): number | null {
 	if (!match) return null;
 	const [year, month, day, hour, minute, second] = match.slice(1).map(part => Number(part ?? 0));
 	const calendar = new Date(0);
-	calendar.setUTCFullYear(year!, month! - 1, day!);
+	calendar.setUTCFullYear(year!, month! - 1, day);
 	if (calendar.getUTCFullYear() !== year || calendar.getUTCMonth() !== month! - 1 || calendar.getUTCDate() !== day || hour! > 23 || minute! > 59 || second! > 59) return null;
 	const timestamp = Date.parse(normalized.includes("T") ? normalized : normalized + "T00:00:00");
 	return Number.isFinite(timestamp) ? timestamp : null;
