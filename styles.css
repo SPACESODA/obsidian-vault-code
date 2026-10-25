@@ -4071,3 +4071,14 @@ body.vault-code-ignore-loading .nav-files-container { visibility: hidden; }
 .vault-code-preview-cell-actions button { font-size: var(--font-ui-small); }
 .vault-code-preview-cell-error { color: var(--text-error); font-size: var(--font-ui-small); white-space: normal; margin-top: 6px; }
 .vault-code-preview-cell-error:empty { display: none; }
+
+.nav-folder-title .vault-code-external-folder-marker { flex-shrink: 0; }
+.vault-code-external-folder-modal .hidden-files-modal-error:empty { display: none; }
+.vault-code-external-folder-target {
+	align-items: flex-start;
+	margin-top: 10px;
+	margin-bottom: 6px;
+	overflow-wrap: anywhere;
+	word-break: normal;
+}
+.vault-code-external-folder-target .hidden-files-modal-dest-icon { padding-top: 2px; }

@@ -113,6 +113,7 @@ import { DATA_PREVIEW_EXTENSIONS } from "./file-preview-data";
 import { FilePreviewRenderer, formatPreviewError } from "./file-preview";
 import { PreviewSaveGuard, previewLineEnding, previewDocumentBytes, decodePreviewBytes, tableEditModel, type CellChange } from "./file-preview-edit";
 import { t, setLanguage, SUPPORTED_LANGUAGES } from "./i18n";
+import { ExternalFolderFeature } from "./external-folders-ui";
 import { GitService } from "./git-service";
 import {
 	AIService,
@@ -4942,6 +4943,7 @@ export default class VaultCodePlugin extends Plugin {
 	aiService!: AIService;
 	aiStorage!: AIStorage;
 	private aiChatRibbonIconEl: HTMLElement | null = null;
+	private externalFolders?: ExternalFolderFeature;
 	private aiChatLeaves = new ChatLeafManager<WorkspaceLeaf>();
 
 	async onload() {
@@ -4950,6 +4952,10 @@ export default class VaultCodePlugin extends Plugin {
 		// Registering a view can immediately restore it during startup or hot reload.
 		// Its settings and ignore policy must already be ready before onOpen runs.
 		await this.initializeIgnoreFiltering();
+		if (Platform.isDesktop) {
+			this.externalFolders = new ExternalFolderFeature(this.app, path => this.isPathIgnored(path, true), () => this.applyFileExplorerFiltering());
+			this.register(this.externalFolders.guardDeletion());
+		}
 
 		this.registerView(
 			VIEW_TYPE_DOTFILE,
@@ -4997,25 +5003,30 @@ export default class VaultCodePlugin extends Plugin {
 		// Watch for ignore file changes at vault root and git status updates
 		this.registerEvent(
 			this.app.vault.on("create", (file) => {
+				this.externalFolders?.invalidate(file.path);
 				void this.handleIgnoreFileEvent(file.path);
 				this.debouncedUpdateGitStatus();
 			}),
 		);
 		this.registerEvent(
 			this.app.vault.on("modify", (file) => {
+				this.externalFolders?.invalidate(file.path);
 				void this.handleIgnoreFileEvent(file.path);
 				this.debouncedUpdateGitStatus();
 			}),
 		);
 		this.registerEvent(
 			this.app.vault.on("delete", (file) => {
+				this.externalFolders?.invalidate(file.path);
 				void this.handleIgnoreFileEvent(file.path);
 				this.debouncedUpdateGitStatus();
 			}),
 		);
 		this.registerEvent(
 			this.app.vault.on("rename", (file, oldPath) => {
+				this.externalFolders?.invalidate(file.path);
 				void this.handleIgnoreFileEvent(file.path);
+				this.externalFolders?.invalidate(oldPath);
 				void this.handleIgnoreFileEvent(oldPath);
 				this.applyFileExplorerFiltering();
 				this.debouncedUpdateGitStatus();
@@ -5116,6 +5127,7 @@ export default class VaultCodePlugin extends Plugin {
 				"file-menu",
 				(menu, file, source, leaf) => {
 					if (file instanceof TFolder) {
+						this.externalFolders?.menu(menu, file);
 						menu.addItem((item) => {
 							item
 								.setTitle(t("contextNewFile"))
@@ -5259,6 +5271,16 @@ export default class VaultCodePlugin extends Plugin {
 		this.addRibbonIcon("file-plus", t("ribbonNewFileTooltip"), () => {
 			const targetFolder = this.getActiveOrSelectedFolder();
 			new CreateFileModal(this.app, this, targetFolder).open();
+		});
+
+		this.addCommand({
+			id: "add-external-folder",
+			name: t("externalFolderAdd"),
+			checkCallback: checking => {
+				if (!Platform.isDesktop) return false;
+				if (!checking) void this.externalFolders?.choose(this.getActiveOrSelectedFolder().path);
+				return true;
+			},
 		});
 
 		this.addAIChatRibbon();
@@ -7049,6 +7071,8 @@ export default class VaultCodePlugin extends Plugin {
 		const normalized = normalizePath(path).replace(/^\/+|\/+$/g, "");
 		if (!normalized) return false;
 
+		if (this.externalFolders?.isBlocked(normalized)) return true;
+
 		// Never ignore the ignore files themselves at vault root
 		if (normalized === ".obsidianignore" || normalized === ".gitignore") {
 			return false;
@@ -7081,7 +7105,7 @@ export default class VaultCodePlugin extends Plugin {
 
 	applyFileExplorerFiltering(): void {
 		for (const leaf of this.app.workspace.getLeavesOfType("file-explorer")) {
-			filterExplorerRows(leaf.view.containerEl, (path, directory) => this.isPathIgnored(path, directory));
+			filterExplorerRows(leaf.view.containerEl, (path, directory) => this.isPathIgnored(path, directory), (row, path, directory) => this.externalFolders?.decorate(row, path, directory));
 		}
 	}
 
@@ -7739,7 +7763,7 @@ export default class VaultCodePlugin extends Plugin {
 		}
 		for (const container of containers) {
 			if (!this.explorerObservers.has(container)) {
-				this.explorerObservers.set(container, observeExplorerIgnore(container, (path, directory) => this.isPathIgnored(path, directory)));
+				this.explorerObservers.set(container, observeExplorerIgnore(container, (path, directory) => this.isPathIgnored(path, directory), (row, path, directory) => this.externalFolders?.decorate(row, path, directory)));
 			}
 		}
 

@@ -63,6 +63,7 @@ Right-click a file or folder in the explorer:
 * **New folder here**: Name a folder directly in the explorer.
 * **New file here (any extension)**: Create any file type, including dotfiles and nested paths such as `src/components/Button.tsx`.
 * **Edit file name and extension...**: Rename files or change their extensions with built-in validation.
+* **Add external folder by symlink (Desktop)**: Choose a disk folder to add by symlink. Edits affect the originals; deleting the symlink leaves them intact. Overlapping targets are allowed; Obsidian may omit unsupported symlinks.
 
 ### 🌿 Review changes with Git (Desktop)
 

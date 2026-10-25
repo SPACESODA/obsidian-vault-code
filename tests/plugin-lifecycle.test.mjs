@@ -8,8 +8,8 @@ const ast=ts.createSourceFile('src/main.ts',source,ts.ScriptTarget.Latest,true);
 const plugin=ast.statements.find(node=>ts.isClassDeclaration(node)&&node.name?.text==='VaultCodePlugin');
 const onload=plugin.members.find(node=>ts.isMethodDeclaration(node)&&node.name.getText(ast)==='onload');
 const statements=[];
-for(const statement of onload.body.statements){if(ts.isIfStatement(statement))break;statements.push(statement.getText(ast));}
-const start=new Function('AIService','AIStorage','VIEW_TYPE_DOTFILE','VIEW_TYPE_AI_CHAT','DotfileView','AIChatView',`return async function(){${statements.join('\n')}};`)(class{},class{},'code','chat',class{constructor(_leaf,plugin){assert.equal(plugin.ready,true);}},class{constructor(_leaf,plugin){assert.equal(plugin.ready,true);}});
+for(const statement of onload.body.statements){if(ts.isIfStatement(statement)&&statement.getText(ast).includes("this.statusBarGitEl"))break;statements.push(statement.getText(ast));}
+const start=new Function('Platform','AIService','AIStorage','VIEW_TYPE_DOTFILE','VIEW_TYPE_AI_CHAT','DotfileView','AIChatView',`return async function(){${statements.join('\n')}};`)({isDesktop:false},class{},class{},'code','chat',class{constructor(_leaf,plugin){assert.equal(plugin.ready,true);}},class{constructor(_leaf,plugin){assert.equal(plugin.ready,true);}});
 
 test('settings and ignore initialization finish before restored views can open',async()=>{
   let finish;
