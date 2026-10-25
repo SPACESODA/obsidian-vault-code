@@ -473,17 +473,15 @@ export class AIChatView extends ItemView {
 		const toggle = new ToggleComponent(this.vaultToggleWrapper)
 			.setValue(this.chatScope === "vault")
 			.onChange((checked) => {
-				this.chatScope = checked ? "vault" : "active-note";
 				this.contextExcluded = false;
-				this.updateContextChip();
+				this.setChatScope(checked ? "vault" : "active-note");
 			});
 		this.vaultToggle = toggle;
 		toggleLabel.addEventListener("click", () => {
 			const newVal = !toggle.getValue();
 			toggle.setValue(newVal);
-			this.chatScope = newVal ? "vault" : "active-note";
 			this.contextExcluded = false;
-			this.updateContextChip();
+			this.setChatScope(newVal ? "vault" : "active-note");
 		});
 
 		this.updateProviderBtnLabel();
@@ -494,9 +492,33 @@ export class AIChatView extends ItemView {
 		this.updateContextChip();
 	}
 
+	public setMode(newMode: "safe" | "edit"): void {
+		if (this.mode === newMode) return;
+		this.mode = newMode;
+		this.updateModeBtnLabel();
+		if (this.currentChatFile) {
+			void this.plugin.aiStorage.updateChatMode(this.currentChatFile, newMode);
+		}
+	}
+
+	public setChatScope(newScope: "active-note" | "vault"): void {
+		if (this.chatScope === newScope) return;
+		this.chatScope = newScope;
+		this.updateVaultToggleState();
+		this.updateContextChip();
+		if (this.currentChatFile) {
+			void this.plugin.aiStorage.updateChatScope(this.currentChatFile, newScope);
+		}
+	}
+
 	private updateVaultToggleState(): void {
 		if (this.pendingQuote || isConnectionProvider(this.selectedProvider)) {
-			this.chatScope = "active-note";
+			if (this.chatScope !== "active-note") {
+				this.chatScope = "active-note";
+				if (this.currentChatFile) {
+					void this.plugin.aiStorage.updateChatScope(this.currentChatFile, "active-note");
+				}
+			}
 			this.vaultToggleWrapper?.hide();
 		} else this.vaultToggleWrapper?.show();
 		if (this.vaultToggle !== null) {
@@ -667,12 +689,10 @@ export class AIChatView extends ItemView {
 	}
 
 	private attachActiveFile(file: TFile): void {
-		this.chatScope = "active-note";
 		this.contextExcluded = false;
 		this.isContextPinned = false;
 		this.pinnedContextFile = null;
-		this.updateVaultToggleState();
-		this.updateContextChip();
+		this.setChatScope("active-note");
 	}
 
 	private togglePinContext(file: TFile): void {
@@ -827,8 +847,7 @@ export class AIChatView extends ItemView {
 			item.setIcon("shield");
 			item.setChecked(this.mode === "safe");
 			item.onClick(() => {
-				this.mode = "safe";
-				this.updateModeBtnLabel();
+				this.setMode("safe");
 			});
 		});
 
@@ -837,8 +856,7 @@ export class AIChatView extends ItemView {
 			item.setIcon("zap");
 			item.setChecked(this.mode === "edit");
 			item.onClick(() => {
-				this.mode = "edit";
-				this.updateModeBtnLabel();
+				this.setMode("edit");
 			});
 		});
 

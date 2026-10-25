@@ -251,6 +251,32 @@ export class AIStorage {
 	}
 
 	/**
+	 * Updates the mode of an existing chat note in its frontmatter immediately.
+	 */
+	public async updateChatMode(file: TFile, newMode: "safe" | "edit"): Promise<void> {
+		try {
+			await this.app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
+				fm["mode"] = newMode;
+			});
+		} catch (err) {
+			console.error("Vault Code: Failed to update chat mode frontmatter", err);
+		}
+	}
+
+	/**
+	 * Updates the scope of an existing chat note in its frontmatter immediately.
+	 */
+	public async updateChatScope(file: TFile, newScope: "active-note" | "vault"): Promise<void> {
+		try {
+			await this.app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
+				fm["scope"] = newScope;
+			});
+		} catch (err) {
+			console.error("Vault Code: Failed to update chat scope frontmatter", err);
+		}
+	}
+
+	/**
 	 * Creates a new chat note in the vault.
 	 */
 	public async createChatNote(

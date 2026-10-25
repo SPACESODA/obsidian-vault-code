@@ -144,3 +144,34 @@ test("AIChatView defaults to safe mode (Vault safe)", async () => {
 	const view = new AIChatView(leaf, plugin);
 	assert.equal(view.mode, "safe");
 });
+
+test("changing mode or scope immediately updates the chat file frontmatter", async () => {
+	const leaf = {};
+	const dummyFile = new globalThis.__TestTFile("Agent-Chats/active.md");
+	const updated = [];
+	const plugin = {
+		settings: {
+			aiProvider: "antigravity",
+			aiProviderLastModel: {},
+			aiReasoningEffort: "auto",
+			aiScope: "active-note",
+			aiMode: "safe",
+		},
+		aiService: { getModelsForProvider: async () => [] },
+		aiStorage: {
+			updateChatMode: async (file, mode) => { updated.push({ type: "mode", file, mode }); },
+			updateChatScope: async (file, scope) => { updated.push({ type: "scope", file, scope }); },
+		},
+		saveSettings: async () => {},
+	};
+	const view = new AIChatView(leaf, plugin);
+	view.currentChatFile = dummyFile;
+
+	view.setMode("edit");
+	assert.equal(view.mode, "edit");
+	assert.deepEqual(updated[0], { type: "mode", file: dummyFile, mode: "edit" });
+
+	view.setChatScope("vault");
+	assert.equal(view.chatScope, "vault");
+	assert.deepEqual(updated[1], { type: "scope", file: dummyFile, scope: "vault" });
+});
