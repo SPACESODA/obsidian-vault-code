@@ -3952,3 +3952,22 @@ body.vault-code-ignore-loading .nav-files-container { visibility: hidden; }
 .vault-code-preview-diff .is-meta { color: var(--text-muted); }
 .vault-code-preview-mermaid { overflow: auto; text-align: center; }
 .vault-code-preview-mermaid svg { max-width: 100%; height: auto; }
+
+.vault-code-preview-table td.is-editable { cursor: text; }
+.vault-code-preview-table td.is-editable:focus-visible {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: -2px;
+}
+.vault-code-preview-table td.is-editing { min-width: 220px; background: var(--background-secondary); }
+.vault-code-preview-table td.is-editing textarea,
+.vault-code-preview-table td.is-editing input,
+.vault-code-preview-table td.is-editing select {
+	width: 100%;
+	box-sizing: border-box;
+	font: inherit;
+}
+.vault-code-preview-table td.is-editing textarea { resize: vertical; min-height: 70px; }
+.vault-code-preview-cell-actions { display: flex; gap: 6px; margin-top: 8px; }
+.vault-code-preview-cell-actions button { font-size: var(--font-ui-small); }
+.vault-code-preview-cell-error { color: var(--text-error); font-size: var(--font-ui-small); white-space: normal; margin-top: 6px; }
+.vault-code-preview-cell-error:empty { display: none; }

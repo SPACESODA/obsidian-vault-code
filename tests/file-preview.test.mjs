@@ -4,7 +4,7 @@ import { createRequire } from 'node:module';
 import { readFile } from 'node:fs/promises';
 import { build } from 'esbuild';
 async function load(entry, stub) {
-  const compiled = await build({entryPoints:[entry],bundle:true,write:false,platform:'node',format:'cjs',plugins:stub?[{name:'obsidian',setup(b){
+  const compiled = await build({...(entry==='src/file-preview.ts'?{stdin:{contents:'export * from "./src/file-preview"; export { setLanguage, t } from "./src/i18n"; export { PreviewError } from "./src/preview-errors";',resolveDir:process.cwd(),sourcefile:'preview-test-entry.ts'}}:{entryPoints:[entry]}),bundle:true,write:false,platform:'node',format:'cjs',plugins:stub?[{name:'obsidian',setup(b){
     b.onResolve({filter:/^obsidian$/},()=>({path:'obsidian',namespace:'stub'}));
     b.onLoad({filter:/.*/,namespace:'stub'},()=>({contents:stub}));
   }}]:[]});
@@ -13,7 +13,8 @@ async function load(entry, stub) {
   return mod.exports;
 }
 const {parseDelimited,parseJsonPreview,jsonRecordTable,parseDiffPreview,mermaidMarkdown,PREVIEW_LIMITS,DATA_PREVIEW_EXTENSIONS}=await load('src/file-preview-data.ts');
-const {FilePreviewRenderer}=await load('src/file-preview.ts',`
+const {FilePreviewRenderer,setLanguage,t,formatPreviewError,PreviewError}=await load('src/file-preview.ts',`
+  export const getLanguage=()=>"en"; export const requireApiVersion=()=>true;
   export class Component {
     constructor(){this.children=[];this.callbacks=[];}
     register(fn){this.callbacks.push(fn);}
@@ -25,20 +26,25 @@ const {FilePreviewRenderer}=await load('src/file-preview.ts',`
   export const MarkdownRenderer={render:(...args)=>globalThis.markdownPreviewRender(...args)};
 `);
 class Element {
-  constructor(tag='div',opts={}){this.tag=tag;this.children=[];this.attrs=opts.attr||{};this.text=opts.text||'';this.classes=new Set((opts.cls||'').split(' ').filter(Boolean));this.events={};this.open=false;this.classList={add:(...cs)=>cs.forEach(c=>this.classes.add(c))};}
+  constructor(tag='div',opts={}){this.tag=tag;this.tagName=tag.toUpperCase();this.children=[];this.attrs=opts.attr||{};this.text=opts.text||'';this.classes=new Set((opts.cls||'').split(' ').filter(Boolean));this.events={};this.open=false;this.classList={add:(...cs)=>cs.forEach(c=>this.classes.add(c)),remove:(...cs)=>cs.forEach(c=>this.classes.delete(c))};}
   createEl(tag,opts={}){const child=new Element(tag,opts);this.children.push(child);return child;}
   createDiv(opts={}){return this.createEl('div',opts);}
   createSpan(opts={}){return this.createEl('span',opts);}
   empty(){this.children=[];this.text='';}
   addEventListener(event,fn){this.events[event]=fn;}
   all(tag){return [...(this.tag===tag?[this]:[]),...this.children.flatMap(c=>c.all(tag))];}
-  textContent(){return this.text+this.children.map(c=>c.textContent()).join('');}
+  get textContent(){return this.text+this.children.map(c=>c.textContent).join('');}
+  set textContent(value){this.text=value;this.children=[];}
+  setText(value){this.textContent=value;}
+  setAttribute(key,value){this.attrs[key]=value;}
+  focus(){this.focused=true;}
+  querySelector(selector){const tags=selector.split(',').map(s=>s.trim());return tags.flatMap(tag=>this.all(tag))[0]||null;}
 }
 function renderer(){const owner=new globalThis.TestComponent();const root=new Element();return {owner,root,preview:new FilePreviewRenderer({},owner)};}
 
 test('CSV handles BOM, quoted delimiters, escaped quotes, CRLF, multiline and empty cells',()=>{
   assert.deepEqual(parseDelimited('\uFEFFa,b,c\r\n"x,y","Say ""hi""","one\r\ntwo"\r\n,,',',').rows,[['a','b','c'],['x,y','Say "hi"','one\r\ntwo'],['','','']]);
-  assert.deepEqual(parseDelimited('a\tb\n1\t"two\tthree"\n','\t').rows,[['a','b'],['1','two\tthree']]);
+  assert.deepEqual(parseDelimited('a\tb\n1\t"two"\n','\t').rows,[['a','b'],['1','"two"']]);
   assert.throws(()=>parseDelimited('a\n"unclosed',','),/Unclosed.*row 2/);
   assert.throws(()=>parseDelimited('a\n"closed"x',','),/Unexpected.*row 2/);
 });
@@ -88,28 +94,28 @@ test('sample fixtures cover every supported preview extension and parse correctl
 test('data previews use text nodes, pad ragged rows, and provide keyboard scroll access',async()=>{
   const h=renderer();await h.preview.render(h.root,'csv','A,B\n<img src=x onerror=alert(1)>\nsecond,last','a.csv');
   assert.equal(h.root.all('td').length,4);assert.equal(h.root.all('img').length,0);
-  assert.ok(h.root.textContent().includes('<img src=x'));
+  assert.ok(h.root.textContent.includes('<img src=x'));
   assert.ok(h.root.all('div').some(e=>e.attrs.role==='region'&&e.attrs.tabindex==='0'));
 });
 test('nested JSON is lazy, preserves primitives, and stops deep/large expansion',async()=>{
   const h=renderer();await h.preview.render(h.root,'json',JSON.stringify({nested:{a:1},enabled:false,empty:null}),'a.json');
   const details=h.root.all('details');assert.equal(details.length,2);
   assert.equal(details[1].children.length,1);
-  details[1].open=true;details[1].events.toggle();assert.ok(h.root.textContent().includes('a:1'));
+  details[1].open=true;details[1].events.toggle();assert.ok(h.root.textContent.includes('a:1'));
   details[1].events.toggle();assert.equal(h.root.all('details').length,2);
   await h.preview.render(h.root,'json',JSON.stringify(Object.fromEntries(Array.from({length:200},(_,i)=>['key'+i,i]))),'a.json');
-  assert.ok(h.root.textContent().includes('Preview shortened'));
+  assert.ok(h.root.textContent.includes('Preview shortened'));
   assert.ok(h.root.all('span').length<=200);
 });
 test('large tables have a DOM budget and explain truncation',async()=>{
   const h=renderer();const row=Array(100).fill('cell').join(',');
   await h.preview.render(h.root,'csv',Array(500).fill(row).join('\n'),'large.csv');
-  assert.ok(h.root.all('td').length<=10000);assert.ok(h.root.textContent().includes('Preview shortened'));
+  assert.ok(h.root.all('td').length<=10000);assert.ok(h.root.textContent.includes('Preview shortened'));
 });
 test('empty, invalid, and oversized files stay readable without launching Mermaid',async()=>{
   const h=renderer();await h.preview.render(h.root,'json','{bad','bad.json');assert.ok(h.root.all('div').some(e=>e.classes.has('hidden-files-preview-error')));
-  await h.preview.render(h.root,'json','  ','empty.json');assert.equal(h.root.textContent(),'Nothing to preview.');
-  await h.preview.render(h.root,'json','x'.repeat(PREVIEW_LIMITS.characters+1),'large.json');assert.match(h.root.textContent(),/too large/);
+  await h.preview.render(h.root,'json','  ','empty.json');assert.equal(h.root.textContent,'Nothing to preview.');
+  await h.preview.render(h.root,'json','x'.repeat(PREVIEW_LIMITS.characters+1),'large.json');assert.match(h.root.textContent,/too large/);
 });
 test('a late Mermaid render cannot overwrite a new preview; components unload on clear',async()=>{
   const h=renderer();let finish;
@@ -121,6 +127,109 @@ test('a late Mermaid render cannot overwrite a new preview; components unload on
   assert.equal(h.owner.children.length,1);
   await h.preview.render(h.root,'json','{"fresh":true}','a.json');
   finish();await old;
-  assert.equal(h.owner.children.length,0);assert.ok(!h.root.textContent().includes('Old diagram'));
-  assert.ok(h.root.textContent().includes('fresh:'));
+  assert.equal(h.owner.children.length,0);assert.ok(!h.root.textContent.includes('Old diagram'));
+  assert.ok(h.root.textContent.includes('fresh:'));
+});
+
+
+test('editable cells require explicit confirmation; cancel and blur never apply', async()=>{
+  const h=renderer();let edits=0;
+  const apply=async()=>{edits++;};
+  await h.preview.render(h.root,'csv','Name,Count\na,2\n','a.csv',apply);
+  const cell=h.root.all('td')[0];
+  assert.ok(cell.classes.has('is-editable'));
+  cell.events.dblclick();
+  const input=cell.all('textarea')[0];input.value='changed';
+  assert.equal(input.events.blur,undefined);
+  assert.equal(edits,0);
+  cell.all('button')[1].events.click();
+  assert.equal(edits,0);assert.equal(cell.textContent,'a');
+  cell.events.dblclick();cell.all('textarea')[0].value='changed';
+  cell.all('button')[0].events.click();await new Promise(r=>setImmediate(r));
+  assert.equal(edits,1);
+});
+test('invalid numeric edits keep the draft and never reach the apply callback',async()=>{
+  const h=renderer();let edits=0;
+  await h.preview.render(h.root,'jsonl','{"n":12,"s":"hello","b":true,"empty":null}\n','a.jsonl',async()=>{edits++;});
+  const cells=h.root.all('td');assert.ok(!cells[3].classes.has('is-editable'));
+  cells[0].events.dblclick();cells[0].all('input')[0].value='not a number';
+  cells[0].all('button')[0].events.click();await new Promise(r=>setImmediate(r));
+  assert.equal(edits,0);assert.ok(cells[0].textContent.includes('precision loss'));
+  assert.equal(cells[0].all('input')[0].value,'not a number');
+});
+test('truncated and malformed tables never offer cell editing',async()=>{
+  const h=renderer();const apply=async()=>{throw new Error('must not edit');};
+  await h.preview.render(h.root,'csv','A,B\n1\n','ragged.csv',apply);
+  assert.ok(h.root.all('td').every(c=>!c.classes.has('is-editable')));
+  await h.preview.render(h.root,'csv','A\n'+Array(600).fill('x').join('\n'),'long.csv',apply);
+  assert.ok(h.root.all('td').every(c=>!c.classes.has('is-editable')));
+});
+
+
+test('preview tables and editors have accessible names without hover tips or instructional text',async()=>{
+  const h=renderer();await h.preview.render(h.root,'csv','Name,Notes\nOne,Text\n','a.csv',async()=>{});
+  assert.ok(!h.root.textContent.includes('Double-click'));
+  const region=h.root.all('div').find(e=>e.attrs.role==='region');
+  assert.ok(region.attrs['aria-labelledby']);assert.equal(region.attrs['aria-label'],undefined);
+  const cell=h.root.all('td')[1];assert.equal(cell.attrs.title,undefined);
+  cell.events.dblclick();
+  const input=cell.all('textarea')[0];assert.ok(input.attrs['aria-labelledby']);assert.equal(input.attrs['aria-label'],undefined);
+  assert.ok(h.root.all('button').every(e=>!e.attrs.title&&!e.attrs['aria-label']));
+});
+
+
+test('TSV preview treats quotes literally and reports legacy multiline row ambiguity',()=>{
+  assert.deepEqual(parseDelimited('A\tB\n1\t"literal"\n','\t').rows,[['A','B'],['1','"literal"']]);
+  assert.throws(()=>parseDelimited('A\tB\n1\t"first\nsecond"\n','\t'),/TSV row 3/);
+});
+test('JSON line tables display multiline strings as text while edits keep escaped source',async()=>{
+  const h=renderer();const source=JSON.stringify({text:'first\nsecond',literal:'\\n'})+'\n';
+  await h.preview.render(h.root,'jsonl',source,'a.jsonl',async()=>{});
+  const cells=h.root.all('td');assert.equal(cells[0].textContent,'first\nsecond');assert.equal(cells[1].textContent,'\\n');
+  cells[0].events.dblclick();assert.equal(cells[0].all('textarea')[0].value,'first\nsecond');
+});
+
+test('TSV multiline input remains a local draft and cannot reach file editing',async()=>{
+  const h=renderer();let edits=0;
+  await h.preview.render(h.root,'tsv','A\tB\nleft\tright\n','a.tsv',async()=>{edits++;});
+  const cell=h.root.all('td')[1];cell.events.dblclick();cell.all('textarea')[0].value='first\nsecond';
+  cell.all('button')[0].events.click();await new Promise(r=>setImmediate(r));
+  assert.equal(edits,0);assert.ok(cell.textContent.includes('TSV cells cannot contain tabs or line breaks'));
+  assert.equal(cell.all('textarea')[0].value,'first\nsecond');
+});
+test('JSONL and NDJSON multiline editors pass escaped single-token changes to the buffer',async()=>{
+  for(const extension of ['jsonl','ndjson']){
+    const h=renderer();let patch;
+    const source='{"text":"before","keep":2}\n';
+    await h.preview.render(h.root,extension,source,'a.'+extension,async change=>{patch=change;});
+    const cell=h.root.all('td')[0];cell.events.dblclick();cell.all('textarea')[0].value='first\nsecond';
+    cell.all('button')[0].events.click();await new Promise(r=>setImmediate(r));
+    assert.equal(patch.insert,'"first\\nsecond"');assert.ok(!patch.insert.includes('\n'));
+    assert.equal(source.slice(patch.to),',"keep":2}\n');
+  }
+});
+
+
+test('preview controls and errors use the selected language without changing data literals',async()=>{
+  try{
+    for(const [language,apply,cancel] of [['zh-tw','套用','取消'],['ja','適用','キャンセル'],['de','Anwenden','Abbrechen']]){
+      setLanguage(language);const h=renderer();
+      await h.preview.render(h.root,'tsv','Name\tNotes\none\ttrue\n','a.tsv',async()=>{});
+      const cell=h.root.all('td')[1];assert.equal(cell.textContent,'true');cell.events.dblclick();
+      assert.deepEqual(cell.all('button').map(e=>e.textContent),[apply,cancel]);
+      cell.all('textarea')[0].value='first\nsecond';cell.all('button')[0].events.click();await new Promise(r=>setImmediate(r));
+      assert.ok(cell.textContent.includes(t('previewTsvCellBreak')));assert.ok(!cell.textContent.includes('TSV cells cannot'));
+      assert.ok(!cell.attrs.title);assert.ok(!cell.all('textarea')[0].attrs['aria-label']);
+    }
+  }finally{setLanguage('en');}
+});
+test('structured errors localize when displayed, including positional values and language changes',()=>{
+  const error=new PreviewError('previewTsvFields',5,1,4);
+  try{
+    for(const language of ['zh-tw','zh-cn','ja','ko','es','fr','it','de','ru']){
+      setLanguage(language);const message=formatPreviewError(error);
+      assert.equal(message,t('previewTsvFields',5,1,4));assert.ok(!message.includes('{0}'));assert.notEqual(message,error.message);
+    }
+  }finally{setLanguage('en');}
+  assert.equal(formatPreviewError(error),'TSV row 5: field count is 1, expected 4. Review the source in Code.');
 });

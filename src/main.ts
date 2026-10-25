@@ -46,6 +46,7 @@ import {
 } from "@codemirror/view";
 import {
 	EditorState,
+	Transaction,
 	Extension,
 	Compartment,
 	Prec,
@@ -58,6 +59,9 @@ import {
 	defaultKeymap,
 	history,
 	historyKeymap,
+	undo,
+	redo,
+	isolateHistory,
 	indentWithTab,
 	toggleBlockComment,
 } from "@codemirror/commands";
@@ -105,8 +109,10 @@ import {
 	rejectChunk,
 } from "@codemirror/merge";
 import mjml2html from "mjml-browser";
+import { PreviewError } from "./preview-errors";
 import { DATA_PREVIEW_EXTENSIONS } from "./file-preview-data";
-import { FilePreviewRenderer } from "./file-preview";
+import { FilePreviewRenderer, formatPreviewError } from "./file-preview";
+import { PreviewSaveGuard, previewLineEnding, previewDocumentBytes, decodePreviewBytes, tableEditModel, type CellChange } from "./file-preview-edit";
 import { t, setLanguage, SUPPORTED_LANGUAGES } from "./i18n";
 import { GitService } from "./git-service";
 import {
@@ -2578,6 +2584,8 @@ export class DotfileView extends TextFileView {
 	private editorEl: HTMLElement | null = null;
 	private previewEl: HTMLElement | null = null;
 	private filePreviewRenderer: FilePreviewRenderer | null = null;
+	private previewSave: { file: TFile; guard: PreviewSaveGuard; separator: string; prefix: string } | null = null;
+	private previewConflictNotified = false;
 	private langEl: HTMLElement | null = null;
 	private lineWrapBtnEl: HTMLButtonElement | null = null;
 	private searchBtnEl: HTMLButtonElement | null = null;
@@ -2946,6 +2954,7 @@ export class DotfileView extends TextFileView {
 
 	async saveExplicitly(): Promise<void> {
 		if (this.isBinaryOrNonEditable() || !this.file) return;
+		if (this.previewSave?.file === this.file) { await this.saveGuardedPreview(); return; }
 		this.data = this.getViewData();
 		this.isModified = false;
 		this.discardOnClose = false;
@@ -2972,12 +2981,50 @@ export class DotfileView extends TextFileView {
 		if (this.plugin.settings.disableAutoSave && !this.isModified) {
 			return;
 		}
+		if (this.previewSave?.file === this.file) { await this.saveGuardedPreview(); return; }
 		this.data = this.getViewData();
 		this.isModified = false;
 		await super.save(clear);
 		this.updateDirtyUI();
 		void this.updateGitStatus();
 		this.plugin.debouncedUpdateGitStatus();
+	}
+
+	private async saveGuardedPreview(): Promise<void> {
+		const session = this.previewSave;
+		if (!session || this.file !== session.file || this.discardOnClose) return;
+		const document = previewDocumentBytes(this.getViewData(), session.separator, session.prefix);
+		try {
+			await session.guard.save(() => document, update => this.app.vault.process(session.file, update));
+			if (this.file !== session.file) return;
+			this.data = session.guard.expected;
+			this.isModified = previewDocumentBytes(this.getViewData(), session.separator, session.prefix) !== session.guard.expected;
+			this.updateDirtyUI(); this.updateStatus();
+			void this.updateGitStatus();
+			this.plugin.debouncedUpdateGitStatus();
+		} catch (reason: unknown) {
+			if (this.file === session.file) { this.isModified = true; this.updateDirtyUI(); }
+			if (!this.previewConflictNotified) {
+				this.previewConflictNotified = true;
+				new Notice(formatPreviewError(reason, "previewSaveFailed"), 10000);
+			}
+			throw reason;
+		}
+	}
+
+	private async applyPreviewCellEdit(source: string, file: TFile, change: CellChange, current: () => boolean): Promise<void> {
+		const stillCurrent = () => current() && this.isPreviewMode && this.file === file && this.getViewData() === source && Boolean(this.editor) && !this.editor?.state.readOnly && !this.discardOnClose;
+		if (!stillCurrent() || this.isBinaryOrNonEditable()) throw new PreviewError("previewChanged");
+		const session = this.previewSave?.file === file ? this.previewSave : null;
+		const disk = decodePreviewBytes(await this.app.vault.readBinary(file));
+		if (!stillCurrent()) throw new PreviewError("previewChanged");
+		if (!tableEditModel(disk, file.extension.toLowerCase())) throw new PreviewError("previewFormat");
+		const separator = previewLineEnding(disk);
+		if (!separator) throw new PreviewError("previewMixedLines");
+		if (session?.guard.conflicted || (session ? disk !== session.guard.expected : previewDocumentBytes(disk.replace(/^\uFEFF/, ""), "\n") !== source)) throw new PreviewError("previewUnsaved");
+		this.previewSave = session ?? { file, guard: new PreviewSaveGuard(disk), separator, prefix: disk.startsWith("\uFEFF") ? "\uFEFF" : "" };
+		this.editor!.dispatch({ changes: change, annotations: [Transaction.userEvent.of("input.preview"), isolateHistory.of("full")] });
+		await this.renderPreview();
 	}
 
 	private updateDirtyUI(): void {
@@ -3009,6 +3056,20 @@ export class DotfileView extends TextFileView {
 	}
 
 	setViewData(data: string, clear: boolean): void {
+		const session = this.previewSave;
+		if (!clear && session?.file === this.file && !session.guard.acceptReload(session.prefix + data, previewDocumentBytes(this.getViewData(), session.separator, session.prefix))) {
+			if (session.guard.conflicted && !this.previewConflictNotified) {
+				this.previewConflictNotified = true;
+				new Notice(t("previewConflict"), 10000);
+			}
+			return;
+		}
+		if (!clear && session?.file === this.file) {
+			const separator = previewLineEnding(data);
+			if (separator) session.separator = separator;
+			else this.previewSave = null;
+			if (previewDocumentBytes(data, "\n") === this.getViewData()) { this.data = data; return; }
+		}
 		this.data = data;
 		this.isModified = false;
 		this.discardOnClose = false;
@@ -3179,6 +3240,16 @@ export class DotfileView extends TextFileView {
 			cls: "hidden-files-editor-preview",
 		});
 		this.previewEl.hide();
+		this.previewEl.addEventListener("keydown", event => {
+			if (!(event.ctrlKey || event.metaKey) || event.altKey || !this.editor || event.isComposing) return;
+			const target = event.target as HTMLElement;
+			if (target.closest("input, textarea, select")) return;
+			if (event.key.toLowerCase() === "z" || event.key.toLowerCase() === "y") {
+				event.preventDefault();
+				const action = event.shiftKey || event.key.toLowerCase() === "y" ? redo : undo;
+				if (action(this.editor)) void this.renderPreview();
+			}
+		});
 
 		// Initialize CodeMirror 6 with language compartment
 		this.editor = new EditorView({
@@ -3333,7 +3404,7 @@ export class DotfileView extends TextFileView {
 				if (update.docChanged) {
 					if (!this.isBinaryOrNonEditable()) {
 						const currentDoc = update.state.doc.toString();
-						this.isModified = currentDoc !== (this.data ?? "");
+						this.isModified = this.previewSave?.file === this.file ? previewDocumentBytes(currentDoc, this.previewSave.separator, this.previewSave.prefix) !== this.previewSave.guard.expected : currentDoc !== (this.data ?? "");
 						this.updateDirtyUI();
 
 						if (!this.plugin.settings.disableAutoSave) {
@@ -3726,6 +3797,8 @@ export class DotfileView extends TextFileView {
 		}
 		this.isDiffMode = false;
 		await super.onUnloadFile(file);
+		this.previewSave = null;
+		this.previewConflictNotified = false;
 	}
 
 	async onClose(): Promise<void> {
@@ -3848,7 +3921,9 @@ export class DotfileView extends TextFileView {
 
 		if (DATA_PREVIEW_EXTENSIONS.has(ext)) {
 			this.filePreviewRenderer ??= new FilePreviewRenderer(this.app, this);
-			await this.filePreviewRenderer.render(this.previewEl, ext, rawContent, this.file.path);
+			const file = this.file;
+			await this.filePreviewRenderer.render(this.previewEl, ext, rawContent, file.path,
+				(change, current) => this.applyPreviewCellEdit(rawContent, file, change, current));
 		} else if (ext === "svg") {
 			this.renderSvgPreview(rawContent);
 		} else if (ext === "html" || ext === "htm") {
@@ -3866,7 +3941,7 @@ export class DotfileView extends TextFileView {
 			const emptyMsg = this.previewEl.createDiv({
 				cls: "hidden-files-preview-empty",
 			});
-			emptyMsg.setText("Empty SVG file");
+			emptyMsg.setText(t("previewEmpty"));
 			return;
 		}
 
@@ -3887,11 +3962,11 @@ export class DotfileView extends TextFileView {
 				});
 				setIcon(iconSpan, "alert-triangle");
 				title.createSpan({
-					text: "SVG syntax error",
+					text: t("previewSvgSyntax"),
 				});
 				errBox.createDiv({
 					cls: "hidden-files-preview-error-msg",
-					text: parserError.textContent || "Unable to parse SVG",
+					text: parserError.textContent || t("previewSvgParse"),
 				});
 				return;
 			}
@@ -3901,7 +3976,7 @@ export class DotfileView extends TextFileView {
 				const errBox = this.previewEl.createDiv({
 					cls: "hidden-files-preview-error",
 				});
-				errBox.setText("No root <svg> element found.");
+				errBox.setText(t("previewSvgRoot"));
 				return;
 			}
 
@@ -3919,7 +3994,7 @@ export class DotfileView extends TextFileView {
 				cls: "hidden-files-preview-error",
 			});
 			errBox.setText(
-				`Failed to render SVG: ${e instanceof Error ? e.message : String(e)}`,
+				t("previewSvgFailed", e instanceof Error ? e.message : String(e)),
 			);
 		}
 	}
@@ -4255,7 +4330,7 @@ export class DotfileView extends TextFileView {
 			const emptyMsg = this.previewEl.createDiv({
 				cls: "hidden-files-preview-empty",
 			});
-			emptyMsg.setText("Empty HTML file");
+			emptyMsg.setText(t("previewEmpty"));
 			return;
 		}
 
@@ -4272,7 +4347,7 @@ export class DotfileView extends TextFileView {
 		const iframe = container.createEl("iframe", {
 			cls: "hidden-files-html-iframe",
 			attr: {
-				title: this.file?.name ?? "HTML preview",
+				title: this.file?.name ?? t("previewHtml"),
 			},
 		});
 
@@ -4296,7 +4371,7 @@ export class DotfileView extends TextFileView {
 			const emptyMsg = this.previewEl.createDiv({
 				cls: "hidden-files-preview-empty",
 			});
-			emptyMsg.setText("Empty file");
+			emptyMsg.setText(t("previewEmpty"));
 			return;
 		}
 
@@ -4317,7 +4392,7 @@ export class DotfileView extends TextFileView {
 				const errBox = this.previewEl.createDiv({
 					cls: "hidden-files-preview-error",
 				});
-				errBox.setText("Compilation produced no output.");
+				errBox.setText(t("previewNoOutput"));
 				return;
 			}
 
@@ -4336,7 +4411,7 @@ export class DotfileView extends TextFileView {
 			});
 			setIcon(iconSpan, "alert-triangle");
 			title.createSpan({
-				text: "MJML compilation error",
+				text: t("previewMjmlError"),
 			});
 			errBox.createDiv({
 				cls: "hidden-files-preview-error-msg",

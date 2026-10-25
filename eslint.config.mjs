@@ -16,7 +16,16 @@ export default tseslint.config(
 			"obsidianmd/ui/sentence-case-locale-module": [
 				"warn",
 				{
+					// Preserve leading format acronyms without replacing the rule's defaults.
+					ignoreRegex: ["^TSV cells cannot contain tabs or line breaks[.]$", "^TSV records must use LF or CRLF line endings[.]$", "^MJML compilation error$"],
 					ignoreWords: [
+						"Unicode",
+						"TSV",
+						"CSV",
+						"LF",
+						"CRLF",
+						"Preview",
+						"MJML",
 						"Aa",
 						"Antigravity",
 						"CLI",

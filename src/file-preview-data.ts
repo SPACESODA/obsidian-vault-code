@@ -1,3 +1,4 @@
+import { PreviewError } from "./preview-errors";
 export const DATA_PREVIEW_EXTENSIONS = new Set(["csv", "tsv", "json", "jsonl", "ndjson", "mmd", "mermaid", "diff", "patch"]);
 export const PREVIEW_LIMITS = { characters: 2_000_000, rows: 500, columns: 100, lines: 5000, branches: 100, nodes: 3000 };
 export interface PreviewTable { rows: string[][]; truncated: boolean; }
@@ -5,6 +6,23 @@ export interface PreviewTable { rows: string[][]; truncated: boolean; }
 /** Quoted delimiters, escaped quotes, BOM, CRLF, and multiline cells; stop at the row limit. */
 export function parseDelimited(source: string, delimiter: string): PreviewTable {
 	const text = source.replace(/^\uFEFF/, "");
+	// Strict TSV is line-oriented: quotes and backslashes are literal characters.
+	// Do not borrow CSV quoting rules or reinterpret literal \n / \t sequences.
+	if (delimiter === "\t") {
+		if (/\r(?!\n)/.test(text)) throw new PreviewError("previewTsvLines");
+		const lines = text.split(/\r?\n/);
+		if (lines[lines.length - 1] === "") lines.pop();
+		const rows: string[][] = [];
+		let columns = 0, truncated = lines.length > PREVIEW_LIMITS.rows + 1;
+		for (const line of lines.slice(0, PREVIEW_LIMITS.rows + 1)) {
+			const fields = line.split("\t");
+			if (!rows.length) columns = fields.length;
+			if (fields.length !== columns) throw new PreviewError("previewTsvFields", rows.length + 1, fields.length, columns);
+			if (fields.length > PREVIEW_LIMITS.columns) truncated = true;
+			rows.push(fields.slice(0, PREVIEW_LIMITS.columns));
+		}
+		return { rows, truncated };
+	}
 	const rows: string[][] = [];
 	let row: string[] = [], field = "", quoted = false, closed = false, truncated = false;
 	const cell = () => {
@@ -26,18 +44,21 @@ export function parseDelimited(source: string, delimiter: string): PreviewTable 
 			if (rows.length >= PREVIEW_LIMITS.rows + 1) return { rows, truncated: truncated || i < text.length - 1 };
 		} else if (c === '"' && !field && !closed) quoted = true;
 		else {
-			if (closed || c === '"') throw new Error(`Unexpected character in row ${rows.length + 1}.`);
+			if (closed || c === '"') throw new PreviewError("previewUnexpected", rows.length + 1);
 			field += c;
 		}
 	}
-	if (quoted) throw new Error(`Unclosed quoted cell in row ${rows.length + 1}.`);
+	if (quoted) throw new PreviewError("previewUnclosed", rows.length + 1);
 	if (field || row.length || closed) { cell(); rows.push(row); }
 	return { rows, truncated };
 }
 
 export function parseJsonPreview(source: string, lines: boolean): { value: unknown; truncated: boolean } {
 	const text = source.replace(/^\uFEFF/, "");
-	if (!lines) return { value: JSON.parse(text) as unknown, truncated: false };
+	if (!lines) {
+		try { return { value: JSON.parse(text) as unknown, truncated: false }; }
+		catch { throw new PreviewError("previewInvalidJson"); }
+	}
 	const records: unknown[] = [];
 	const input = text.split(/\r?\n/);
 	for (let i = 0; i < input.length; i++) {
@@ -45,7 +66,7 @@ export function parseJsonPreview(source: string, lines: boolean): { value: unkno
 		if (!line) continue;
 		if (records.length === PREVIEW_LIMITS.rows) return { value: records, truncated: true };
 		try { records.push(JSON.parse(line) as unknown); }
-		catch { throw new Error(`Invalid JSON on line ${i + 1}.`); }
+		catch { throw new PreviewError("previewInvalidJsonLine", i + 1); }
 	}
 	return { value: records, truncated: false };
 }
