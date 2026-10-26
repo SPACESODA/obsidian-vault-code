@@ -426,19 +426,18 @@ export class AIStorage {
 
 	/** Loads instructions text, recreating the default note if deleted or missing. */
 	public async loadInstructions(folderPath: string): Promise<string> {
+		let raw = DEFAULT_AGENT_INSTRUCTIONS;
 		try {
 			const file = await this.ensureInstructionsFile(folderPath);
-			const raw = await this.app.vault.read(file);
-			return raw
-				.replace(/^---[\s\S]*?\r?\n---\s*/, "")
-				.replace(/<!--[\s\S]*?-->/g, "")
-				.trim();
+			raw = await this.app.vault.read(file);
 		} catch {
-			return DEFAULT_AGENT_INSTRUCTIONS
-				.replace(/^---[\s\S]*?\r?\n---\s*/, "")
-				.replace(/<!--[\s\S]*?-->/g, "")
-				.trim();
+			// Fall back to the built-in instructions if the note cannot be read.
 		}
+		return raw
+			.replace(/^---[\s\S]*?\r?\n---\s*/, "")
+			// Keep a boundary so removing a comment cannot form a new comment opener.
+			.replace(/<!--[\s\S]*?(?:-->|$)/g, "\n")
+			.trim();
 	}
 
 	/**

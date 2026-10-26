@@ -157,3 +157,29 @@ test('ensureInstructionsFile creates default note if missing and loadInstruction
   const loaded=await storage.loadInstructions('agent-chats');
   assert.equal(loaded,'# Custom Rules\n- Be concise.');
 });
+
+test('instruction comments preserve text boundaries and cannot reassemble comment openers',async()=>{
+  const cases=[
+    ['Before<!-- hidden -->After','Before\nAfter'],
+    ['Keep<!-- one --><!-- two --> this','Keep\n\n this'],
+    ['<<!-- hidden -->!-- remaining -->','<\n!-- remaining -->'],
+    ['Before<!-- outer <!-- inner -->After','Before\nAfter'],
+    ['Before<!-- unfinished\nprivate text','Before'],
+    ['---\ntype: Note\n---\n# Rules\n<!-- hidden -->\n- Keep [[Links]] and `code`.','# Rules\n\n\n- Keep [[Links]] and `code`.'],
+  ];
+  for(const [source,expected] of cases){
+    const storage=new AIStorage({vault:{read:async()=>source}});
+    storage.ensureInstructionsFile=async()=>({});
+    const result=await storage.loadInstructions('agent-chats');
+    assert.equal(result,expected,source);
+    assert.ok(!result.includes('<!--'),source);
+  }
+});
+
+test('instruction read failures return the built-in instructions',async()=>{
+  for(const failAt of ['ensure','read']){
+    const storage=new AIStorage({vault:{read:async()=>{throw Error('read failed');}}});
+    storage.ensureInstructionsFile=async()=>{if(failAt==='ensure')throw Error('creation failed');return {};};
+    assert.equal(await storage.loadInstructions('agent-chats'),mod.exports.DEFAULT_AGENT_INSTRUCTIONS.trim());
+  }
+});
