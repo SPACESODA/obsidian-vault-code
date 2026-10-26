@@ -9185,6 +9185,27 @@ class VaultCodeSettingTab extends PluginSettingTab {
 			new Setting(containerEl)
 				.setName(t("settingsAIAttachInstructionsName"))
 				.setDesc(t("settingsAIAttachInstructionsDesc"))
+				.addButton((button) =>
+					button
+						.setIcon("file-text")
+						.setTooltip(t("settingsTooltipOpenInstructions"))
+						.onClick(async () => {
+							try {
+								const file =
+									await this.plugin.aiStorage.ensureInstructionsFile(
+										this.plugin.settings.aiChatFolder ||
+											"agent-chats",
+									);
+								if (file instanceof TFile) {
+									await this.app.workspace
+										.getLeaf("tab")
+										.openFile(file);
+								}
+							} catch {
+								// Silently ignore if cannot open
+							}
+						}),
+				)
 				.addToggle((toggle) =>
 					toggle
 						.setValue(this.plugin.settings.aiAttachInstructions ?? true)

@@ -266,6 +266,7 @@ export const ru: TranslationSchema = {
 	settingsAICleanupNowBtn: "Очистить сейчас...",
 	settingsAIAttachInstructionsName: "Прикреплять инструкции агента к сообщениям",
 	settingsAIAttachInstructionsDesc: "Включать указания из instructions.md в папке чатов в каждое сообщение. Удаление файла сбросит его до шаблона по умолчанию.",
+	settingsTooltipOpenInstructions: "Открыть файл",
 	aiChatProviderSelect: "Выбрать провайдера ИИ",
 	aiChatProviderAntigravity: "Antigravity",
 	aiChatProviderCodex: "Codex",

@@ -266,6 +266,7 @@ export const it: TranslationSchema = {
 	settingsAICleanupNowBtn: "Pulisci ora...",
 	settingsAIAttachInstructionsName: "Allega istruzioni dell’agente ai messaggi",
 	settingsAIAttachInstructionsDesc: "Include le linee guida di instructions.md nella cartella chat con ogni messaggio. Eliminando il file verrà ripristinato il modello predefinito.",
+	settingsTooltipOpenInstructions: "Apri file",
 	aiChatProviderSelect: "Seleziona provider IA",
 	aiChatProviderAntigravity: "Antigravity",
 	aiChatProviderCodex: "Codex",

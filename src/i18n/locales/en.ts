@@ -264,6 +264,7 @@ export const en = {
 	settingsAICleanupNowBtn: "Clean up now...",
 	settingsAIAttachInstructionsName: "Attach agent instructions to messages",
 	settingsAIAttachInstructionsDesc: "Include instructions.md from the chat folder with every message. Deleting that file will reset it to default.",
+	settingsTooltipOpenInstructions: "Open file",
 	aiChatProviderSelect: "Select AI provider",
 	aiChatProviderAntigravity: "Antigravity",
 	aiChatProviderCodex: "Codex",

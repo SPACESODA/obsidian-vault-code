@@ -266,6 +266,7 @@ export const de: TranslationSchema = {
 	settingsAICleanupNowBtn: "Jetzt bereinigen...",
 	settingsAIAttachInstructionsName: "Agent-Anweisungen an Nachrichten anhängen",
 	settingsAIAttachInstructionsDesc: "Fügt jeder Nachricht die Richtlinien aus instructions.md im Chat-Ordner hinzu. Das Löschen der Datei setzt sie auf den Standard zurück.",
+	settingsTooltipOpenInstructions: "Datei öffnen",
 	aiChatProviderSelect: "KI-Anbieter auswählen",
 	aiChatProviderAntigravity: "Antigravity",
 	aiChatProviderCodex: "Codex",
