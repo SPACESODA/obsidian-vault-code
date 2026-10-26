@@ -2692,6 +2692,8 @@ export class DotfileView extends TextFileView {
 						await this.onUnloadFile(this.file);
 					}
 					this.file = abstractFile;
+					// Prepare header actions before file I/O can expose an incomplete header.
+					this.plugin.updateLeafHeaderActions(this.leaf, this);
 					let content = "";
 					try {
 						content = await this.app.vault.read(abstractFile);
@@ -2728,6 +2730,7 @@ export class DotfileView extends TextFileView {
 
 	override async onLoadFile(file: TFile): Promise<void> {
 		this.filePath = file.path;
+		this.plugin.updateLeafHeaderActions(this.leaf, this);
 		await super.onLoadFile(file);
 		if (this.headerFileNameEl) {
 			this.headerFileNameEl.setText(file.name);
@@ -4899,6 +4902,7 @@ export default class VaultCodePlugin extends Plugin {
 	settings!: VaultCodeSettings;
 	public gitService = new GitService(this.app);
 	public cachedModifiedFiles: Set<string> = new Set();
+	private editorViewSwitches = new WeakSet<WorkspaceLeaf>();
 	private statusBarGitEl: HTMLElement | null = null;
 	private gitStatusDebounceTimer: number | null = null;
 	private previousShowUnsupportedFiles = false;
@@ -5742,6 +5746,7 @@ export default class VaultCodePlugin extends Plugin {
 			actionsEl?.querySelector(".vault-code-header-toggle-btn")?.remove();
 			actionsEl?.querySelector(".vault-code-header-ai-chat-btn")?.remove();
 			actionsEl?.querySelector(".vault-code-header-diff-btn")?.remove();
+			actionsEl?.querySelector(".vault-code-header-more-options")?.removeClass("vault-code-header-more-options");
 		});
 
 		this.removeAIChatRibbon();
@@ -6342,7 +6347,7 @@ export default class VaultCodePlugin extends Plugin {
 		leaf: WorkspaceLeaf,
 		targetFile?: TFile,
 	): Promise<void> {
-		if (!leaf || !leaf.view) return;
+		if (!leaf || !leaf.view || this.editorViewSwitches.has(leaf)) return;
 		const view = leaf.view;
 		const file = targetFile ?? (view as { file?: TFile }).file;
 		if (!file) return;
@@ -6352,12 +6357,7 @@ export default class VaultCodePlugin extends Plugin {
 			(!targetFile || targetFile.path === view.file?.path)
 		) {
 			await view.saveExplicitly();
-			await leaf.setViewState({
-				type: "markdown",
-				state: { file: file.path },
-				active: true,
-			});
-			this.updateAllLeafHeaderActions();
+			await this.switchEditorView(leaf, file, "markdown");
 			return;
 		}
 
@@ -6370,17 +6370,44 @@ export default class VaultCodePlugin extends Plugin {
 			}
 		}
 
-		await leaf.setViewState({
-			type: VIEW_TYPE_DOTFILE,
-			state: { file: file.path },
-			active: true,
-		});
-		this.updateAllLeafHeaderActions();
+		await this.switchEditorView(leaf, file, VIEW_TYPE_DOTFILE);
 	}
 
-	updateLeafHeaderActions(leaf: WorkspaceLeaf): void {
-		if (!leaf || !leaf.view) return;
-		const view = leaf.view;
+	private async switchEditorView(leaf: WorkspaceLeaf, file: TFile, type: string): Promise<void> {
+		if (this.editorViewSwitches.has(leaf)) return;
+		this.editorViewSwitches.add(leaf);
+		const actions = (leaf.view as unknown as { actionsEl?: HTMLElement }).actionsEl;
+		const container = actions?.closest<HTMLElement>(".workspace-leaf");
+		let snapshot: HTMLElement | null = null;
+		try {
+			if (actions && container) {
+				const rect = actions.getBoundingClientRect();
+				const bounds = container.getBoundingClientRect();
+				snapshot = actions.cloneNode(true) as HTMLElement;
+				snapshot.addClass("vault-code-header-snapshot");
+				snapshot.setAttribute("aria-hidden", "true");
+				snapshot.setAttribute("inert", "");
+				snapshot.removeAttribute("id");
+				for (const element of snapshot.querySelectorAll("[id]")) element.removeAttribute("id");
+				snapshot.style.left = `${rect.left - bounds.left}px`;
+				snapshot.style.top = `${rect.top - bounds.top}px`;
+				snapshot.style.width = `${rect.width}px`;
+				snapshot.style.height = `${rect.height}px`;
+				container.appendChild(snapshot);
+				container.addClass("vault-code-header-switching");
+			}
+			await leaf.setViewState({ type, state: { file: file.path }, active: true });
+			this.updateLeafHeaderActions(leaf);
+		} finally {
+			// Reveal the completed header in one step, even if switching failed.
+			container?.removeClass("vault-code-header-switching");
+			snapshot?.remove();
+			this.editorViewSwitches.delete(leaf);
+		}
+	}
+
+	updateLeafHeaderActions(leaf: WorkspaceLeaf, view: View = leaf.view): void {
+		if (!leaf || !view) return;
 		const actionsEl = (view as unknown as { actionsEl?: HTMLElement })
 			?.actionsEl;
 		if (!actionsEl || !actionsEl.instanceOf(HTMLElement)) return;
@@ -6532,14 +6559,23 @@ export default class VaultCodePlugin extends Plugin {
 			headerDiffButton.setAttribute("aria-label", t(active ? "gitHideChanges" : "gitViewChanges"));
 		}
 
-		// Keep plugin actions together before native actions, in keyboard and visual order.
-		let previous: HTMLElement | null = null;
-		for (const selector of [".vault-code-header-ai-chat-btn", ".vault-code-header-diff-btn", ".vault-code-header-toggle-btn"]) {
+		// Keep Chat first, with Git and Code editor immediately before More options.
+		const nativeMoreOptions = (view as unknown as { moreOptionsButtonEl?: HTMLElement }).moreOptionsButtonEl;
+		const moreOptions = (nativeMoreOptions?.parentElement === actionsEl ? nativeMoreOptions : null)
+			?? actionsEl.querySelector<HTMLElement>(".view-action.mod-more-options")
+			?? actionsEl.querySelector(".lucide-ellipsis, .lucide-more-horizontal, .lucide-more-vertical, .lucide-ellipsis-vertical")?.closest<HTMLElement>(".view-action")
+			?? null;
+		moreOptions?.addClass("vault-code-header-more-options");
+		let anchor: ChildNode | null = moreOptions;
+		for (const selector of [".vault-code-header-toggle-btn", ".vault-code-header-diff-btn"]) {
 			const button = actionsEl.querySelector<HTMLElement>(selector);
 			if (!button) continue;
-			const anchor: ChildNode | null = previous ? previous.nextSibling : actionsEl.firstChild;
-			if (button !== anchor) actionsEl.insertBefore(button, anchor);
-			previous = button;
+			if (button.nextSibling !== anchor) actionsEl.insertBefore(button, anchor);
+			anchor = button;
+		}
+		const chatButton = actionsEl.querySelector<HTMLElement>(".vault-code-header-ai-chat-btn");
+		if (chatButton && chatButton !== actionsEl.firstChild) {
+			actionsEl.insertBefore(chatButton, actionsEl.firstChild);
 		}
 	}
 

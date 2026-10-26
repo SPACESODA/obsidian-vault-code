@@ -1623,6 +1623,34 @@ body.is-phone .hidden-files-btn-icon svg {
 }
 
 /* Header view action toggle button for code editor and agent chat */
+.workspace-leaf.vault-code-header-switching .view-header .view-actions {
+	visibility: hidden;
+}
+
+.workspace-leaf > .vault-code-header-snapshot {
+	position: absolute;
+	z-index: 1;
+	pointer-events: none;
+}
+
+/* Keep visual positions stable while native views asynchronously add actions.
+   The header setup also keeps DOM order aligned for keyboard navigation. */
+.view-actions > .vault-code-header-ai-chat-btn {
+	order: -1;
+}
+
+.view-actions > .vault-code-header-diff-btn {
+	order: 1;
+}
+
+.view-actions > .vault-code-header-toggle-btn {
+	order: 2;
+}
+
+.view-actions > .vault-code-header-more-options {
+	order: 3;
+}
+
 .clickable-icon.view-action.vault-code-header-toggle-btn.is-active,
 .clickable-icon.view-action.vault-code-header-diff-btn.is-active,
 .clickable-icon.view-action.vault-code-header-ai-chat-btn.is-active {

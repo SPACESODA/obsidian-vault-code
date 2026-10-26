@@ -86,7 +86,7 @@ export const ja: TranslationSchema = {
 	settingsObsidianIgnoreName: "{0} でファイルとフォルダーを除外",
 	settingsObsidianIgnoreDesc: "保管庫ルートの .obsidianignore に定義されたルールを適用します。標準の .gitignore 構文に対応（ワイルドカード、スラッシュ、否定 ! をサポート）。",
 	settingsButtonCreateDefault: "デフォルトを追加",
-	settingsButtonCopyDefault: "デフォルト値をコピー",
+	settingsButtonCopyDefault: "デフォルトをコピー",
 	settingsTooltipCreateDefault: "保管庫のルートにデフォルトの除外ルールを含む .obsidianignore を作成します",
 	settingsTooltipCopyDefault: "デフォルトの除外ルールをクリップボードにコピー",
 	settingsNoticeCreatedObsidianIgnore: "保管庫のルートに .obsidianignore を作成しました。",

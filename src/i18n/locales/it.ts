@@ -86,7 +86,7 @@ export const it: TranslationSchema = {
 	settingsObsidianIgnoreName: "Ignora file e cartelle con {0}",
 	settingsObsidianIgnoreDesc: "Applica le regole di .obsidianignore nella radice del vault, usando la sintassi standard di .gitignore (supporta caratteri jolly, barre per cartelle e negazioni !).",
 	settingsButtonCreateDefault: "Aggiungi predefinito",
-	settingsButtonCopyDefault: "Copia valori predefiniti",
+	settingsButtonCopyDefault: "Copia predefiniti",
 	settingsTooltipCreateDefault: "Crea un file .obsidianignore con le regole predefinite nella radice del vault",
 	settingsTooltipCopyDefault: "Copia le regole di esclusione predefinite negli appunti",
 	settingsNoticeCreatedObsidianIgnore: ".obsidianignore creato nella radice del vault.",

@@ -1,6 +1,6 @@
 # Vault Code
 
-<h2 align="center" style="color: #8a5cf5;">Vault Code turns Obsidian into a workspace for notes, code, and files.</h2>
+<div align="center" style="color: #8a5cf5; font-size: 1.5em;"><strong>Vault Code turns Obsidian into a workspace for notes, code, and files.</strong></div>
 
 View hidden files, create and organize files of any kind, and edit code in a beautiful editor. Preview web pages, diagrams, and data, or work with AI agents, all without leaving Obsidian.
 

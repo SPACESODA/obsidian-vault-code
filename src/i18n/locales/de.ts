@@ -86,7 +86,7 @@ export const de: TranslationSchema = {
 	settingsObsidianIgnoreName: "Dateien und Ordner mit {0} ignorieren",
 	settingsObsidianIgnoreDesc: "Regeln aus .obsidianignore im Vault-Stammverzeichnis anwenden (verwendet Standard-.gitignore-Syntax mit Platzhaltern, Ordner-Schrägstrichen und Negationen !).",
 	settingsButtonCreateDefault: "Standard hinzufügen",
-	settingsButtonCopyDefault: "Standardwerte kopieren",
+	settingsButtonCopyDefault: "Standard kopieren",
 	settingsTooltipCreateDefault: "Erstellt eine .obsidianignore-Datei mit Standardregeln im Vault-Stammverzeichnis",
 	settingsTooltipCopyDefault: "Standard-Ignorierregeln in die Zwischenablage kopieren",
 	settingsNoticeCreatedObsidianIgnore: ".obsidianignore im Vault-Stammverzeichnis erstellt.",

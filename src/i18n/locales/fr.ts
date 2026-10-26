@@ -86,7 +86,7 @@ export const fr: TranslationSchema = {
 	settingsObsidianIgnoreName: "Ignorer les fichiers et dossiers avec {0}",
 	settingsObsidianIgnoreDesc: "Respecter les règles de .obsidianignore à la racine du coffre, selon la syntaxe standard .gitignore (jokers, barres obliques de dossier et négations !).",
 	settingsButtonCreateDefault: "Ajouter par défaut",
-	settingsButtonCopyDefault: "Copier les valeurs par défaut",
+	settingsButtonCopyDefault: "Copier les règles par défaut",
 	settingsTooltipCreateDefault: "Créer un fichier .obsidianignore avec les règles par défaut à la racine du coffre",
 	settingsTooltipCopyDefault: "Copier les règles d'exclusion par défaut dans le presse-papiers",
 	settingsNoticeCreatedObsidianIgnore: ".obsidianignore créé à la racine du coffre.",

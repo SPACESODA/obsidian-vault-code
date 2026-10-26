@@ -84,7 +84,7 @@ export const en = {
 	settingsObsidianIgnoreName: "Ignore files and folders with {0}",
 	settingsObsidianIgnoreDesc: "Respect rules defined in .obsidianignore at the vault root, using standard .gitignore syntax (supports wildcards, folder slashes, and negations).",
 	settingsButtonCreateDefault: "Add default",
-	settingsButtonCopyDefault: "Copy default values",
+	settingsButtonCopyDefault: "Copy default",
 	settingsTooltipCreateDefault: "Create a .obsidianignore file with default rules at the vault root",
 	settingsTooltipCopyDefault: "Copy default ignore rules to clipboard",
 	settingsNoticeCreatedObsidianIgnore: "Created .obsidianignore at vault root.",

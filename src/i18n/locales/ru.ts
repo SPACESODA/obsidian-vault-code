@@ -86,7 +86,7 @@ export const ru: TranslationSchema = {
 	settingsObsidianIgnoreName: "Игнорировать файлы и папки с помощью {0}",
 	settingsObsidianIgnoreDesc: "Применять правила из .obsidianignore в корне хранилища, используя стандартный синтаксис .gitignore (поддерживает маски, косые черты папок и исключения !).",
 	settingsButtonCreateDefault: "Добавить по умолчанию",
-	settingsButtonCopyDefault: "Скопировать значения по умолчанию",
+	settingsButtonCopyDefault: "Копировать стандартные правила",
 	settingsTooltipCreateDefault: "Создать файл .obsidianignore со стандартными правилами в корне хранилища",
 	settingsTooltipCopyDefault: "Скопировать стандартные правила в буфер обмена",
 	settingsNoticeCreatedObsidianIgnore: "Файл .obsidianignore создан в корне хранилища.",
