@@ -21,7 +21,7 @@ async function load(entry) {
 const core=await load('src/ai-connections.ts');
 const {AIService}=await load('src/ai-service.ts');
 const connection={id:'test-provider',name:'Test provider',kind:'api',baseUrl:'https://example.test/v1',format:'chat-completions',models:['test-model']};
-const local={...connection,id:'local-model',kind:'local',baseUrl:'http://127.0.0.1:53176/v1'};
+const local={...connection,id:'local-model',kind:'local',baseUrl:'http://127.0.0.1:1337/v1'};
 function harness({config=connection,chunks=['data: {"choices":[{"delta":{"content":"Hello"}}]}\n\ndata: [DONE]\n\n'],status=200,contentType='text/event-stream',key='test-secret',hold=false}={}) {
   const requests=[];const secrets=new Map(key?[[core.connectionSecretId(config.id),key]]:[]);
   const networking={request(url,options,callback){
@@ -41,9 +41,10 @@ function harness({config=connection,chunks=['data: {"choices":[{"delta":{"conten
   return {service,send,requests,app,plugin};
 }
 
-test('presets include Atomic Chat, Chinese providers, and unrestricted custom entries',()=>{
-  assert.equal(core.CONNECTION_PRESETS.find(p=>p.id==='atomic').baseUrl,'http://127.0.0.1:53176/v1');
-  for(const id of ['deepseek','qwen','kimi','glm','minimax','siliconflow','custom-api','custom-local']) assert.ok(core.CONNECTION_PRESETS.some(p=>p.id===id));
+test('presets include Atomic Chat, CC Switch, Chinese providers, and unrestricted custom entries',()=>{
+  assert.equal(core.CONNECTION_PRESETS.find(p=>p.id==='atomic').baseUrl,'http://127.0.0.1:1337/v1');
+  assert.equal(core.CONNECTION_PRESETS.find(p=>p.id==='ccswitch').baseUrl,'http://127.0.0.1:15721/v1');
+  for(const id of ['deepseek','qwen','kimi','glm','minimax','siliconflow','ccswitch','custom-api','custom-local']) assert.ok(core.CONNECTION_PRESETS.some(p=>p.id===id));
 });
 test('manual model IDs preserve provider-qualified names and remove duplicates',()=>assert.deepEqual(core.parseModelIds('org/model\ncustom-model,org/model'),['org/model','custom-model']));
 test('endpoint construction preserves custom paths and query parameters',()=>assert.equal(core.endpointUrl('https://host.test/custom/v1/?api-version=test','models'),'https://host.test/custom/v1/models?api-version=test'));
@@ -112,6 +113,10 @@ test('connection tests contain only a short synthetic prompt, no vault data',asy
 test('model discovery merges no guessed model IDs',async()=>{
   const h=harness({contentType:'application/json',chunks:['{"data":[{"id":"loaded-model"},{"id":"org/another-model"}]}']});
   assert.deepEqual((await h.service.discoverConnectionModels(connection)).map(m=>m.id),['loaded-model','org/another-model']);assert.equal(h.requests[0].body,undefined);
+});
+test('model discovery parses both data and models arrays from local routers',async()=>{
+  const h=harness({contentType:'application/json',chunks:['{"models":[{"id":"model-a"},{"model":"model-b"},"model-c"]}']});
+  assert.deepEqual((await h.service.discoverConnectionModels(connection)).map(m=>m.id),['model-a','model-b','model-c']);
 });
 test('cancelling a direct request suppresses error and completion callbacks',async()=>{
   const h=harness({hold:true});let callbacks=0;

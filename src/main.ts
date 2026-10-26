@@ -5191,6 +5191,8 @@ export default class VaultCodePlugin extends Plugin {
 								});
 						});
 
+						this.externalFolders?.menu(menu, file);
+
 						menu.addItem((item) => {
 							item
 								.setTitle(t("contextEditFileNameAndExtension"))

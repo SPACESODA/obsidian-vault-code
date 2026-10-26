@@ -1181,8 +1181,14 @@ export class AIService {
 			let text = "";
 			for await (const chunk of response.chunks) { text += chunk; if (text.length > 4_000_000) throw new Error("Model list is too large."); }
 			if (response.status < 200 || response.status >= 300) throw new Error(`Model discovery returned HTTP ${response.status}. Enter model IDs manually.`);
-			const data = JSON.parse(text) as { data?: Array<{ id?: string; name?: string }> };
-			return (data.data || []).filter((m) => typeof m.id === "string" && m.id).map((m) => ({ id: m.id!, displayName: m.name || m.id! }));
+			const data = JSON.parse(text) as {
+				data?: Array<{ id?: string; name?: string; model?: string }>;
+				models?: Array<{ id?: string; name?: string; model?: string } | string>;
+			};
+			const list = Array.isArray(data.data) ? data.data : Array.isArray(data.models) ? data.models : [];
+			return list
+				.map((m) => (typeof m === "string" ? { id: m, displayName: m } : { id: m.id || m.model || m.name || "", displayName: m.name || m.id || m.model || "" }))
+				.filter((m) => Boolean(m.id));
 		} finally { window.clearTimeout(timeout); }
 	}
 

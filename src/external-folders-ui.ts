@@ -1,4 +1,4 @@
-import { App, FileSystemAdapter, Modal, Notice, Platform, TFolder, type TAbstractFile, type Menu, setIcon } from "obsidian";
+import { App, FileSystemAdapter, Modal, Notice, Platform, TFile, TFolder, type TAbstractFile, type Menu, setIcon } from "obsidian";
 import { ExternalFolders, ExternalFolderError, type ExternalFolderCode, type FolderFS, type FolderPath } from "./external-folders";
 import { t, type TranslationKey } from "./i18n";
 
@@ -113,8 +113,9 @@ export class ExternalFolderFeature {
 		}
 	}
 
-	menu(menu: Menu, folder: TFolder): void {
+	menu(menu: Menu, target: TFolder | TFile): void {
 		if (!Platform.isDesktop) return;
+		const folder = target instanceof TFolder ? target : (target.parent ?? this.app.vault.getRoot());
 		menu.addItem(item => item.setTitle(t("externalFolderAdd")).setIcon("folder-symlink").setSection("action").onClick(() => { void this.choose(folder.path); }));
 	}
 

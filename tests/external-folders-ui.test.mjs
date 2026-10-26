@@ -9,6 +9,8 @@ export class App {} export class FileSystemAdapter {} export class Modal {} expo
 globalThis.ExternalTestAdapter=FileSystemAdapter;
 export class TFolder { constructor(path){this.path=path;} }
 globalThis.ExternalTestFolder=TFolder;
+export class TFile { constructor(path,parent){this.path=path;this.parent=parent;} }
+globalThis.ExternalTestFile=TFile;
 export class Notice {} export const setIcon=()=>{};
 export const getLanguage=()=> 'en'; export const requireApiVersion=()=>true;
 `}));}}]});
@@ -124,4 +126,45 @@ test('failed duplicate indexing cleans up its watcher and deletion never starts 
   assert.equal(starts,1);assert.equal(stops,1);
   assert.equal(await feature.refresh('Deleted link'),false);
   assert.equal(starts,1);
+});
+
+test('menu accepts both folders and files, adding symlink at the same level as the file', () => {
+  const root = new globalThis.ExternalTestFolder('/');
+  const sub = new globalThis.ExternalTestFolder('sub');
+  const fileInSub = new globalThis.ExternalTestFile('sub/note.md', sub);
+  const fileInRoot = new globalThis.ExternalTestFile('root.md', null);
+
+  const targets = [];
+  const feature = new ExternalFolderFeature({ vault: { getRoot: () => root } }, () => false, () => {});
+  feature.choose = async (path) => { targets.push(path); };
+
+  const makeMenu = () => {
+    let clickHandler;
+    return {
+      addItem: (callback) => {
+        const item = {
+          setTitle: () => item,
+          setIcon: () => item,
+          setSection: () => item,
+          onClick: (fn) => { clickHandler = fn; return item; }
+        };
+        callback(item);
+      },
+      click: () => clickHandler?.()
+    };
+  };
+
+  const m1 = makeMenu();
+  feature.menu(m1, sub);
+  m1.click();
+
+  const m2 = makeMenu();
+  feature.menu(m2, fileInSub);
+  m2.click();
+
+  const m3 = makeMenu();
+  feature.menu(m3, fileInRoot);
+  m3.click();
+
+  assert.deepEqual(targets, ['sub', 'sub', '/']);
 });

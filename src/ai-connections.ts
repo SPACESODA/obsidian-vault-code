@@ -21,7 +21,7 @@ export const CONNECTION_PRESETS: ConnectionPreset[] = [
 	{ id: "anthropic", name: "Anthropic", kind: "api", baseUrl: "https://api.anthropic.com/v1", format: "anthropic" },
 	{ id: "gemini", name: "Gemini", kind: "api", baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai", format: "chat-completions" },
 	{ id: "openrouter", name: "OpenRouter", kind: "api", baseUrl: "https://openrouter.ai/api/v1", format: "chat-completions" },
-	{ id: "deepseek", name: "DeepSeek", kind: "api", baseUrl: "https://api.deepseek.com/v1", format: "chat-completions" },
+	{ id: "deepseek", name: "DeepSeek", kind: "api", baseUrl: "https://api.deepseek.com", format: "chat-completions" },
 	{ id: "qwen", name: "Qwen", kind: "api", baseUrl: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1", format: "chat-completions" },
 	{ id: "kimi", name: "Kimi / Moonshot", kind: "api", baseUrl: "https://api.moonshot.ai/v1", format: "chat-completions" },
 	{ id: "glm", name: "GLM / Z.ai", kind: "api", baseUrl: "https://api.z.ai/api/paas/v4", format: "chat-completions" },
@@ -29,8 +29,9 @@ export const CONNECTION_PRESETS: ConnectionPreset[] = [
 	{ id: "siliconflow", name: "SiliconFlow", kind: "api", baseUrl: "https://api.siliconflow.com/v1", format: "chat-completions" },
 	{ id: "custom-api", name: "Custom", kind: "api", baseUrl: "", format: "chat-completions" },
 	{ id: "ollama", name: "Ollama", kind: "local", baseUrl: "http://127.0.0.1:11434/v1", format: "chat-completions" },
+	{ id: "atomic", name: "Atomic Chat", kind: "local", baseUrl: "http://127.0.0.1:1337/v1", format: "chat-completions" },
 	{ id: "lmstudio", name: "LM Studio", kind: "local", baseUrl: "http://127.0.0.1:1234/v1", format: "chat-completions" },
-	{ id: "atomic", name: "Atomic Chat", kind: "local", baseUrl: "http://127.0.0.1:53176/v1", format: "chat-completions" },
+	{ id: "ccswitch", name: "CC Switch", kind: "local", baseUrl: "http://127.0.0.1:15721/v1", format: "chat-completions" },
 	{ id: "custom-local", name: "Custom", kind: "local", baseUrl: "", format: "chat-completions" },
 ];
 export const isConnectionProvider = (provider: string): provider is `connection:${string}` => provider.startsWith("connection:");
