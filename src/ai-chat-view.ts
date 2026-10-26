@@ -1401,7 +1401,7 @@ export class AIChatView extends ItemView {
 		// Auto-create chat note on first turn if not yet saved
 		if (!this.currentChatFile) {
 			this.currentChatTitle = text.slice(0, 50);
-			const folder = this.plugin.settings.aiChatFolder || "Agent-Chats";
+			const folder = this.plugin.settings.aiChatFolder || "agent-chats";
 			try {
 				const createdChat = await this.plugin.aiStorage.createChatNote(
 					folder,

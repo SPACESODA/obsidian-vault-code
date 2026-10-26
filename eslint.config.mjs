@@ -67,12 +67,14 @@ export default tseslint.config(
 						"AGENTS",
 						"AGENTS.md",
 						"instructions.md",
+						"agent-chats",
 					],
 				},
 			],
 			"obsidianmd/ui/sentence-case": [
 				"warn",
 				{
+					ignoreRegex: ["^agent-chats$"],
 					ignoreWords: [
 						"Aa",
 						"Antigravity",
@@ -110,6 +112,7 @@ export default tseslint.config(
 						"AGENTS",
 						"AGENTS.md",
 						"instructions.md",
+						"agent-chats",
 					],
 				},
 			],

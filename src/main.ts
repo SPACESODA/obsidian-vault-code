@@ -677,6 +677,9 @@ export const DEFAULT_OBSIDIANIGNORE_CONTENT = `# Obsidian & Git
 # Windows
 Thumbs.db
 desktop.ini
+
+# Folders & Files
+agent-chats/
 `;
 
 const DEFAULT_SETTINGS: VaultCodeSettings = {
@@ -717,7 +720,7 @@ const DEFAULT_SETTINGS: VaultCodeSettings = {
 	},
 	aiScope: "active-note",
 	aiMode: "safe",
-	aiChatFolder: "Agent-Chats",
+	aiChatFolder: "agent-chats",
 	aiChatAutoClean: "never",
 	aiAttachInstructions: true,
 };
@@ -5070,7 +5073,7 @@ export default class VaultCodePlugin extends Plugin {
 				if (this.settings.enableAIChat) {
 					await this.reloadAIChatLeaves();
 					if (this.settings.aiAttachInstructions !== false) {
-						void this.aiStorage.ensureInstructionsFile(this.settings.aiChatFolder || "Agent-Chats");
+						void this.aiStorage.ensureInstructionsFile(this.settings.aiChatFolder || "agent-chats");
 					}
 					if (this.settings.aiChatAutoClean !== "never") {
 						void this.aiStorage.runAutoCleanup(
@@ -9196,10 +9199,10 @@ class VaultCodeSettingTab extends PluginSettingTab {
 				.setDesc(t("settingsAIChatFolderDesc"))
 				.addText((text) =>
 					text
-						.setPlaceholder("Agent-Chats")
+						.setPlaceholder("agent-chats")
 						.setValue(this.plugin.settings.aiChatFolder)
 						.onChange(async (value) => {
-							this.plugin.settings.aiChatFolder = value.trim() || "Agent-Chats";
+							this.plugin.settings.aiChatFolder = value.trim() || "agent-chats";
 							await this.plugin.saveSettings();
 							if (this.plugin.settings.aiAttachInstructions !== false) {
 								void this.plugin.aiStorage.ensureInstructionsFile(this.plugin.settings.aiChatFolder);

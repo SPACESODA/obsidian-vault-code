@@ -1,6 +1,6 @@
 # Vault Code
 
-<h2 align="center" style="color: #8a5cf5; font-weight: bold;">Vault Code turns your Obsidian vault into a workspace for notes, code, and files.</h2>
+<h2 align="center" style="color: #8a5cf5;">Vault Code turns Obsidian into a workspace for notes, code, and files.</h2>
 
 View hidden files, create and organize files of any kind, and edit code in a beautiful editor. Preview web pages, diagrams, and data, or work with AI agents, all without leaving Obsidian.
 
@@ -83,11 +83,9 @@ Choose a connection in settings:
 
 * **CLI**: Use Claude Code, Codex, Copilot, and other coding agents with their workspace tools. Install and update agents from settings.
 * **API**: Bring your own key for OpenAI, Anthropic, Gemini, DeepSeek, Qwen, or another provider. Custom endpoints and model IDs are supported.
-* **Local model**: Connect Ollama, LM Studio, Atomic Chat, or another compatible server.
+* **Local**: Connect Ollama, Atomic Chat, LM Studio, CC Switch, or another compatible server.
 
-Attach notes or selections, pin context, and revisit Markdown chat histories. **Safe mode** is read-only. **Edit mode** enables edits; API and local models require review before applying.
-
-Most providers require a paid subscription. API keys use Obsidian's secret storage (**1.11.4+**) and must be configured on each device.
+Attach notes or selections, pin context, and guide agent behavior with a customizable `instructions.md` note in your chat folder. Revisit Markdown chat histories anytime.
 
 ### 🛡️ Control editing and file opening
 
@@ -144,7 +142,7 @@ To test pre-release builds or update directly from GitHub:
 
 Vault Code sends no analytics or telemetry. Network activity depends on what you use:
 
-* **Agent chat**: CLI agents contact their configured services. API and local connections send prompts, chat history, and attached note or selection context to your chosen endpoint. A loopback endpoint runs on your device; its server may also route to cloud providers. Generation tests run only when you click **Test**.
+* **Agent chat**: CLI agents contact their configured services. API and local connections send prompts, chat history, and attached note or selection context to your chosen endpoint. A loopback endpoint runs on your device; its server may also route to cloud providers.
 * **CLI installation & updates**: Contact the agent's installer or package registry.
 * **Live preview**: HTML can run JavaScript and load remote resources. Remote CSS, fonts, images, or scripts may make network requests.
 * **External links**: Settings links open in your default browser.

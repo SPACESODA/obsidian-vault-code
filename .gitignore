@@ -21,3 +21,7 @@ npm-debug.log
 .obsidian/workspace.json
 data.json
 .hotreload
+
+# Folders and Files
+agent-chats/
+docs

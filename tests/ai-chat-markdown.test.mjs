@@ -42,13 +42,13 @@ test('a slower streaming render cannot replace the final answer', async () => {
   const pending = [];
   globalThis.__renderMarkdown = (app, text, el, source) => new Promise(resolve => { el.textContent = text; pending.push({resolve, source}); });
   const body = element(), view = owner();
-  const first = renderChatMarkdown({}, '> Partial', body, 'Agent-Chats/test.md', view);
-  const final = renderChatMarkdown({}, '> Final', body, 'Agent-Chats/test.md', view);
+  const first = renderChatMarkdown({}, '> Partial', body, 'agent-chats/test.md', view);
+  const final = renderChatMarkdown({}, '> Final', body, 'agent-chats/test.md', view);
   pending[1].resolve(); await final;
   pending[0].resolve(); await first;
   assert.equal(body.children[0].textContent, '> Final');
   assert.match(body.children[0].className, /markdown-rendered/);
-  assert.equal(pending[1].source, 'Agent-Chats/test.md');
+  assert.equal(pending[1].source, 'agent-chats/test.md');
   assert.equal(view.children.size, 1);
 });
 test('replacing a response unloads the old Markdown components', async () => {

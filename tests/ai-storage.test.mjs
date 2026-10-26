@@ -91,18 +91,18 @@ test('history timestamps prefer chat_last and still accept legacy last_chat',()=
 });
 
 test('history order uses last chat time rather than file modifications or creation date',async()=>{
-  const file=(name,mtime)=>({path:'Agent-Chats/'+name+'.md',stat:{mtime}});
+  const file=(name,mtime)=>({path:'agent-chats/'+name+'.md',stat:{mtime}});
   const files=[file('renamed-old',9999999999999),file('latest',0),file('middle',1),file('legacy',2)];
   const timestamps=['2026-10-24T12:00:00','2026-10-26T19:19:31','2026-10-25T20:00:00','2026-10-25 09:00:00'];
   const properties=new Map(files.map((file,i)=>[file,{frontmatter:i===3?{last_chat:timestamps[i]}:{chat_last:timestamps[i],created:'2099-01-01T00:00:00'}}]));
   const storage=new AIStorage({vault:{getMarkdownFiles:()=>files},metadataCache:{getFileCache:file=>properties.get(file)}});
-  assert.deepEqual((await storage.listChatNotes('Agent-Chats')).map(file=>file.path),['latest','middle','legacy','renamed-old'].map(name=>'Agent-Chats/'+name+'.md'));
+  assert.deepEqual((await storage.listChatNotes('agent-chats')).map(file=>file.path),['latest','middle','legacy','renamed-old'].map(name=>'agent-chats/'+name+'.md'));
 });
 test('missing or invalid chat dates fall back to modification time and equal dates sort consistently',async()=>{
-  const files=['b','a','fallback'].map(name=>({path:'Agent-Chats/'+name+'.md',stat:{mtime:Date.parse('2026-10-25T00:00:00')}}));
+  const files=['b','a','fallback'].map(name=>({path:'agent-chats/'+name+'.md',stat:{mtime:Date.parse('2026-10-25T00:00:00')}}));
   const storage=new AIStorage({vault:{getMarkdownFiles:()=>files},metadataCache:{getFileCache:file=>({frontmatter:{chat_last:file.path.includes('fallback')?'invalid':'2026-10-26T10:00:00'}})}});
   assert.equal(storage.getLastChatTime(files[2]),files[2].stat.mtime);
-  assert.deepEqual((await storage.listChatNotes('Agent-Chats')).map(file=>file.path),['a','b','fallback'].map(name=>'Agent-Chats/'+name+'.md'));
+  assert.deepEqual((await storage.listChatNotes('agent-chats')).map(file=>file.path),['a','b','fallback'].map(name=>'agent-chats/'+name+'.md'));
 });
 test('transcript updates save chat_last as an unquoted local ISO date-time',async()=>{
   const h=harness(legacyNote());await h.storage.updateChatNote({},metadata,messages);
@@ -130,30 +130,30 @@ test('chat_created takes precedence and a separate user-created property is pres
 
 test('listChatNotes ignores instructions.md so it is never listed or deleted as a chat',async()=>{
   const created=new Date('2026-10-24T10:00:00').getTime();
-  const files=[{path:'Agent-Chats/chat-1.md',name:'chat-1.md',stat:{mtime:created}},{path:'Agent-Chats/instructions.md',name:'instructions.md',stat:{mtime:created}}];
+  const files=[{path:'agent-chats/chat-1.md',name:'chat-1.md',stat:{mtime:created}},{path:'agent-chats/instructions.md',name:'instructions.md',stat:{mtime:created}}];
   const storage=new AIStorage({vault:{getMarkdownFiles:()=>files},metadataCache:{getFileCache:()=>({frontmatter:{type:'Agent Chat'}})}});
-  const result=await storage.listChatNotes('Agent-Chats');
+  const result=await storage.listChatNotes('agent-chats');
   assert.equal(result.length,1);
   assert.equal(result[0].name,'chat-1.md');
 });
 
 test('ensureInstructionsFile creates default note if missing and loadInstructions strips frontmatter',async()=>{
   let createdPath='',createdContent='';
-  const mockFile={path:'Agent-Chats/instructions.md',name:'instructions.md'};
+  const mockFile={path:'agent-chats/instructions.md',name:'instructions.md'};
   let existing=null;
   const storage=new AIStorage({
     vault:{
-      getAbstractFileByPath:p=>p==='Agent-Chats/instructions.md'?existing:null,
+      getAbstractFileByPath:p=>p==='agent-chats/instructions.md'?existing:null,
       create:async(path,content)=>{createdPath=path;createdContent=content;existing=mockFile;return mockFile;},
       createFolder:async()=>{},
       read:async()=>'---\ntype: Note\n---\n<!-- Internal note -->\n# Custom Rules\n- Be concise.'
     }
   });
-  const file=await storage.ensureInstructionsFile('Agent-Chats');
+  const file=await storage.ensureInstructionsFile('agent-chats');
   assert.equal(file,mockFile);
-  assert.equal(createdPath,'Agent-Chats/instructions.md');
+  assert.equal(createdPath,'agent-chats/instructions.md');
   assert.ok(createdContent.includes('Keep a helpful, professional, and concise tone.'));
 
-  const loaded=await storage.loadInstructions('Agent-Chats');
+  const loaded=await storage.loadInstructions('agent-chats');
   assert.equal(loaded,'# Custom Rules\n- Be concise.');
 });

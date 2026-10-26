@@ -1494,7 +1494,7 @@ export class AIService {
 			return "";
 		}
 		if (this.plugin?.aiStorage) {
-			const folder = this.plugin.settings.aiChatFolder || "Agent-Chats";
+			const folder = this.plugin.settings.aiChatFolder || "agent-chats";
 			const content = await this.plugin.aiStorage.loadInstructions(folder);
 			return content.slice(0, 10000);
 		}

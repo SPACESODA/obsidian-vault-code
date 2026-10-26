@@ -71,21 +71,21 @@ test("AIChatView getState and setState preserve active chat file across view rel
 		saveSettings: async () => {},
 	};
 	const view = new AIChatView(leaf, plugin);
-	const dummyFile = new globalThis.__TestTFile("Agent-Chats/my-chat.md");
+	const dummyFile = new globalThis.__TestTFile("agent-chats/my-chat.md");
 	view.currentChatFile = dummyFile;
 
 	const state = view.getState();
-	assert.equal(state.chatPath, "Agent-Chats/my-chat.md");
+	assert.equal(state.chatPath, "agent-chats/my-chat.md");
 
 	let loadedFile = null;
 	view.loadChatFromFile = async (file) => { loadedFile = file; };
 	view.app = {
 		vault: {
-			getAbstractFileByPath: (p) => (p === "Agent-Chats/my-chat.md" ? dummyFile : null),
+			getAbstractFileByPath: (p) => (p === "agent-chats/my-chat.md" ? dummyFile : null),
 		},
 	};
 
-	await view.setState({ chatPath: "Agent-Chats/my-chat.md" }, {});
+	await view.setState({ chatPath: "agent-chats/my-chat.md" }, {});
 	assert.equal(loadedFile, dummyFile);
 });
 
@@ -152,7 +152,7 @@ test("AIChatView defaults to safe mode (Safe mode)", async () => {
 
 test("changing mode or scope immediately updates the chat file frontmatter", async () => {
 	const leaf = {};
-	const dummyFile = new globalThis.__TestTFile("Agent-Chats/active.md");
+	const dummyFile = new globalThis.__TestTFile("agent-chats/active.md");
 	const updated = [];
 	const plugin = {
 		settings: {
@@ -183,7 +183,7 @@ test("changing mode or scope immediately updates the chat file frontmatter", asy
 
 test("changing provider, model, or effort immediately updates the chat file frontmatter", async () => {
 	const leaf = {};
-	const dummyFile = new globalThis.__TestTFile("Agent-Chats/active.md");
+	const dummyFile = new globalThis.__TestTFile("agent-chats/active.md");
 	const updated = [];
 	const plugin = {
 		settings: {
@@ -224,7 +224,7 @@ test("changing provider, model, or effort immediately updates the chat file fron
 
 test("loadChatFromFile follows recorded provider, model, effort, scope, and mode when available", async () => {
 	const leaf = {};
-	const dummyFile = new globalThis.__TestTFile("Agent-Chats/existing.md");
+	const dummyFile = new globalThis.__TestTFile("agent-chats/existing.md");
 	const plugin = {
 		settings: {
 			aiProvider: "antigravity",
@@ -277,7 +277,7 @@ test("loadChatFromFile follows recorded provider, model, effort, scope, and mode
 
 test("loadChatFromFile falls back to settings default provider when recorded provider does not exist", async () => {
 	const leaf = {};
-	const dummyFile = new globalThis.__TestTFile("Agent-Chats/deleted-provider.md");
+	const dummyFile = new globalThis.__TestTFile("agent-chats/deleted-provider.md");
 	const plugin = {
 		settings: {
 			aiProvider: "antigravity",
@@ -343,7 +343,7 @@ test("updateChatProvider deletes reasoning_effort when switching to provider wit
 		obsidian: OBSIDIAN_STUB,
 	});
 	const storage = new AIStorage(fakeApp);
-	const dummyFile = new globalThis.__TestTFile("Agent-Chats/test.md");
+	const dummyFile = new globalThis.__TestTFile("agent-chats/test.md");
 
 	// Switch to Antigravity (does not support reasoning effort)
 	await storage.updateChatProvider(dummyFile, "antigravity", "gemini-3.8-flash-high");

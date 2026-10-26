@@ -31,12 +31,12 @@ test('simultaneous startup and open actions create only one chat leaf', async()=
   assert.ok(results.every(l=>l===results[0]));
 });
 test('opening during restoration reuses the temporarily empty leaf and preserves the chat',async()=>{
-  const original=leaf('Agent-Chats/saved.md'); const h=harness([original]);
+  const original=leaf('agent-chats/saved.md'); const h=harness([original]);
   const reload=h.manager.ensure(h.options);
   assert.equal(original.state.type,'empty');
   const open=h.manager.ensure(h.options);
   assert.equal(await reload, original); assert.equal(await open, original);
-  assert.equal(h.created,0); assert.equal(original.state.state.chatPath,'Agent-Chats/saved.md');
+  assert.equal(h.created,0); assert.equal(original.state.state.chatPath,'agent-chats/saved.md');
 });
 test('duplicate blank leaves are removed, preferring the active healthy leaf',async()=>{
   const active=leaf(null,{current:true,active:true});const h=harness([leaf(),active,leaf()]);

@@ -1,0 +1,9 @@
+{
+  "types": {
+    "aliases": "aliases",
+    "cssclasses": "multitext",
+    "tags": "tags",
+    "chat_last": "datetime",
+    "chat_created": "datetime"
+  }
+}

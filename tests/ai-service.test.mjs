@@ -361,7 +361,7 @@ test('Entire Vault option excludes ignored files and formats strict boundaries',
   assert.ok(patterns.includes('.obsidian/**'));
   assert.ok(patterns.includes('.git/**'));
   assert.ok(patterns.includes('.trash/**'));
-  assert.ok(!patterns.some(p => p.includes('Agent-Chats')), 'Chat folder must not be ignored so history remains referenceable');
+  assert.ok(!patterns.some(p => p.includes('agent-chats')), 'Chat folder must not be ignored so history remains referenceable');
   assert.ok(patterns.includes('node_modules/**'));
   assert.ok(patterns.includes('projects/secret/**'));
   assert.ok(patterns.includes('dist/**'));
@@ -373,7 +373,7 @@ test('Entire Vault option excludes ignored files and formats strict boundaries',
     scope: 'vault',
     prompt: 'List all vault files',
     history: [{ role: 'user', content: 'What was my initial plan?' }, { role: 'assistant', content: 'You wanted to build an app.' }],
-    currentChatPath: 'Agent-Chats/My Plan.md',
+    currentChatPath: 'agent-chats/My Plan.md',
   });
   const promptArg = h.spawned[0].args.find(a => a.includes('[Context: Entire Vault]'));
   assert.ok(promptArg, 'Prompt should include [Context: Entire Vault]');
@@ -383,7 +383,7 @@ test('Entire Vault option excludes ignored files and formats strict boundaries',
   assert.ok(promptArg.includes('[Current Conversation Transcript]'));
   assert.ok(promptArg.includes('User: What was my initial plan?'));
   assert.ok(promptArg.includes('Agent: You wanted to build an app.'));
-  assert.ok(promptArg.includes('[Active Chat File: "Agent-Chats/My Plan.md"]'));
+  assert.ok(promptArg.includes('[Active Chat File: "agent-chats/My Plan.md"]'));
   assert.ok(promptArg.includes('List all vault files'));
 
   // Verify chat transcript is also referenceable when Entire Vault is OFF
@@ -391,12 +391,12 @@ test('Entire Vault option excludes ignored files and formats strict boundaries',
     scope: 'active-note',
     prompt: 'What did we decide?',
     history: [{ role: 'user', content: 'Let us use SQLite.' }],
-    currentChatPath: 'Agent-Chats/Database.md',
+    currentChatPath: 'agent-chats/Database.md',
   });
   const activePromptArg = h.spawned[1].args.find(a => a.includes('[Current Conversation Transcript]'));
   assert.ok(activePromptArg, 'Transcript should be in prompt when entire vault is OFF');
   assert.ok(activePromptArg.includes('User: Let us use SQLite.'));
-  assert.ok(activePromptArg.includes('[Active Chat File: "Agent-Chats/Database.md"]'));
+  assert.ok(activePromptArg.includes('[Active Chat File: "agent-chats/Database.md"]'));
 });
 
 

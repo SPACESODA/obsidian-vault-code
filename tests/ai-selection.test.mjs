@@ -131,7 +131,7 @@ function chat() {
   view.selectedProvider='connection:test';view.selectedModel='test-model';view.mode='safe';
   view.updateVaultToggleState=()=>{};view.updateContextChip=()=>{};view.autoResizeTextarea=()=>{};
   view.updateSendButtonState=()=>{};view.scrollToBottom=()=>{};view.renderMessageBubble=()=>{};
-  view.messagesContainerEl=node(); view.currentChatFile={path:'Agent-Chats/test.md'};
+  view.messagesContainerEl=node(); view.currentChatFile={path:'agent-chats/test.md'};
   const file=new globalThis.__SelectionTestFile('Note/test.md');
   view.app={vault:{getAbstractFileByPath:path=>path===file.path?file:null},workspace:{getActiveFile:()=>{throw Error('Must not use another active note');}}};
   const requests=[];view.plugin={settings:{},aiService:{sendMessage:options=>{requests.push(options);return {kill(){}};}}};
@@ -172,7 +172,7 @@ test('cancelling while a chat note is being created cannot send or attach a stal
   assert.equal(view.isGenerating,true);
   view.submissionId++;
   view.isGenerating=false;
-  resolveNote({path:'Agent-Chats/cancelled.md'});
+  resolveNote({path:'agent-chats/cancelled.md'});
   await submission;
   assert.equal(requests.length,0);
   assert.equal(view.currentChatFile,null);
