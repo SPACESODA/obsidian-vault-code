@@ -659,10 +659,9 @@ interface VaultCodeSettings {
 	aiProviderLastModel?: Record<string, string>;
 	aiScope: "active-note" | "vault";
 	aiMode: "safe" | "edit";
-	aiCustomPath: string;
-	aiCodexPath: string;
 	aiChatFolder: string;
 	aiChatAutoClean: "never" | "7d" | "30d" | "90d";
+	aiAttachInstructions: boolean;
 }
 
 
@@ -718,10 +717,9 @@ const DEFAULT_SETTINGS: VaultCodeSettings = {
 	},
 	aiScope: "active-note",
 	aiMode: "safe",
-	aiCustomPath: "",
-	aiCodexPath: "",
 	aiChatFolder: "Agent-Chats",
 	aiChatAutoClean: "never",
+	aiAttachInstructions: true,
 };
 
 /** Check if any segment of a path is a dotfile or dotfolder. */
@@ -5071,6 +5069,9 @@ export default class VaultCodePlugin extends Plugin {
 			if (Platform.isDesktop) {
 				if (this.settings.enableAIChat) {
 					await this.reloadAIChatLeaves();
+					if (this.settings.aiAttachInstructions !== false) {
+						void this.aiStorage.ensureInstructionsFile(this.settings.aiChatFolder || "Agent-Chats");
+					}
 					if (this.settings.aiChatAutoClean !== "never") {
 						void this.aiStorage.runAutoCleanup(
 							this.settings.aiChatFolder,
@@ -8809,14 +8810,14 @@ class VaultCodeSettingTab extends PluginSettingTab {
 				);
 
 			if (this.plugin.settings.enableAIChat) {
-			const connectionTabs = containerEl.createDiv({ cls: "vault-code-connection-tabs", attr: { role: "tablist", "aria-label": t("settingsAIConnectionType") } });
+			const connectionTabs = containerEl.createDiv({ cls: "vault-code-connection-tabs", attr: { role: "tablist" } });
 			const connectionPanels = containerEl.createDiv({ cls: "vault-code-connection-panels" });
 			const panels = new Map<string, HTMLElement>();
 			const tabs = new Map<string, HTMLButtonElement>();
 			const showConnectionTab = (id: "cli" | "api" | "local") => {
 				this.aiSettingsTab = id;
 				if (!panels.has(id)) {
-					const panel = connectionPanels.createDiv({ attr: { role: "tabpanel", "aria-label": id === "cli" ? t("settingsAITabCLI") : id === "api" ? t("settingsAITabAPI") : t("settingsAITabLocal") } });
+					const panel = connectionPanels.createDiv({ attr: { role: "tabpanel" } });
 					panels.set(id, panel);
 					renderConnectionPanel(panel, id);
 				}
@@ -9147,7 +9148,8 @@ class VaultCodeSettingTab extends PluginSettingTab {
 
 			}
 
-			if (tabId === "cli") {
+			};
+			showConnectionTab(this.aiSettingsTab);
 
 			new Setting(containerEl)
 				.setName(t("settingsAIDefaultScopeName"))
@@ -9178,35 +9180,16 @@ class VaultCodeSettingTab extends PluginSettingTab {
 				});
 
 			new Setting(containerEl)
-				.setName(t("settingsAICustomPathName"))
-				.setDesc(t("settingsAICustomPathDesc"))
-				.addText((text) =>
-					text
-						.setPlaceholder("/opt/homebrew/bin/agy")
-						.setValue(this.plugin.settings.aiCustomPath)
+				.setName(t("settingsAIAttachInstructionsName"))
+				.setDesc(t("settingsAIAttachInstructionsDesc"))
+				.addToggle((toggle) =>
+					toggle
+						.setValue(this.plugin.settings.aiAttachInstructions ?? true)
 						.onChange(async (value) => {
-							this.plugin.settings.aiCustomPath = value.trim();
+							this.plugin.settings.aiAttachInstructions = value;
 							await this.plugin.saveSettings();
 						}),
 				);
-
-			new Setting(containerEl)
-				.setName(t("settingsAICodexCustomPathName"))
-				.setDesc(t("settingsAICodexCustomPathDesc"))
-				.addText((text) =>
-					text
-						.setPlaceholder("/opt/homebrew/bin/codex")
-						.setValue(this.plugin.settings.aiCodexPath || "")
-						.onChange(async (value) => {
-							this.plugin.settings.aiCodexPath = value.trim();
-							await this.plugin.saveSettings();
-						}),
-				);
-
-			}
-
-			};
-			showConnectionTab(this.aiSettingsTab);
 
 			new Setting(containerEl)
 				.setName(t("settingsAIChatFolderName"))
@@ -9218,6 +9201,9 @@ class VaultCodeSettingTab extends PluginSettingTab {
 						.onChange(async (value) => {
 							this.plugin.settings.aiChatFolder = value.trim() || "Agent-Chats";
 							await this.plugin.saveSettings();
+							if (this.plugin.settings.aiAttachInstructions !== false) {
+								void this.plugin.aiStorage.ensureInstructionsFile(this.plugin.settings.aiChatFolder);
+							}
 						}),
 				);
 

@@ -17,7 +17,14 @@ export default tseslint.config(
 				"warn",
 				{
 					// Preserve format acronyms and literal extension examples without replacing the rule's defaults.
-					ignoreRegex: ["^Example: html, css, js$", "^TSV cells cannot contain tabs or line breaks[.]$", "^TSV records must use LF or CRLF line endings[.]$", "^MJML compilation error$"],
+					ignoreRegex: [
+						"^Example: html, css, js$",
+						"^TSV cells cannot contain tabs or line breaks[.]$",
+						"^TSV records must use LF or CRLF line endings[.]$",
+						"^MJML compilation error$",
+						"AGENTS[.]md",
+						"instructions[.]md",
+					],
 					ignoreWords: [
 						"Unicode",
 						"TSV",
@@ -57,6 +64,9 @@ export default tseslint.config(
 						"Chat",
 						"CC",
 						"Switch",
+						"AGENTS",
+						"AGENTS.md",
+						"instructions.md",
 					],
 				},
 			],
@@ -97,6 +107,9 @@ export default tseslint.config(
 						"Chat",
 						"CC",
 						"Switch",
+						"AGENTS",
+						"AGENTS.md",
+						"instructions.md",
 					],
 				},
 			],

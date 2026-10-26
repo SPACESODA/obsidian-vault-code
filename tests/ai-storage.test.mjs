@@ -127,3 +127,33 @@ test('chat_created takes precedence and a separate user-created property is pres
   assert.equal(properties.created,'User-owned date');
   assert.equal(properties.chat_created,'2026-10-24T10:00:00');
 });
+
+test('listChatNotes ignores instructions.md so it is never listed or deleted as a chat',async()=>{
+  const created=new Date('2026-10-24T10:00:00').getTime();
+  const files=[{path:'Agent-Chats/chat-1.md',name:'chat-1.md',stat:{mtime:created}},{path:'Agent-Chats/instructions.md',name:'instructions.md',stat:{mtime:created}}];
+  const storage=new AIStorage({vault:{getMarkdownFiles:()=>files},metadataCache:{getFileCache:()=>({frontmatter:{type:'Agent Chat'}})}});
+  const result=await storage.listChatNotes('Agent-Chats');
+  assert.equal(result.length,1);
+  assert.equal(result[0].name,'chat-1.md');
+});
+
+test('ensureInstructionsFile creates default note if missing and loadInstructions strips frontmatter',async()=>{
+  let createdPath='',createdContent='';
+  const mockFile={path:'Agent-Chats/instructions.md',name:'instructions.md'};
+  let existing=null;
+  const storage=new AIStorage({
+    vault:{
+      getAbstractFileByPath:p=>p==='Agent-Chats/instructions.md'?existing:null,
+      create:async(path,content)=>{createdPath=path;createdContent=content;existing=mockFile;return mockFile;},
+      createFolder:async()=>{},
+      read:async()=>'---\ntype: Note\n---\n<!-- Internal note -->\n# Custom Rules\n- Be concise.'
+    }
+  });
+  const file=await storage.ensureInstructionsFile('Agent-Chats');
+  assert.equal(file,mockFile);
+  assert.equal(createdPath,'Agent-Chats/instructions.md');
+  assert.ok(createdContent.includes('Keep a helpful, professional, and concise tone.'));
+
+  const loaded=await storage.loadInstructions('Agent-Chats');
+  assert.equal(loaded,'# Custom Rules\n- Be concise.');
+});

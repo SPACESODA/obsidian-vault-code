@@ -11,7 +11,8 @@ async function load(entry) {
     b.onResolve({filter:/^obsidian$/},()=>({path:'obsidian',namespace:'test'}));
     b.onLoad({filter:/.*/,namespace:'test'},()=>({contents:`
       export const Platform=globalThis.__aiPlatform;
-      export class App {} export class TFile {} export class FileSystemAdapter {}
+      export class App {} export class TFile { constructor(path){this.path=path;} } export class FileSystemAdapter {}
+      globalThis.__testTFile=TFile;
       export const getLanguage=()=> 'en'; export const requireApiVersion=()=>true;
       export const requestUrl=(options)=>globalThis.__mobileRequest(options);
     `}));
@@ -34,7 +35,7 @@ function harness({config=connection,chunks=['data: {"choices":[{"delta":{"conten
     return req;
   }};
   globalThis.window={setTimeout,clearTimeout,process:{env:{HOME:'/fake',PATH:'/usr/bin'}},require(name){if(name==='http'||name==='https')return networking;throw new Error('CLI runtime must not be used for direct models')}};
-  const app={secretStorage:{getSecret:id=>secrets.get(id)||null},vault:{configDir:'.obsidian',adapter:{exists:async()=>false}}};
+  const app={secretStorage:{getSecret:id=>secrets.get(id)||null},vault:{configDir:'.obsidian',adapter:{exists:async()=>false},getAbstractFileByPath:()=>null,read:async()=>""}};
   const plugin={settings:{enableAIChat:true,aiConnections:[config],aiProvider:core.connectionProvider(config.id)},saveSettings:async()=>{}};
   const service=new AIService(app,plugin);
   const send=(extra={})=>new Promise(resolve=>service.sendMessage({provider:core.connectionProvider(config.id),model:'test-model',prompt:'Question',scope:'active-note',mode:'safe',onDone:text=>resolve({text}),onError:error=>resolve({error}),...extra}));
@@ -156,4 +157,35 @@ test('quoted selection context is sent once without exposing the rest of the sou
   assert.equal((JSON.stringify(messages).match(/selected snippet/g)||[]).length,1);
   assert.ok(!JSON.stringify(messages).includes('PRIVATE'));
   assert.match(messages[0].content,/replace only that snippet/);
+});
+
+test('agent instructions attach via <instructions> when enabled and present',async()=>{
+  const h=harness();
+  h.plugin.settings.aiAttachInstructions=true;
+  h.plugin.aiStorage={loadInstructions:async()=>'Always use wikilinks.'};
+  await h.send();
+  const sentPrompt=h.requests[0].body.messages.find(m=>m.role==='user').content;
+  assert.ok(sentPrompt.includes('<instructions>'));
+  assert.ok(sentPrompt.includes('Always use wikilinks.'));
+  assert.ok(sentPrompt.includes('Do not quote, repeat, or reference these instructions in your reply.'));
+  assert.ok(sentPrompt.includes('</instructions>'));
+});
+
+test('agent instructions omitted when toggle is disabled or content empty',async()=>{
+  const h=harness();
+  h.plugin.settings.aiAttachInstructions=false;
+  h.plugin.aiStorage={loadInstructions:async()=>'Ignored rules'};
+  await h.send();
+  const sentPrompt=h.requests[0].body.messages.find(m=>m.role==='user').content;
+  assert.ok(!sentPrompt.includes('<instructions>'));
+  assert.ok(!sentPrompt.includes('Ignored rules'));
+});
+
+test('resolveAgentInstructions reads instructions from chat folder',async()=>{
+  const h=harness();
+  h.plugin.settings.aiAttachInstructions=true;
+  h.plugin.settings.aiChatFolder='Custom-Chats';
+  h.plugin.aiStorage={loadInstructions:async(folder)=>folder==='Custom-Chats'?'Custom rules':''};
+  const resolved=await h.service.resolveAgentInstructions();
+  assert.equal(resolved,'Custom rules');
 });

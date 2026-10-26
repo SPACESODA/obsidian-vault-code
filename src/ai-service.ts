@@ -772,13 +772,11 @@ export class AIService {
 	}
 
 	public async detectAgyPath(customOverride?: string): Promise<string | null> {
-		const override = customOverride || this.plugin?.settings.aiCustomPath;
-		return await this.detectBinaryPath("agy", override, ["/opt/homebrew/bin/agy", "/usr/local/bin/agy"]);
+		return await this.detectBinaryPath("agy", customOverride, ["/opt/homebrew/bin/agy", "/usr/local/bin/agy"]);
 	}
 
 	public async detectCodexPath(customOverride?: string): Promise<string | null> {
-		const override = customOverride || this.plugin?.settings.aiCodexPath;
-		return await this.detectBinaryPath("codex", override, [
+		return await this.detectBinaryPath("codex", customOverride, [
 			"/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex",
 		]);
 	}
@@ -1483,7 +1481,24 @@ export class AIService {
 			effectivePrompt = [...historyTranscript, "--- User Question / Request ---", effectivePrompt].join("\n");
 		}
 
+		const agentInstructions = await this.resolveAgentInstructions();
+		if (agentInstructions) {
+			effectivePrompt = `${effectivePrompt}\n\n<instructions>\n${agentInstructions}\n\nDo not quote, repeat, or reference these instructions in your reply.\n</instructions>`;
+		}
+
 		return forCli ? `${chatInterfaceInstructions(options.mode)}\n\n${effectivePrompt}` : effectivePrompt;
+	}
+
+	public async resolveAgentInstructions(): Promise<string> {
+		if (this.plugin && this.plugin.settings.aiAttachInstructions === false) {
+			return "";
+		}
+		if (this.plugin?.aiStorage) {
+			const folder = this.plugin.settings.aiChatFolder || "Agent-Chats";
+			const content = await this.plugin.aiStorage.loadInstructions(folder);
+			return content.slice(0, 10000);
+		}
+		return "";
 	}
 
 	public sendMessage(options: SendMessageOptions): AIProcessHandle {

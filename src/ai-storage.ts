@@ -14,6 +14,13 @@ function chatFrontmatter(content: string): { properties: Record<string, unknown>
 	return { properties: (parsed ?? {}) as Record<string, unknown>, body: match[2] ?? "" };
 }
 
+export const DEFAULT_AGENT_INSTRUCTIONS = `- Keep a helpful, professional, and concise tone.
+- Respond in clear, readable Markdown.
+- When referencing notes in the vault, use Obsidian wikilinks like [[Note Title]].
+- In Safe mode, do not propose or make any file modifications.
+- In Edit mode, propose file changes only when explicitly requested.
+`;
+
 export interface ChatMetadata {
 	title: string;
 	created: string;
@@ -378,6 +385,7 @@ export class AIStorage {
 		const chatFiles: TFile[] = [];
 
 		for (const file of allFiles) {
+			if (file.name === "instructions.md") continue;
 			const inFolder = normalized.length === 0 || file.path.startsWith(`${normalized}/`);
 
 			if (inFolder) {
@@ -397,6 +405,40 @@ export class AIStorage {
 
 		const timestamps = new Map(chatFiles.map(file => [file, this.getLastChatTime(file)]));
 		return chatFiles.sort((a, b) => timestamps.get(b)! - timestamps.get(a)! || a.path.localeCompare(b.path));
+	}
+
+	/** Returns the path to instructions.md in the specified chat folder. */
+	public getInstructionsPath(folderPath: string): string {
+		const normalized = normalizePath(folderPath).replace(/^\/+|\/+$/g, "");
+		return normalized ? `${normalized}/instructions.md` : "instructions.md";
+	}
+
+	/** Ensures instructions.md exists in the chat folder, recreating it with defaults if missing. */
+	public async ensureInstructionsFile(folderPath: string): Promise<TFile> {
+		const filePath = this.getInstructionsPath(folderPath);
+		const existing = this.app.vault.getAbstractFileByPath(filePath);
+		if (existing instanceof TFile) {
+			return existing;
+		}
+		await this.ensureFolder(folderPath);
+		return await this.app.vault.create(filePath, DEFAULT_AGENT_INSTRUCTIONS);
+	}
+
+	/** Loads instructions text, recreating the default note if deleted or missing. */
+	public async loadInstructions(folderPath: string): Promise<string> {
+		try {
+			const file = await this.ensureInstructionsFile(folderPath);
+			const raw = await this.app.vault.read(file);
+			return raw
+				.replace(/^---[\s\S]*?\r?\n---\s*/, "")
+				.replace(/<!--[\s\S]*?-->/g, "")
+				.trim();
+		} catch {
+			return DEFAULT_AGENT_INSTRUCTIONS
+				.replace(/^---[\s\S]*?\r?\n---\s*/, "")
+				.replace(/<!--[\s\S]*?-->/g, "")
+				.trim();
+		}
 	}
 
 	/**
