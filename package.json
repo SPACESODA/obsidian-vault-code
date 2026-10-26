@@ -1,7 +1,7 @@
 {
   "name": "obsidian-vault-code",
   "version": "2.1.7",
-  "description": "Turn your vault into a workspace for notes, code, and files. View hidden files, edit code, preview HTML, SVG and data, review Git diffs, or chat with AI agents, all without leaving Obsidian.",
+  "description": "Turn your vault into a workspace for notes, code, and files. View hidden files, edit code, preview HTML, SVG and data, review Git diffs, or chat with AI agents, all in one place.",
   "main": "main.js",
   "type": "module",
   "author": "SPACESODA",
