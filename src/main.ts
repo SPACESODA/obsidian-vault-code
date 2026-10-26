@@ -679,6 +679,7 @@ Thumbs.db
 desktop.ini
 
 # Folders & Files
+node_modules/
 agent-chats/
 `;
 
