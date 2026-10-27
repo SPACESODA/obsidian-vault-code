@@ -136,6 +136,7 @@ import type { SelectionQuote } from "./ai-selection";
 import { sizeSvgPreview } from "./svg-preview";
 import { WebViewerChat } from "./ai-web-context";
 import { ReadingSelectionChat } from "./ai-reading-selection";
+import { HtmlPreviewSelection } from "./html-preview-selection";
 import { createCustomMenu } from "./custom-menu";
 import { observeExplorerIgnore, filterExplorerRows } from "./explorer-ignore";
 import { IgnoreMatcher, parseGitignore, type IgnoreRule, EMPTY_IGNORE_RULES } from "./ignore-rules";
@@ -2594,6 +2595,7 @@ export class DotfileView extends TextFileView {
 	private editorEl: HTMLElement | null = null;
 	private previewEl: HTMLElement | null = null;
 	private previewSearch: HtmlPreviewSearch | null = null;
+	private previewSelection: HtmlPreviewSelection | null = null;
 	private filePreviewRenderer: FilePreviewRenderer | null = null;
 	private previewGeneration = 0;
 	private previewSave: { file: TFile; guard: PreviewSaveGuard; separator: string; prefix: string } | null = null;
@@ -3285,6 +3287,12 @@ export class DotfileView extends TextFileView {
 		this.previewEl.hide();
 		this.previewSearch = new HtmlPreviewSearch(contentEl, this.previewEl);
 		this.register(() => this.previewSearch?.dispose());
+		this.previewSelection = new HtmlPreviewSelection(contentEl, {
+			enabled: () => Platform.isDesktop && this.plugin.settings.enableAIChat && this.plugin.settings.enableSendToChatIcon && this.isPreviewMode,
+			source: () => this.file ? { path: this.file.path, text: this.getViewData() } : null,
+			onQuote: quote => { void this.plugin.activateAIChatView(quote); },
+		});
+		this.register(() => this.previewSelection?.dispose());
 		this.previewEl.addEventListener("keydown", event => {
 			if (!(event.ctrlKey || event.metaKey) || event.altKey || !this.editor || event.isComposing) return;
 			const target = event.target as HTMLElement;
@@ -3837,6 +3845,7 @@ export class DotfileView extends TextFileView {
 
 	override async onUnloadFile(file: TFile): Promise<void> {
 		this.previewSearch?.reset();
+		this.previewSelection?.setFrame(null);
 		this.filePreviewRenderer?.clear();
 		if (this.diffToolbarEl) {
 			this.diffToolbarEl.remove();
@@ -3850,6 +3859,7 @@ export class DotfileView extends TextFileView {
 
 	async onClose(): Promise<void> {
 		this.previewSearch?.dispose();
+		this.previewSelection?.dispose();
 		this.previewGeneration++;
 		this.closeGotoLine();
 		if (this.diffToolbarEl) {
@@ -3955,7 +3965,7 @@ export class DotfileView extends TextFileView {
 				this.searchBtnEl.toggle(this.isWebPreview());
 				this.searchBtnEl.setAttribute("aria-label", t("searchFindAriaLabel"));
 			}
-			if (!this.isWebPreview()) this.previewSearch?.reset();
+			if (!this.isWebPreview()) { this.previewSearch?.reset(); this.previewSelection?.setFrame(null); }
 			if (this.lineWrapBtnEl) this.lineWrapBtnEl.hide();
 			if (this.previewEl) {
 				this.previewEl.show();
@@ -3963,6 +3973,7 @@ export class DotfileView extends TextFileView {
 			}
 		} else {
 			this.previewSearch?.reset();
+			this.previewSelection?.setFrame(null);
 			this.filePreviewRenderer?.clear();
 			if (this.previewEl) this.previewEl.hide();
 			if (this.searchBtnEl) {
@@ -3983,6 +3994,7 @@ export class DotfileView extends TextFileView {
 		if (!this.previewEl || !this.file) return;
 		const generation = ++this.previewGeneration;
 		this.previewSearch?.setFrame(null);
+		this.previewSelection?.setFrame(null);
 		this.filePreviewRenderer?.clear();
 		this.previewEl.empty();
 
@@ -4456,6 +4468,7 @@ export class DotfileView extends TextFileView {
 			"allow-scripts allow-forms allow-modals allow-same-origin allow-popups",
 		);
 		this.previewSearch?.setFrame(iframe);
+		this.previewSelection?.setFrame(iframe);
 		iframe.addEventListener("load", () => {
 			try {
 				iframe.contentDocument?.addEventListener("click", event => forwardPreviewAppLink(event, openInDefaultBrowser));
