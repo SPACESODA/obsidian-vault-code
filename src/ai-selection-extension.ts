@@ -16,7 +16,19 @@ export function agentSelectionExtension(options: SelectionOptions): Extension {
 		private button: HTMLButtonElement;
 		private quote: SelectionQuote | null = null;
 		private destroyed = false;
-		private reposition = () => this.measure();
+		private timer: number | undefined;
+		private revision = 0;
+		private pointers = new Set<number>();
+		private reposition = () => this.schedule();
+		private blur = () => { this.pointers.clear(); this.hide(); };
+		private pointerDown = (event: PointerEvent) => {
+			this.pointers.add(event.pointerId);
+			this.hide();
+		};
+		private pointerEnd = (event: PointerEvent) => {
+			if (!this.pointers.delete(event.pointerId)) return;
+			this.schedule();
+		};
 		constructor(private view: EditorView) {
 			this.button = view.dom.doc.body.createEl("button", { cls: "clickable-icon vault-code-selection-agent" });
 			this.button.hidden = true;
@@ -25,20 +37,41 @@ export function agentSelectionExtension(options: SelectionOptions): Extension {
 			this.button.addEventListener("click", () => {
 				const quote = this.quote;
 				if (!quote || !options.enabled()) return;
-				this.button.hidden = true;
+				this.hide();
 				options.onQuote(quote);
 			});
+			view.dom.addEventListener("pointerdown", this.pointerDown, true);
+			view.dom.doc.addEventListener("pointerup", this.pointerEnd, true);
+			view.dom.doc.addEventListener("pointercancel", this.pointerEnd, true);
 			view.scrollDOM.addEventListener("scroll", this.reposition);
 			view.dom.win.addEventListener("resize", this.reposition);
-			this.measure();
+			view.dom.win.addEventListener("blur", this.blur);
+			view.dom.win.addEventListener("focus", this.reposition);
+			this.schedule();
 		}
 		update(update: ViewUpdate): void {
-			if (update.selectionSet || update.docChanged || update.focusChanged || update.geometryChanged || update.viewportChanged) this.measure();
+			if (update.selectionSet || update.docChanged || update.focusChanged || update.geometryChanged || update.viewportChanged) this.schedule();
+		}
+		private hide(): void {
+			this.revision++;
+			if (this.timer !== undefined) this.view.dom.win.clearTimeout(this.timer);
+			this.timer = undefined;
+			this.quote = null;
+			this.button.hidden = true;
+		}
+		private schedule(): void {
+			this.hide();
+			if (this.destroyed || this.pointers.size || this.view.state.selection.main.empty) return;
+			this.timer = this.view.dom.win.setTimeout(() => {
+				this.timer = undefined;
+				if (!this.destroyed && !this.pointers.size) this.measure();
+			}, 300);
 		}
 		private measure(): void {
+			const revision = this.revision;
 			this.view.requestMeasure({ key: this,
 				read: (view) => {
-					if (this.destroyed || !options.enabled() || (!view.hasFocus && view.dom.doc.activeElement !== this.button) || view.state.selection.main.empty) return null;
+					if (this.destroyed || revision !== this.revision || this.pointers.size || !options.enabled() || (!view.hasFocus && view.dom.doc.activeElement !== this.button) || view.state.selection.main.empty) return null;
 					const path = options.filePath(view);
 					if (!path) return null;
 					const range = view.state.selection.main;
@@ -50,7 +83,7 @@ export function agentSelectionExtension(options: SelectionOptions): Extension {
 						top: Math.max(8, Math.min((coords.top + coords.bottom) / 2 - 15, view.dom.win.innerHeight - 38)) };
 				},
 				write: (result) => {
-					if (this.destroyed) return;
+					if (this.destroyed || revision !== this.revision) return;
 					this.quote = result?.quote || null;
 					this.button.hidden = !this.quote;
 					if (!result || !this.quote) return;
@@ -61,8 +94,15 @@ export function agentSelectionExtension(options: SelectionOptions): Extension {
 		}
 		destroy(): void {
 			this.destroyed = true;
+			this.hide();
+			this.pointers.clear();
+			this.view.dom.removeEventListener("pointerdown", this.pointerDown, true);
+			this.view.dom.doc.removeEventListener("pointerup", this.pointerEnd, true);
+			this.view.dom.doc.removeEventListener("pointercancel", this.pointerEnd, true);
 			this.view.scrollDOM.removeEventListener("scroll", this.reposition);
 			this.view.dom.win.removeEventListener("resize", this.reposition);
+			this.view.dom.win.removeEventListener("blur", this.blur);
+			this.view.dom.win.removeEventListener("focus", this.reposition);
 			this.button.remove();
 		}
 	});

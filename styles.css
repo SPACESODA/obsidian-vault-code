@@ -3824,6 +3824,16 @@ svg.vault-code-spin {
 	color: inherit;
 }
 .vault-code-selection-agent[hidden] { display: none; }
+.vault-code-selection-agent:not([hidden]) {
+	animation: vault-code-selection-agent-in 120ms ease-out;
+}
+@keyframes vault-code-selection-agent-in {
+	from { opacity: 0; }
+	to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+	.vault-code-selection-agent:not([hidden]) { animation: none; }
+}
 .vault-code-selection-agent:hover,
 .vault-code-selection-agent:focus-visible {
 	color: var(--text-on-accent, #ffffff);

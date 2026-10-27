@@ -66,19 +66,22 @@ const {agentSelectionExtension}=await load('src/ai-selection-extension.ts',{
   'obsidian':'export const setIcon = () => {};',
   '@codemirror/view':'export const ViewPlugin = { fromClass: klass => klass };',
 });
-function toolbar() {
-  const events={}, windowEvents={}, scrollEvents={}, sent=[];
+function toolbar(settled=true) {
+  const events={}, windowEvents={}, scrollEvents={}, editorEvents={}, documentEvents={}, sent=[];
+  let clock=0, timerId=0;const timers=new Map();
+  const advance=(ms=300)=>{clock+=ms;for(const [id,t] of [...timers])if(t.at<=clock){timers.delete(id);t.fn();}};
   const button={hidden:false,attributes:{},addEventListener:(name,fn)=>events[name]=fn,setAttribute(name,value){this.attributes[name]=value;},setCssProps(values){this.styles=values;},remove(){this.removed=true;}};
   let source='first\nselected text\nlast';
-  const doc={body:{createEl:()=>button}};
-  const view={hasFocus:true,dom:{doc,win:{innerWidth:1000,innerHeight:800,addEventListener:(n,fn)=>windowEvents[n]=fn,removeEventListener:n=>delete windowEvents[n]},getBoundingClientRect:()=>({top:0,bottom:700,right:600,width:600})},
+  const doc={body:{createEl:()=>button},addEventListener:(n,fn)=>documentEvents[n]=fn,removeEventListener:n=>delete documentEvents[n]};
+  const view={hasFocus:true,dom:{doc,addEventListener:(n,fn)=>editorEvents[n]=fn,removeEventListener:n=>delete editorEvents[n],win:{setTimeout:(fn,ms)=>{const id=++timerId;timers.set(id,{fn,at:clock+ms});return id;},clearTimeout:id=>timers.delete(id),innerWidth:1000,innerHeight:800,addEventListener:(n,fn)=>windowEvents[n]=fn,removeEventListener:n=>delete windowEvents[n]},getBoundingClientRect:()=>({top:0,bottom:700,right:600,width:600})},
     scrollDOM:{addEventListener:(n,fn)=>scrollEvents[n]=fn,removeEventListener:n=>delete scrollEvents[n]},
     state:{doc:{toString:()=>source},selection:{main:{empty:false,from:6,to:19,head:19}}},
     coordsAtPos:()=>({top:50,bottom:70}),requestMeasure(spec){spec.write(spec.read(this));}};
   let enabled=true;
   const Extension=agentSelectionExtension({enabled:()=>enabled,filePath:()=> 'Note/test.md',label:()=> 'Quote selection',onQuote:q=>sent.push(q)});
   const plugin=new Extension(view);
-  return {view,plugin,button,events,sent,windowEvents,scrollEvents,disable:()=>enabled=false,setSource:value=>source=value};
+  if(settled)advance();
+  return {view,plugin,button,events,sent,windowEvents,scrollEvents,editorEvents,documentEvents,advance,timers,disable:()=>enabled=false,setSource:value=>source=value};
 }
 test('floating action captures the selection before focus changes and never sends automatically',()=>{
   const h=toolbar(); assert.equal(h.button.hidden,false); assert.equal(h.sent.length,0);
@@ -96,11 +99,11 @@ test('floating action hides on collapsed selection and cleans up scroll and resi
 test('floating action aligns with the first selected line in either selection direction',()=>{
   const h=toolbar();
   h.view.coordsAtPos=pos=>pos===6?{top:100,bottom:120}:{top:200,bottom:220};
-  h.plugin.update({selectionSet:true});
+  h.plugin.update({selectionSet:true});h.advance();
   assert.equal(h.button.styles['--selection-agent-top'],'95px');
   assert.equal(h.button.styles['--selection-agent-left'],'544px');
   h.view.state.selection.main.head=6;
-  h.plugin.update({selectionSet:true});
+  h.plugin.update({selectionSet:true});h.advance();
   assert.equal(h.button.styles['--selection-agent-top'],'95px');
 });
 test('disabled chat cannot receive a quote from an already displayed action',()=>{
@@ -201,9 +204,40 @@ test('permission recovery opens the mode menu only on click and never resends',a
 test('selection action repositions from measured glyphs when font geometry changes',()=>{
   const h=toolbar();
   h.view.coordsAtPos=()=>({top:120,bottom:150});
-  h.plugin.update({geometryChanged:true});
+  h.plugin.update({geometryChanged:true});h.advance();
   assert.equal(h.button.styles['--selection-agent-top'],'120px');
   h.view.coordsAtPos=()=>({top:120,bottom:165});
-  h.plugin.update({geometryChanged:true});
+  h.plugin.update({geometryChanged:true});h.advance();
   assert.equal(h.button.styles['--selection-agent-top'],'127.5px');
+});
+
+
+test('selection action waits until pointer selection is released and stable for 300 milliseconds',()=>{
+  const h=toolbar(false);assert.equal(h.button.hidden,true);
+  h.editorEvents.pointerdown({pointerId:1});h.plugin.update({selectionSet:true});h.advance(1000);
+  assert.equal(h.button.hidden,true);
+  h.documentEvents.pointerup({pointerId:1});h.advance(299);assert.equal(h.button.hidden,true);
+  h.advance(1);assert.equal(h.button.hidden,false);h.plugin.destroy();
+});
+test('keyboard changes restart the delay; scrolling and cancellation hide immediately',()=>{
+  const h=toolbar();h.plugin.update({selectionSet:true});assert.equal(h.button.hidden,true);
+  h.advance(200);h.plugin.update({selectionSet:true});h.advance(299);assert.equal(h.button.hidden,true);
+  h.advance(1);assert.equal(h.button.hidden,false);
+  h.scrollEvents.scroll();assert.equal(h.button.hidden,true);h.advance();assert.equal(h.button.hidden,false);
+  h.editorEvents.pointerdown({pointerId:2});h.documentEvents.pointercancel({pointerId:2});
+  h.view.state.selection.main.empty=true;h.plugin.update({selectionSet:true});h.advance();assert.equal(h.button.hidden,true);
+  h.plugin.destroy();assert.equal(h.timers.size,0);assert.deepEqual(h.editorEvents,{});assert.deepEqual(h.documentEvents,{});
+});
+test('queued measurements cannot reveal an outdated selection or a destroyed action',()=>{
+  const h=toolbar(false), queued=[];h.view.requestMeasure=spec=>queued.push(spec);
+  h.advance();assert.equal(queued.length,1);
+  const old=queued[0], result=old.read(h.view);
+  h.plugin.update({selectionSet:true});old.write(result);assert.equal(h.button.hidden,true);
+  h.plugin.destroy();h.advance();old.write(result);assert.equal(h.button.hidden,true);assert.equal(h.button.removed,true);
+});
+
+test('leaving the window during a drag cannot leave the action stuck or visible',()=>{
+  const h=toolbar();h.editorEvents.pointerdown({pointerId:3});h.windowEvents.blur();
+  h.advance(1000);assert.equal(h.button.hidden,true);
+  h.windowEvents.focus();h.advance();assert.equal(h.button.hidden,false);h.plugin.destroy();
 });
