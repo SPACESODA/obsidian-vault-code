@@ -1,6 +1,6 @@
 import { t } from "./i18n";
 import { PreviewError, type PreviewTextKey } from "./preview-errors";
-import { Component, MarkdownRenderer, type App } from "obsidian";
+import { Component, MarkdownRenderer, type App, type Events } from "obsidian";
 import { PREVIEW_LIMITS, parseDelimited, parseJsonPreview, jsonRecordTable, parseDiffPreview, mermaidMarkdown, type PreviewTable } from "./file-preview-data";
 
 import { decodePreviewBytes, tableEditModel, editableToken, changeTableCell, type TableEditModel, type CellChange } from "./file-preview-edit";
@@ -212,6 +212,13 @@ export class FilePreviewRenderer {
 				if (source.length > 50000) { notice(content, t("previewDiagramTooLarge")); return; }
 				content.classList.add("markdown-rendered", "vault-code-preview-mermaid");
 				this.component = this.owner.addChild(new Component());
+				// Obsidian emits this when the user approves Mermaid for the vault.
+				// Defer until event dispatch finishes, and ignore cleared/replaced previews.
+				this.component.registerEvent((this.app.workspace as Events).on("post-processor-change", () => {
+					queueMicrotask(() => {
+						if (generation === this.generation) void this.render(container, extension, source, path);
+					});
+				}));
 				await MarkdownRenderer.render(this.app, mermaidMarkdown(source), content, path, this.component);
 			}
 		} catch (error: unknown) {

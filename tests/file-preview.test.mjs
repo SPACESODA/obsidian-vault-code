@@ -18,6 +18,7 @@ const {FilePreviewRenderer,setLanguage,t,formatPreviewError,PreviewError}=await 
   export class Component {
     constructor(){this.children=[];this.callbacks=[];}
     register(fn){this.callbacks.push(fn);}
+    registerEvent(ref){this.register(()=>ref.off());}
     addChild(c){this.children.push(c);return c;}
     removeChild(c){this.children=this.children.filter(x=>x!==c);c.unload();return c;}
     unload(){for(const child of [...this.children])this.removeChild(child);for(const fn of this.callbacks)fn();}
@@ -40,7 +41,11 @@ class Element {
   focus(){this.focused=true;}
   querySelector(selector){const tags=selector.split(',').map(s=>s.trim());return tags.flatMap(tag=>this.all(tag))[0]||null;}
 }
-function renderer(){const owner=new globalThis.TestComponent();const root=new Element();return {owner,root,preview:new FilePreviewRenderer({},owner)};}
+function renderer(){
+  const owner=new globalThis.TestComponent();const root=new Element();const listeners=new Set();
+  const workspace={on(name,callback){assert.equal(name,'post-processor-change');listeners.add(callback);return {off(){listeners.delete(callback);}};}};
+  return {owner,root,listeners,refresh(){for(const callback of [...listeners])callback();},preview:new FilePreviewRenderer({workspace},owner)};
+}
 
 test('CSV handles BOM, quoted delimiters, escaped quotes, CRLF, multiline and empty cells',()=>{
   assert.deepEqual(parseDelimited('\uFEFFa,b,c\r\n"x,y","Say ""hi""","one\r\ntwo"\r\n,,',',').rows,[['a','b','c'],['x,y','Say "hi"','one\r\ntwo'],['','','']]);
@@ -268,4 +273,34 @@ test('an obsolete encoding check cannot replace a newer preview',async()=>{
   await preview.render(root,'csv','name\nlatest','new.csv');
   release(new Uint8Array([0xff]).buffer);await pending;
   assert.match(root.textContent,/latest/);assert.doesNotMatch(root.textContent,/requires UTF-8/);
+});
+
+test('approving Mermaid refreshes the current diagram without leaving the file',async()=>{
+  for(const extension of ['mmd','mermaid']) {
+    const h=renderer();let allowed=false;let renders=0;
+    globalThis.markdownPreviewRender=async(_app,markdown,target,path)=>{
+      renders++;assert.equal(path,'diagram.'+extension);assert.ok(markdown.includes('graph TD'));
+      target.createSpan({text:allowed?'Rendered diagram':'Allow Mermaid'});
+    };
+    await h.preview.render(h.root,extension,'graph TD; A-->B','diagram.'+extension);
+    assert.equal(h.root.textContent,'Allow Mermaid');assert.equal(h.listeners.size,1);
+    allowed=true;h.refresh();h.refresh();await new Promise(resolve=>setImmediate(resolve));
+    assert.equal(h.root.textContent,'Rendered diagram');assert.equal(renders,2);assert.equal(h.listeners.size,1);
+    h.owner.unload();assert.equal(h.listeners.size,0);
+  }
+});
+
+test('pending Mermaid permission refreshes cannot replace another file or revive a cleared preview',async()=>{
+  for(const replace of [true,false]) {
+    const h=renderer();let renders=0;
+    globalThis.markdownPreviewRender=async(_app,_markdown,target)=>{renders++;target.createSpan({text:'Allow Mermaid'});};
+    await h.preview.render(h.root,'mmd','graph TD; A-->B','old.mmd');
+    h.refresh();
+    if(replace) await h.preview.render(h.root,'json','{"fresh":true}','new.json');
+    else {h.preview.clear();h.root.empty();}
+    await new Promise(resolve=>setImmediate(resolve));
+    assert.equal(renders,1);assert.equal(h.listeners.size,0);
+    assert.ok(!h.root.textContent.includes('Allow Mermaid'));
+    if(replace) assert.ok(h.root.textContent.includes('fresh'));
+  }
 });
