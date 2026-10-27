@@ -133,6 +133,7 @@ import { renderConnectionSettings } from "./ai-connections-settings";
 import { preserveSettingsScroll } from "./settings-scroll";
 import { agentSelectionExtension } from "./ai-selection-extension";
 import type { SelectionQuote } from "./ai-selection";
+import { sizeSvgPreview } from "./svg-preview";
 import { createCustomMenu } from "./custom-menu";
 import { observeExplorerIgnore, filterExplorerRows } from "./explorer-ignore";
 import { IgnoreMatcher, parseGitignore, type IgnoreRule, EMPTY_IGNORE_RULES } from "./ignore-rules";
@@ -4057,6 +4058,7 @@ export class DotfileView extends TextFileView {
 			});
 
 			const imported = document.importNode(svgElement, true);
+			sizeSvgPreview(imported);
 			canvas.appendChild(imported);
 		} catch (e) {
 			const errBox = this.previewEl.createDiv({
