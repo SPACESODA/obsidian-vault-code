@@ -420,7 +420,7 @@ export const es: TranslationSchema = {
 
 	aiChatErrorLabel: "Error",
 	aiChatChooseMode: "Elegir modo",
-	aiChatSafePermissionHelp: "El modo seguro requiere aprobar esta herramienta. Para permitir cambios en archivos y comandos, elige el modo de edición y vuelve a pedirlo. Si no, revisa los permisos de la CLI en Terminal.",
+	aiChatSafePermissionHelp: "Se ha bloqueado una herramienta en el modo seguro. Pide una respuesta en el chat o elige el modo de edición si quieres modificar archivos o ejecutar comandos.",
 	aiChatPermissionHelp: "Esta CLI requiere aprobar la herramienta. Revisa sus permisos en Terminal y vuelve a pedirlo.",
 	aiChatYou: "Tú",
 	aiChatOpenSettings: "Abrir ajustes",
@@ -451,7 +451,6 @@ export const es: TranslationSchema = {
 	externalFolderIgnored: "Las reglas de exclusión ocultan este nombre de carpeta. Elige otro nombre.",
 	externalFolderBusy: "Hay otra operación de carpetas en curso. Inténtalo de nuevo en unos momentos.",
 	aiChatContinue: "Continuar",
-	aiChatContinueRequest: "Realiza mi solicitud anterior en modo de edición.",
 	aiChatReadOnlyHint: "{0} es de solo lectura. Elige {1} y vuelve a pedirlo para aplicar los cambios.",
 	aiChatStopped: "Respuesta detenida.",
 

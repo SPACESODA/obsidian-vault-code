@@ -420,7 +420,7 @@ export const it: TranslationSchema = {
 
 	aiChatErrorLabel: "Errore",
 	aiChatChooseMode: "Scegli modalità",
-	aiChatSafePermissionHelp: "La modalità sicura richiede l’approvazione dello strumento. Per consentire modifiche ai file e comandi, scegli la modalità modifica e ripeti la richiesta. Altrimenti verifica i permessi della CLI nel terminale.",
+	aiChatSafePermissionHelp: "Uno strumento è stato bloccato in modalità sicura. Chiedi una risposta in chat oppure scegli la modalità modifica se vuoi modificare file o eseguire comandi.",
 	aiChatPermissionHelp: "Questa CLI richiede l’approvazione dello strumento. Verifica i permessi nel terminale, poi ripeti la richiesta.",
 	aiChatYou: "Tu",
 	aiChatOpenSettings: "Apri impostazioni",
@@ -451,7 +451,6 @@ export const it: TranslationSchema = {
 	externalFolderIgnored: "Questo nome di cartella è escluso dalle regole. Scegli un altro nome.",
 	externalFolderBusy: "È in corso un’altra operazione sulle cartelle. Riprova tra poco.",
 	aiChatContinue: "Continua",
-	aiChatContinueRequest: "Esegui la mia richiesta precedente in modalità modifica.",
 	aiChatReadOnlyHint: "{0} è di sola lettura. Scegli {1} e ripeti la richiesta per applicare le modifiche.",
 	aiChatStopped: "Risposta interrotta.",
 

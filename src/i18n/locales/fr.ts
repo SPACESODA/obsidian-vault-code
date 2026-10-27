@@ -420,7 +420,7 @@ export const fr: TranslationSchema = {
 
 	aiChatErrorLabel: "Erreur",
 	aiChatChooseMode: "Choisir le mode",
-	aiChatSafePermissionHelp: "Le mode sécurisé nécessite l’approbation de cet outil. Pour autoriser les modifications de fichiers et les commandes, choisissez le mode édition puis faites à nouveau votre demande. Sinon, vérifiez les permissions de la CLI dans le terminal.",
+	aiChatSafePermissionHelp: "Un outil a été bloqué en mode sécurisé. Demandez une réponse dans le chat, ou choisissez le mode édition pour modifier des fichiers ou exécuter des commandes.",
 	aiChatPermissionHelp: "Cette CLI nécessite l’approbation de l’outil. Vérifiez ses permissions dans le terminal, puis faites à nouveau votre demande.",
 	aiChatYou: "Vous",
 	aiChatOpenSettings: "Ouvrir les paramètres",
@@ -451,7 +451,6 @@ export const fr: TranslationSchema = {
 	externalFolderIgnored: "Ce nom de dossier est exclu par vos règles. Choisissez un autre nom.",
 	externalFolderBusy: "Une autre opération sur un dossier est en cours. Réessayez dans un instant.",
 	aiChatContinue: "Continuer",
-	aiChatContinueRequest: "Exécutez ma demande précédente en mode édition.",
 	aiChatReadOnlyHint: "{0} est en lecture seule. Choisissez {1} et faites à nouveau votre demande pour appliquer les modifications.",
 	aiChatStopped: "Réponse arrêtée.",
 

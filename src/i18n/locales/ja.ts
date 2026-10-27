@@ -420,7 +420,7 @@ export const ja: TranslationSchema = {
 
 	aiChatErrorLabel: "エラー",
 	aiChatChooseMode: "モードを選択",
-	aiChatSafePermissionHelp: "セーフモードではツールの承認が必要です。ファイルの編集やコマンドの実行を許可する場合は、編集モードを選択してからもう一度依頼してください。それ以外の場合は、ターミナルで CLI の権限を確認してください。",
+	aiChatSafePermissionHelp: "セーフモードでツールの使用がブロックされました。チャット内での回答を依頼してください。ファイルの変更やコマンドの実行が必要な場合は、編集モードを選択してください。",
 	aiChatPermissionHelp: "この CLI にはツールの承認が必要です。ターミナルで権限を確認してからもう一度依頼してください。",
 	aiChatYou: "あなた",
 	aiChatOpenSettings: "設定を開く",
@@ -451,7 +451,6 @@ export const ja: TranslationSchema = {
 	externalFolderIgnored: "このフォルダー名は除外ルールの対象です。別の名前を入力してください。",
 	externalFolderBusy: "別のフォルダー操作を実行中です。しばらくしてから再試行してください。",
 	aiChatContinue: "続ける",
-	aiChatContinueRequest: "編集モードで先ほどの依頼を実行してください。",
 	aiChatReadOnlyHint: "{0}は読み取り専用です。変更を適用するには、{1}に切り替えてから、もう一度依頼してください。",
 	aiChatStopped: "応答を停止しました。",
 

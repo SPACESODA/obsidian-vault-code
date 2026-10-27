@@ -418,7 +418,7 @@ export const en = {
 
 	aiChatErrorLabel: "Error",
 	aiChatChooseMode: "Choose mode",
-	aiChatSafePermissionHelp: "Tool approval is required in safe mode. To allow file edits and commands, choose edit mode, then ask again. Otherwise, review the CLI permissions in your terminal.",
+	aiChatSafePermissionHelp: "A tool was blocked in safe mode. Ask for an answer in chat, or choose edit mode if you want file changes or commands.",
 	aiChatPermissionHelp: "This CLI requires tool approval. Review its permissions in your terminal, then ask again.",
 	aiChatYou: "You",
 	aiChatOpenSettings: "Open settings",
@@ -449,7 +449,6 @@ export const en = {
 	externalFolderIgnored: "This folder name is excluded by your ignore rules. Choose another name.",
 	externalFolderBusy: "Another folder operation is still running. Try again shortly.",
 	aiChatContinue: "Continue",
-	aiChatContinueRequest: "Please carry out my previous request in edit mode.",
 	aiChatReadOnlyHint: "{0} is read-only. Choose {1}, then ask again to apply changes.",
 	aiChatStopped: "Response stopped.",
 

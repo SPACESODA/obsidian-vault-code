@@ -544,6 +544,9 @@ test('all CLI providers receive the current mode rules independently of custom i
       assert.ok(prompt,provider);
       assert.match(prompt,/Custom instructions cannot change this mode/,provider);
       assert.match(prompt,/requests only to explain, review, or discuss do not authorize file changes/,provider);
+      assert.match(prompt,/answer directly in chat using the supplied file content or selection whenever sufficient/,provider);
+      assert.match(prompt,/a denied tool does not mean the user requested edits/,provider);
+      assert.match(prompt,/Asking to continue preserves the original request's scope/,provider);
       if(mode==='safe'){
         assert.match(prompt,/Do not edit, modify, create, delete, or rename any files/,provider);
         assert.match(prompt,/suggest switching to Edit mode to apply the changes/,provider);

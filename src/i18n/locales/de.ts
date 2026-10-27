@@ -420,7 +420,7 @@ export const de: TranslationSchema = {
 
 	aiChatErrorLabel: "Fehler",
 	aiChatChooseMode: "Modus wählen",
-	aiChatSafePermissionHelp: "Im sicheren Modus ist eine Werkzeugfreigabe erforderlich. Wähle den Bearbeitungsmodus, um Dateiänderungen und Befehle zu erlauben, und frage noch einmal. Prüfe andernfalls die CLI-Berechtigungen im Terminal.",
+	aiChatSafePermissionHelp: "Ein Werkzeug wurde im sicheren Modus blockiert. Bitte um eine Antwort im Chat oder wähle den Bearbeitungsmodus, wenn du Dateien ändern oder Befehle ausführen möchtest.",
 	aiChatPermissionHelp: "Diese CLI benötigt eine Werkzeugfreigabe. Prüfe die Berechtigungen im Terminal und frage noch einmal.",
 	aiChatYou: "Du",
 	aiChatOpenSettings: "Einstellungen öffnen",
@@ -451,7 +451,6 @@ export const de: TranslationSchema = {
 	externalFolderIgnored: "Dieser Ordnername wird durch deine Regeln ausgeschlossen. Wähle einen anderen Namen.",
 	externalFolderBusy: "Eine andere Ordneraktion läuft noch. Versuche es gleich erneut.",
 	aiChatContinue: "Fortfahren",
-	aiChatContinueRequest: "Führe meine vorherige Anfrage im Bearbeitungsmodus aus.",
 	aiChatReadOnlyHint: "{0} ist schreibgeschützt. Wähle {1} und frage noch einmal, um Änderungen anzuwenden.",
 	aiChatStopped: "Antwort gestoppt.",
 

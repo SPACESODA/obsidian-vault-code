@@ -420,7 +420,7 @@ export const ko: TranslationSchema = {
 
 	aiChatErrorLabel: "오류",
 	aiChatChooseMode: "모드 선택",
-	aiChatSafePermissionHelp: "안전 모드에서는 도구 승인이 필요합니다. 파일 수정과 명령 실행을 허용하려면 편집 모드를 선택한 뒤 다시 요청하세요. 그렇지 않으면 터미널에서 CLI 권한을 확인하세요.",
+	aiChatSafePermissionHelp: "안전 모드에서 도구 사용이 차단되었습니다. 채팅으로 답변해 달라고 요청하거나, 파일 수정이나 명령 실행을 원하면 편집 모드를 선택하세요.",
 	aiChatPermissionHelp: "이 CLI는 도구 승인이 필요합니다. 터미널에서 권한을 확인한 뒤 다시 요청하세요.",
 	aiChatYou: "나",
 	aiChatOpenSettings: "설정 열기",
@@ -451,7 +451,6 @@ export const ko: TranslationSchema = {
 	externalFolderIgnored: "이 폴더 이름은 제외 규칙에 해당합니다. 다른 이름을 사용하세요.",
 	externalFolderBusy: "다른 폴더 작업이 진행 중입니다. 잠시 후 다시 시도하세요.",
 	aiChatContinue: "계속",
-	aiChatContinueRequest: "편집 모드에서 이전 요청을 실행해 주세요.",
 	aiChatReadOnlyHint: "{0}에서는 읽기만 가능합니다. 변경하려면 {1}로 전환한 뒤 다시 요청하세요.",
 	aiChatStopped: "응답이 중지되었습니다.",
 

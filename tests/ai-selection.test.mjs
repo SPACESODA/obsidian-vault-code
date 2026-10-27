@@ -185,7 +185,10 @@ test('switching conversations while a chat note is being created cannot send or 
 
 test('permission recovery opens the mode menu only on click and never resends',async()=>{
   const {view,requests,file}=chat();
-  view.attachSelection(captureSelection(file.path,'selected text',0,13));
+  const question='am I excluding to ignore correctly';
+  const selected='!docs/assets/vc-code-editing.webp\n!docs/assets/vc-code-editing-gh.jpg';
+  view.inputEl.value=question;
+  view.attachSelection(captureSelection(file.path,selected,0,selected.length));
   view.renderMessageBody=async()=>{};
   await view.handleSubmit();
   view.currentChatFile=null;
@@ -199,6 +202,19 @@ test('permission recovery opens the mode menu only on click and never resends',a
   assert.ok(action);
   action.children[0].events.click({});
   assert.equal(opened,1);assert.equal(view.mode,'safe');assert.equal(requests.length,1);
+  view.updateModeBtnLabel=()=>{};view.continueBtnEl={hidden:true};view.updateSendButtonState=()=>view.updateContinueAction();
+  view.setMode('edit');
+  assert.equal(action.children[0].textContent,'Continue');assert.equal(action.children[0].hidden,false);
+  assert.equal(view.continueBtnEl.hidden,true);assert.equal(requests.length,1);
+  view.inputEl.value='Keep my draft';view.updateContinueAction();
+  assert.equal(action.children[0].disabled,true);action.children[0].events.click({});
+  assert.equal(view.inputEl.value,'Keep my draft');
+  view.inputEl.value='';view.updateContinueAction();
+  view.setMode('safe');assert.equal(action.children[0].textContent,'Choose mode');
+  view.setMode('edit');action.children[0].events.click({});
+  assert.equal(view.inputEl.value,question);
+  assert.equal(view.pendingQuote.text,selected);
+  assert.equal(action.children[0].hidden,true);assert.equal(requests.length,1);
 });
 
 test('selection action repositions from measured glyphs when font geometry changes',()=>{
@@ -240,4 +256,31 @@ test('leaving the window during a drag cannot leave the action stuck or visible'
   const h=toolbar();h.editorEvents.pointerdown({pointerId:3});h.windowEvents.blur();
   h.advance(1000);assert.equal(h.button.hidden,true);
   h.windowEvents.focus();h.advance();assert.equal(h.button.hidden,false);h.plugin.destroy();
+});
+
+test('mode and provider changes during chat creation apply only to the next submission',async()=>{
+  const {view,requests,file}=chat();
+  view.attachSelection(captureSelection(file.path,'selected text',0,13));
+  view.currentChatFile=null;let resolveNote;
+  view.plugin.aiStorage.createChatNote=()=>new Promise(resolve=>{resolveNote=resolve;});
+  const submission=view.handleSubmit();
+  view.mode='edit';view.selectedProvider='antigravity';view.selectedModel='different-model';view.chatScope='vault';
+  resolveNote({path:'agent-chats/test.md'});await submission;
+  assert.equal(requests.length,1);assert.equal(requests[0].mode,'safe');
+  assert.equal(requests[0].provider,'connection:test');assert.equal(requests[0].model,'test-model');
+  assert.equal(view.safeRequest.scope,'active-note');
+});
+
+test('new quotes disable inline Continue immediately, and removing the quote restores it',()=>{
+  const {view}=chat();view.mode='edit';view.inputEl.value='';
+  view.messages=[{id:'original',role:'user',content:'Explain'}];
+  view.safeRequest={userId:'original',text:'Explain',file:null,quote:null,scope:'active-note'};
+  const button={hidden:true};view.permissionAction={button,userId:'original'};
+  view.updateContinueAction();assert.equal(button.disabled,false);
+  view.attachSelection(captureSelection('Note/test.md','new quote',0,9));
+  assert.equal(button.disabled,true);
+  const remove=view.quoteContainerEl.children[0].children.find(el=>el.tag==='button');remove.events.click();
+  assert.equal(button.disabled,false);
+  view.messages.push({id:'new',role:'user',content:'Another question'});view.updateContinueAction();
+  assert.equal(button.hidden,true);assert.equal(view.permissionAction,null);
 });

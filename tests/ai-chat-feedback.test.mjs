@@ -48,7 +48,7 @@ test('the concise read-only reminder is translated with the actual mode labels',
   try {
     for(const language of ['en','zh-tw','zh-cn','ja','ko','es','fr','it','de','ru']) {
       setLanguage(language);
-      assert.ok(t('aiChatContinue').trim());assert.ok(t('aiChatContinueRequest').trim());
+      assert.ok(t('aiChatContinue').trim());
       const safe=t('aiChatModeSafe'),edit=t('aiChatModeEdit');
       const hint=t('aiChatReadOnlyHint',safe,edit);
       assert.ok(hint.includes(safe));assert.ok(hint.includes(edit));

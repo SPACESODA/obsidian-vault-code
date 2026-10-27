@@ -115,7 +115,7 @@ export class AIChatView extends ItemView {
 	private chatLoadId = 0;
 	private chatSaveTask: Promise<void> = Promise.resolve();
 	private pendingChatFiles = new WeakMap<ChatMessage[], Promise<TFile>>();
-	private safeRequest: { userId: string; file: TFile | null; quote: SelectionQuote | null; scope: "active-note" | "vault" } | null = null;
+	private safeRequest: { userId: string; text: string; file: TFile | null; quote: SelectionQuote | null; scope: "active-note" | "vault" } | null = null;
 	private activeProcessHandle: AIProcessHandle | null = null;
 	private availableModels: AgyModelInfo[] = [];
 
@@ -141,6 +141,7 @@ export class AIChatView extends ItemView {
 	private effortBtnEl!: HTMLElement;
 	private modeBtnEl!: HTMLElement;
 	private continueBtnEl?: HTMLButtonElement;
+	private permissionAction: { button: HTMLButtonElement; userId: string } | null = null;
 	private vaultToggle: ToggleComponent | null = null;
 	private vaultToggleWrapper!: HTMLElement;
 	private contextChipEl!: HTMLElement;
@@ -537,19 +538,28 @@ export class AIChatView extends ItemView {
 	}
 
 	private updateContinueAction(): void {
-		if (!this.continueBtnEl) return;
 		const latestUser = [...this.messages].reverse().find(message => message.role === "user");
-		this.continueBtnEl.hidden = this.mode !== "edit" || this.isGenerating || !!this.inputEl?.value.trim() || !!this.pendingQuote
-			|| !this.safeRequest || latestUser?.id !== this.safeRequest.userId;
+		const current = !!this.safeRequest && latestUser?.id === this.safeRequest.userId;
+		const canContinue = this.mode === "edit" && !this.isGenerating && !this.inputEl?.value.trim() && !this.pendingQuote && current;
+		const action = this.permissionAction;
+		const inline = !!action && current && action.userId === this.safeRequest?.userId;
+		if (action) {
+			action.button.hidden = !inline || this.isGenerating;
+			action.button.textContent = t(this.mode === "edit" ? "aiChatContinue" : "aiChatChooseMode");
+			action.button.disabled = this.mode === "edit" && !canContinue;
+			if (!current) this.permissionAction = null;
+		}
+		if (this.continueBtnEl) this.continueBtnEl.hidden = !canContinue || inline;
 	}
 
 	private prepareContinuation(): void {
 		this.updateContinueAction();
-		if (!this.continueBtnEl || this.continueBtnEl.hidden || !this.safeRequest) return;
+		const latestUser = [...this.messages].reverse().find(message => message.role === "user");
+		if (this.mode !== "edit" || this.isGenerating || this.inputEl?.value.trim() || this.pendingQuote || !this.safeRequest || latestUser?.id !== this.safeRequest.userId) return;
 		const request = this.safeRequest;
 		this.safeRequest = null;
-		// Prepare a visible follow-up; switching mode or choosing Continue never sends it.
-		this.inputEl.value = t("aiChatContinueRequest");
+		// Restore the original request verbatim: changing mode must not turn a question into an edit instruction.
+		this.inputEl.value = request.text;
 		this.pendingQuote = request.quote;
 		this.chatScope = request.scope;
 		this.pinnedContextFile = request.file;
@@ -1125,6 +1135,7 @@ export class AIChatView extends ItemView {
 
 	public attachSelection(quote: SelectionQuote): void {
 		this.pendingQuote = quote;
+		this.updateContinueAction();
 		this.renderSelectionQuote();
 		this.updateVaultToggleState();
 		this.updateContextChip();
@@ -1164,6 +1175,7 @@ export class AIChatView extends ItemView {
 		setIcon(remove, "x");
 		remove.addEventListener("click", () => {
 			this.pendingQuote = null;
+			this.updateContinueAction();
 			this.renderSelectionQuote();
 			this.updateVaultToggleState();
 			this.updateContextChip();
@@ -1309,6 +1321,13 @@ export class AIChatView extends ItemView {
 
 		const text = this.inputEl.value.trim();
 		if (!text) return;
+		// A mode or provider change while context/history loads applies to the next submission.
+		const requestMode = this.mode;
+		const requestProvider = this.selectedProvider;
+		const requestModel = this.selectedModel;
+		const requestEffort = this.selectedReasoningEffort;
+		const requestScope = this.chatScope;
+		const requestConversation = this.conversationId;
 		const submission = ++this.submissionId;
 		this.safeRequest = null;
 		const quote = this.pendingQuote;
@@ -1383,7 +1402,7 @@ export class AIChatView extends ItemView {
 			activeContent = quote.source;
 			selectedText = quote.text;
 			selectionStart = quote.from;
-		} else if (this.chatScope === "active-note" && !this.contextExcluded) {
+		} else if (requestScope === "active-note" && !this.contextExcluded) {
 			activeFile = (this.isContextPinned && this.pinnedContextFile)
 				? this.pinnedContextFile
 				: this.app.workspace.getActiveFile();
@@ -1418,23 +1437,21 @@ export class AIChatView extends ItemView {
 		await this.ensureSubmittedChatFile(text, submission, submittedMessages);
 
 		if (submission !== this.submissionId || !this.isGenerating) return;
-		const requestMode = this.mode;
-		const requestProvider = this.selectedProvider;
 		if (requestMode === "safe") {
 			const contextQuote = quote || (activeFile && selectedText && selectionStart !== undefined
 				? captureSelection(activeFile.path, activeContent, selectionStart, selectionStart + selectedText.length) : null);
-			this.safeRequest = { userId: userMsg.id, file: activeFile, quote: contextQuote, scope: this.chatScope };
+			this.safeRequest = { userId: userMsg.id, text, file: activeFile, quote: contextQuote, scope: requestScope };
 		}
 		this.activeProcessHandle = this.plugin.aiService.sendMessage({
 			prompt: messageText,
 			contextInPrompt: Boolean(quote),
 			history: this.messages.slice(0, -2).filter((m) => m.content.trim()).map((m) => ({ role: m.role, content: m.content })),
-			provider: this.selectedProvider,
-			model: this.selectedModel,
-			reasoningEffort: this.selectedReasoningEffort,
-			scope: quote ? "active-note" : this.chatScope,
-			mode: this.mode,
-			conversationId: this.conversationId,
+			provider: requestProvider,
+			model: requestModel,
+			reasoningEffort: requestEffort,
+			scope: quote ? "active-note" : requestScope,
+			mode: requestMode,
+			conversationId: requestConversation,
 			currentChatPath: this.currentChatFile?.path,
 			activeFile,
 			activeContent,
@@ -1504,7 +1521,7 @@ export class AIChatView extends ItemView {
 				}
 
 				const isModelError = /model.*(?:not found|unknown|deprecated|discontinued|invalid|does not exist|unsupported)/i.test(err.message);
-				if (isModelError) {
+				if (isModelError && this.selectedProvider === requestProvider && this.selectedModel === requestModel) {
 					const fallback = resolveOptimalModel(this.selectedProvider, this.availableModels);
 					if (this.selectedModel !== fallback) {
 						this.selectedModel = fallback;
@@ -1525,10 +1542,17 @@ export class AIChatView extends ItemView {
 				if (asstBodyEl) {
 					if (this.renderRafId !== null) { window.cancelAnimationFrame(this.renderRafId); this.renderRafId = null; }
 					void this.renderMessageBody(assistantMsg.content, asstBodyEl).then(() => {
-						if (asstBodyEl.isConnected && this.messages.includes(assistantMsg) && requestMode === "safe" && isChatPermissionError(err.message)) {
+						if (asstBodyEl.isConnected && this.messages.includes(assistantMsg) && this.safeRequest?.userId === userMsg.id && requestMode === "safe" && isChatPermissionError(err.message)) {
 							const actions = asstBodyEl.createDiv({ cls: "vault-code-chat-error-actions" });
 							const choose = actions.createEl("button", { text: t("aiChatChooseMode"), attr: { type: "button" } });
-							choose.addEventListener("click", event => this.showModeMenu(event));
+							if (this.permissionAction) this.permissionAction.button.hidden = true;
+							this.permissionAction = { button: choose, userId: userMsg.id };
+							choose.addEventListener("click", event => {
+								if (this.permissionAction?.button !== choose || this.safeRequest?.userId !== userMsg.id) return;
+								if (this.mode === "edit") this.prepareContinuation();
+								else this.showModeMenu(event);
+							});
+							this.updateContinueAction();
 						}
 						this.scrollToBottom();
 					});

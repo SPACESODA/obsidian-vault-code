@@ -420,7 +420,7 @@ export const zhCn: TranslationSchema = {
 
 	aiChatErrorLabel: "错误",
 	aiChatChooseMode: "选择模式",
-	aiChatSafePermissionHelp: "安全模式下，此工具需要授权。如需允许编辑文件和执行命令，请切换至编辑模式后，再次提出要求。否则，请在终端中检查 CLI 权限。",
+	aiChatSafePermissionHelp: "安全模式已阻止工具操作。可请 AI 直接在对话中回答；如需修改文件或执行命令，请选择编辑模式。",
 	aiChatPermissionHelp: "此 CLI 需要工具授权。请在终端中检查权限后，再次提出要求。",
 	aiChatYou: "你",
 	aiChatOpenSettings: "打开设置",
@@ -451,7 +451,6 @@ export const zhCn: TranslationSchema = {
 	externalFolderIgnored: "此文件夹名称已被忽略规则排除，请使用其他名称。",
 	externalFolderBusy: "另一项文件夹操作尚未完成，请稍后重试。",
 	aiChatContinue: "继续",
-	aiChatContinueRequest: "请在编辑模式下执行我之前的要求。",
 	aiChatReadOnlyHint: "{0}为只读模式。如需应用更改，请切换至{1}后，再次提出要求。",
 	aiChatStopped: "回复已停止。",
 

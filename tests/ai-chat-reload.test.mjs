@@ -562,7 +562,7 @@ test("Continue prepares a follow-up with the original context and never sends or
 	const view = Object.create(AIChatView.prototype);
 	const original = { path: "Note/original.md" };
 	view.messages = [{ id: "user-1", role: "user", content: "Add a translation" }];
-	view.safeRequest = { userId: "user-1", file: original, quote: null, scope: "active-note" };
+	view.safeRequest = { userId: "user-1", text: "Add a translation", file: original, quote: null, scope: "active-note" };
 	view.mode = "safe"; view.isGenerating = false;
 	view.continueBtnEl = { hidden: true };
 	view.inputEl = { value: "", focus() {} };
@@ -583,7 +583,7 @@ test("Continue prepares a follow-up with the original context and never sends or
 	assert.equal(view.inputEl.value, "My unsent draft");
 	view.inputEl.value = "";
 	view.prepareContinuation();
-	assert.equal(view.inputEl.value, "Please carry out my previous request in edit mode.");
+	assert.equal(view.inputEl.value, "Add a translation");
 	assert.equal(view.pinnedContextFile, original);
 	assert.equal(view.isContextPinned, true);
 	assert.equal(view.safeRequest, null);
