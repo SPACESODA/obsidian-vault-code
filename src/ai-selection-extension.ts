@@ -43,6 +43,7 @@ export function agentSelectionExtension(options: SelectionOptions): Extension {
 			view.dom.addEventListener("pointerdown", this.pointerDown, true);
 			view.dom.doc.addEventListener("pointerup", this.pointerEnd, true);
 			view.dom.doc.addEventListener("pointercancel", this.pointerEnd, true);
+			view.dom.doc.addEventListener("vault-code-selection-setting-change", this.reposition);
 			view.scrollDOM.addEventListener("scroll", this.reposition);
 			view.dom.win.addEventListener("resize", this.reposition);
 			view.dom.win.addEventListener("blur", this.blur);
@@ -99,6 +100,7 @@ export function agentSelectionExtension(options: SelectionOptions): Extension {
 			this.view.dom.removeEventListener("pointerdown", this.pointerDown, true);
 			this.view.dom.doc.removeEventListener("pointerup", this.pointerEnd, true);
 			this.view.dom.doc.removeEventListener("pointercancel", this.pointerEnd, true);
+			this.view.dom.doc.removeEventListener("vault-code-selection-setting-change", this.reposition);
 			this.view.scrollDOM.removeEventListener("scroll", this.reposition);
 			this.view.dom.win.removeEventListener("resize", this.reposition);
 			this.view.dom.win.removeEventListener("blur", this.blur);

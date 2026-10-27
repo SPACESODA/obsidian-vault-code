@@ -12,7 +12,7 @@ async function load(entry, stubs = {}) {
   } }] });
   const mod = {exports:{}}; new Function('module','exports','require',result.outputFiles[0].text)(mod,mod.exports,require); return mod.exports;
 }
-const {captureSelection,selectionLabel,quoteMessage} = await load('src/ai-selection.ts');
+const {captureSelection,captureReadingSelection,selectionLabel,quoteMessage} = await load('src/ai-selection.ts');
 test('selection snapshots preserve exact text, offsets, and source line numbers',()=>{
   const source = '# Intro\nFirst line\nSecond line\nLast line';
   const q = captureSelection('Note/README.md',source,8,source.indexOf('Last line'));
@@ -81,7 +81,7 @@ function toolbar(settled=true) {
   const Extension=agentSelectionExtension({enabled:()=>enabled,filePath:()=> 'Note/test.md',label:()=> 'Quote selection',onQuote:q=>sent.push(q)});
   const plugin=new Extension(view);
   if(settled)advance();
-  return {view,plugin,button,events,sent,windowEvents,scrollEvents,editorEvents,documentEvents,advance,timers,disable:()=>enabled=false,setSource:value=>source=value};
+  return {view,plugin,button,events,sent,windowEvents,scrollEvents,editorEvents,documentEvents,advance,timers,disable:()=>enabled=false,enable:()=>enabled=true,setSource:value=>source=value};
 }
 test('floating action captures the selection before focus changes and never sends automatically',()=>{
   const h=toolbar(); assert.equal(h.button.hidden,false); assert.equal(h.sent.length,0);
@@ -111,7 +111,7 @@ test('disabled chat cannot receive a quote from an already displayed action',()=
 });
 
 const {AIChatView}=await load('src/ai-chat-view.ts',{'obsidian':`
-  export class ItemView {} export class WorkspaceLeaf {} export class App {} export class FileSystemAdapter {}
+  export class View {} export class ItemView {} export class WorkspaceLeaf {} export class App {} export class FileSystemAdapter {}
   export class TFile { constructor(path) { this.path=path; } }
   globalThis.__SelectionTestFile=TFile;
   export class Component {} export class Modal {} export class SuggestModal {} export class Menu {} export class ToggleComponent {}
@@ -122,7 +122,7 @@ const {AIChatView}=await load('src/ai-chat-view.ts',{'obsidian':`
 `});
 function node(tag='div',options={}) {
   return {tag,children:[],attrs:{...options.attr},textContent:options.text||'',events:{},
-    empty(){this.children=[];}, setAttribute(k,v){this.attrs[k]=v;},
+    empty(){this.children=[];},remove(){this.removed=true;}, setAttribute(k,v){this.attrs[k]=v;},
     createEl(tag,options={}){const child=node(tag,options);this.children.push(child);return child;},
     createDiv(options){return this.createEl('div',options);}, createSpan(options){return this.createEl('span',options);},
     addEventListener(name,fn){this.events[name]=fn;},focus(){this.focused=true;}};
@@ -283,4 +283,45 @@ test('new quotes disable inline Continue immediately, and removing the quote res
   assert.equal(button.disabled,false);
   view.messages.push({id:'new',role:'user',content:'Another question'});view.updateContinueAction();
   assert.equal(button.hidden,true);assert.equal(view.permissionAction,null);
+});
+
+test('whole Web Viewer pages replace stale note context and record the source URL in history',async()=>{
+  const {view,requests}=chat();const page={url:'https://example.com/lesson',title:'Lesson',text:'Visible lesson text'};
+  view.plugin.webViewerChat={hasPage:true,target:{...page,read:async()=>page}};
+  view.app.vault.getAbstractFileByPath=()=>{throw Error('A web URL is not a vault path');};
+  await view.handleSubmit();
+  assert.equal(requests.length,1);assert.deepEqual(requests[0].webPage,page);assert.equal(requests[0].activeFile,null);
+  assert.equal(requests[0].activeContent,'');assert.ok(view.messages[0].content.includes(page.url));
+  assert.ok(!view.messages[0].content.includes(page.text));
+  view.isGenerating=false;view.mode='edit';view.prepareContinuation();
+  view.plugin.webViewerChat.target={url:'https://different.test/',title:'Other',read:async()=>{throw Error('Wrong page');}};
+  assert.equal(view.inputEl.value,'My existing question');assert.deepEqual(await view.webTarget().read(),page);
+});
+test('web selection quotes use the URL without line numbers and never look up a vault file',async()=>{
+  const {view,requests}=chat();const web={url:'http://127.0.0.1:51370/lesson/1',title:'Lesson'};
+  view.app.vault.getAbstractFileByPath=()=>{throw Error('A web URL is not a vault file');};
+  view.attachSelection({path:web.url,web,text:'Selected lesson text',source:'Selected lesson text',from:0,to:20,startLine:0,endLine:0});
+  await view.handleSubmit();assert.equal(requests.length,1);assert.equal(requests[0].activeFile,null);
+  assert.equal(requests[0].webPage.text,'Selected lesson text');assert.ok(requests[0].prompt.includes(web.url));assert.ok(!requests[0].prompt.includes('L0'));
+});
+test('unreadable or unsupported Web Viewer pages fail clearly instead of attaching the last note',async()=>{
+  for(const target of [null,{url:'https://example.test/',title:'Unavailable',read:async()=>{throw Error('Navigation changed');}}]){
+    const {view,requests}=chat();view.plugin.webViewerChat={hasPage:true,target};view.renderMessageBody=async()=>{};
+    await view.handleSubmit();assert.equal(requests.length,0);assert.equal(view.isGenerating,false);
+    assert.ok(view.messages.at(-1).content.includes('Could not read this page'));
+  }
+});
+
+
+test('Reading view quotations remain reference text rather than raw editable Markdown ranges',async()=>{
+  const {view,requests,file}=chat();view.mode='edit';
+  view.attachSelection(captureReadingSelection(file.path,'# Heading\n\n**Selected** text','Selected text'));
+  await view.handleSubmit();assert.equal(requests.length,1);assert.equal(requests[0].activeFile,null);
+  assert.ok(requests[0].prompt.includes('Selected text'));assert.ok(requests[0].prompt.includes(file.path));assert.ok(!requests[0].prompt.includes('L0'));
+});
+
+
+test('changing the selection icon setting hides and restores the editor action without recreating the editor',()=>{
+  const h=toolbar();assert.equal(h.button.hidden,false);h.disable();h.documentEvents['vault-code-selection-setting-change']();assert.equal(h.button.hidden,true);h.advance();assert.equal(h.button.hidden,true);
+  h.enable();h.documentEvents['vault-code-selection-setting-change']();h.advance();assert.equal(h.button.hidden,false);h.plugin.destroy();
 });

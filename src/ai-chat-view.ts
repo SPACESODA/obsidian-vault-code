@@ -25,8 +25,9 @@ import { isConnectionProvider, connectionProvider, extractEditProposal } from ".
 import { AIEditReviewModal } from "./ai-edit-review";
 import { chatErrorContent, isChatPermissionError } from "./ai-chat-feedback";
 import { renderChatMarkdown, disposeChatMarkdown } from "./ai-chat-markdown";
-import { type SelectionQuote, selectionLabel, quoteMessage, captureSelection } from "./ai-selection";
+import { type SelectionQuote, selectionLabel, quoteMessage, captureSelection, webPageMessage } from "./ai-selection";
 import type { ChatMetadata } from "./ai-storage";
+import { snapshotPage, type WebPageContext, type WebPageTarget } from "./ai-web-context";
 
 export const VIEW_TYPE_AI_CHAT = "vault-code-ai-chat";
 
@@ -115,7 +116,7 @@ export class AIChatView extends ItemView {
 	private chatLoadId = 0;
 	private chatSaveTask: Promise<void> = Promise.resolve();
 	private pendingChatFiles = new WeakMap<ChatMessage[], Promise<TFile>>();
-	private safeRequest: { userId: string; text: string; file: TFile | null; quote: SelectionQuote | null; scope: "active-note" | "vault" } | null = null;
+	private safeRequest: { userId: string; text: string; file: TFile | null; quote: SelectionQuote | null; scope: "active-note" | "vault"; page?: WebPageContext } | null = null;
 	private activeProcessHandle: AIProcessHandle | null = null;
 	private availableModels: AgyModelInfo[] = [];
 
@@ -125,6 +126,7 @@ export class AIChatView extends ItemView {
 
 	// Context pinning state
 	private pinnedContextFile: TFile | null = null;
+	private pinnedWebPage: WebPageTarget | null = null;
 	private isContextPinned = false;
 	private contextExcluded = false;
 	private lastRenderedContextKey = "";
@@ -563,8 +565,9 @@ export class AIChatView extends ItemView {
 		this.pendingQuote = request.quote;
 		this.chatScope = request.scope;
 		this.pinnedContextFile = request.file;
-		this.isContextPinned = !!request.file;
-		this.contextExcluded = !request.file;
+		this.pinnedWebPage = request.page ? snapshotPage(request.page) : null;
+		this.isContextPinned = !!request.file || !!request.page;
+		this.contextExcluded = !request.file && !request.page;
 		this.renderSelectionQuote();
 		this.updateVaultToggleState();
 		this.updateContextChip();
@@ -584,7 +587,7 @@ export class AIChatView extends ItemView {
 	}
 
 	private updateVaultToggleState(): void {
-		if (this.pendingQuote || isConnectionProvider(this.selectedProvider)) {
+		if (this.pendingQuote || this.webTarget() || isConnectionProvider(this.selectedProvider)) {
 			if (this.chatScope !== "active-note") {
 				this.chatScope = "active-note";
 				if (this.currentChatFile) {
@@ -693,6 +696,9 @@ export class AIChatView extends ItemView {
 			}
 			return;
 		}
+		const page = this.webTarget();
+		if (page) { this.renderWebContext(page, force); return; }
+		if (!this.isContextPinned && this.plugin.webViewerChat?.hasPage) { this.contextChipEl.hide(); this.lastRenderedContextKey = "web-unavailable"; return; }
 
 		const activeFile = (this.isContextPinned && this.pinnedContextFile)
 			? this.pinnedContextFile
@@ -792,10 +798,44 @@ export class AIChatView extends ItemView {
 		}
 	}
 
+	public refreshWebContext(): void { this.updateVaultToggleState(); this.updateContextChip(true); }
+	private webTarget(): WebPageTarget | null {
+		if (this.isContextPinned) return this.pinnedWebPage ?? null;
+		return this.plugin.webViewerChat?.target ?? null;
+	}
+	private renderWebContext(page: WebPageTarget, force: boolean): void {
+		const key = JSON.stringify({ web: page.url, title: page.title, pinned: this.isContextPinned, excluded: this.contextExcluded });
+		if (!force && this.lastRenderedContextKey === key) return;
+		this.lastRenderedContextKey = key;
+		this.contextChipEl.empty(); this.contextChipEl.show();
+		this.contextChipEl.toggleClass("is-detached", this.contextExcluded);
+		if (this.contextExcluded) {
+			const attach = this.contextChipEl.createEl("button", { cls: "vault-code-context-attach-btn", text: `${t("aiChatAttachActiveNote")}: ${page.title}`, attr: { type: "button" } });
+			attach.addEventListener("click", () => { this.contextExcluded = false; this.refreshWebContext(); });
+			return;
+		}
+		setIcon(this.contextChipEl.createSpan({ cls: "vault-code-context-chip-icon" }), "globe");
+		const name = this.contextChipEl.createSpan({ cls: "vault-code-context-chip-name", text: page.title }); name.title = page.url;
+		const pin = this.contextChipEl.createEl("button", { cls: `clickable-icon vault-code-context-chip-btn${this.isContextPinned ? " is-pinned" : ""}`, attr: { type: "button", "aria-label": t(this.isContextPinned ? "aiChatContextUnpin" : "aiChatContextPin") } });
+		setIcon(pin, "pin");
+		pin.addEventListener("click", () => {
+			if (this.isContextPinned) { this.pinnedWebPage = null; this.isContextPinned = false; this.refreshWebContext(); return; }
+			const load = this.chatLoadId;
+			pin.disabled = true;
+			void page.read().then(snapshot => {
+				if (load !== this.chatLoadId || this.contextExcluded || this.webTarget()?.url !== page.url) return;
+				this.pinnedWebPage = snapshotPage(snapshot); this.pinnedContextFile = null; this.isContextPinned = true; this.refreshWebContext();
+			}).catch(() => { new Notice(t("aiChatWebUnavailable")); }).finally(() => { pin.disabled = false; });
+		});
+		const remove = this.contextChipEl.createEl("button", { cls: "clickable-icon vault-code-context-chip-btn", attr: { type: "button", "aria-label": t("aiChatContextRemove") } });
+		setIcon(remove, "x"); remove.addEventListener("click", () => this.removeContext());
+	}
+
 	private attachActiveFile(): void {
 		this.contextExcluded = false;
 		this.isContextPinned = false;
 		this.pinnedContextFile = null;
+		this.pinnedWebPage = null;
 		if (this.chatScope !== "active-note") {
 			this.setChatScope("active-note");
 		}
@@ -803,6 +843,7 @@ export class AIChatView extends ItemView {
 	}
 
 	private togglePinContext(file: TFile): void {
+		this.pinnedWebPage = null;
 		this.isContextPinned = !this.isContextPinned;
 		if (this.isContextPinned) {
 			this.pinnedContextFile = file;
@@ -816,6 +857,7 @@ export class AIChatView extends ItemView {
 		this.contextExcluded = true;
 		this.isContextPinned = false;
 		this.pinnedContextFile = null;
+		this.pinnedWebPage = null;
 		this.updateContextChip(true);
 	}
 
@@ -1065,6 +1107,7 @@ export class AIChatView extends ItemView {
 			this.messages = parsed.messages;
 			this.isContextPinned = false;
 			this.pinnedContextFile = null;
+			this.pinnedWebPage = null;
 			this.contextExcluded = false;
 			this.lastRenderedContextKey = "";
 
@@ -1103,6 +1146,7 @@ export class AIChatView extends ItemView {
 		this.messages = [];
 		this.isContextPinned = false;
 		this.pinnedContextFile = null;
+		this.pinnedWebPage = null;
 		this.contextExcluded = false;
 		this.lastRenderedContextKey = "";
 		this.headerTitleEl?.setText(t("aiChatViewTitle"));
@@ -1134,6 +1178,7 @@ export class AIChatView extends ItemView {
 	}
 
 	public attachSelection(quote: SelectionQuote): void {
+		if (quote.web) { this.pinnedContextFile = null; this.pinnedWebPage = null; this.isContextPinned = false; this.contextExcluded = false; }
 		this.pendingQuote = quote;
 		this.updateContinueAction();
 		this.renderSelectionQuote();
@@ -1157,13 +1202,13 @@ export class AIChatView extends ItemView {
 		const chevron = summary.createSpan({ cls: "vault-code-chat-quote-chevron" });
 		setIcon(chevron, "chevron-right");
 		const fileIcon = summary.createSpan({ cls: "vault-code-chat-quote-icon" });
-		setIcon(fileIcon, "file-text");
+		setIcon(fileIcon, quote.web ? "globe" : "file-text");
 		summary.createSpan({
-			text: quote.path.split("/").pop() || quote.path,
+			text: quote.web?.title || quote.path.split("/").pop() || quote.path,
 			cls: "vault-code-chat-quote-file",
 			attr: { "aria-label": selectionLabel(quote) },
 		});
-		summary.createSpan({
+		if (!quote.web && quote.startLine > 0) summary.createSpan({
 			text: `L${quote.startLine}${quote.endLine === quote.startLine ? "" : `–${quote.endLine}`}`,
 			cls: "vault-code-chat-quote-lines",
 		});
@@ -1328,10 +1373,12 @@ export class AIChatView extends ItemView {
 		const requestEffort = this.selectedReasoningEffort;
 		const requestScope = this.chatScope;
 		const requestConversation = this.conversationId;
+		const requestWeb = !this.pendingQuote && !this.contextExcluded ? this.webTarget() : null;
+		const expectsWeb = !this.isContextPinned && !this.contextExcluded && !!this.plugin.webViewerChat?.hasPage;
 		const submission = ++this.submissionId;
 		this.safeRequest = null;
 		const quote = this.pendingQuote;
-		const messageText = quote ? quoteMessage(text, quote) : text;
+		const messageText = quote ? quoteMessage(text, quote) : requestWeb ? webPageMessage(text, requestWeb) : text;
 		this.pendingQuote = null;
 		this.renderSelectionQuote();
 		this.updateVaultToggleState();
@@ -1395,10 +1442,25 @@ export class AIChatView extends ItemView {
 		let activeContent = "";
 		let selectedText = "";
 		let selectionStart: number | undefined;
+		let webPage: WebPageContext | undefined;
 
-		if (quote) {
+		if (quote?.web || requestWeb || (!quote && expectsWeb)) {
+			try {
+				if (quote?.web) webPage = { ...quote.web, text: quote.text };
+				else if (requestWeb) webPage = await requestWeb.read();
+				else throw new Error(t("aiChatWebUnavailable"));
+			} catch {
+				if (submission !== this.submissionId || !this.isGenerating) return;
+				assistantMsg.content = chatErrorContent(t("aiChatWebUnavailable"), requestMode);
+				this.currentTypingIndicatorEl?.remove(); this.currentTypingIndicatorEl = null;
+				void this.renderMessageBody(assistantMsg.content, asstBodyEl);
+				await this.ensureSubmittedChatFile(text, submission, submittedMessages);
+				if (submission !== this.submissionId || !this.isGenerating) return;
+				this.finishGenerating(); void this.persistChat(); return;
+			}
+		} else if (quote) {
 			const file = this.app.vault.getAbstractFileByPath(quote.path);
-			activeFile = file instanceof TFile ? file : null;
+			activeFile = !quote.rendered && file instanceof TFile ? file : null;
 			activeContent = quote.source;
 			selectedText = quote.text;
 			selectionStart = quote.from;
@@ -1440,16 +1502,17 @@ export class AIChatView extends ItemView {
 		if (requestMode === "safe") {
 			const contextQuote = quote || (activeFile && selectedText && selectionStart !== undefined
 				? captureSelection(activeFile.path, activeContent, selectionStart, selectionStart + selectedText.length) : null);
-			this.safeRequest = { userId: userMsg.id, text, file: activeFile, quote: contextQuote, scope: requestScope };
+			this.safeRequest = { userId: userMsg.id, text, file: activeFile, quote: contextQuote, scope: requestScope, page: webPage };
 		}
 		this.activeProcessHandle = this.plugin.aiService.sendMessage({
 			prompt: messageText,
+			webPage,
 			contextInPrompt: Boolean(quote),
 			history: this.messages.slice(0, -2).filter((m) => m.content.trim()).map((m) => ({ role: m.role, content: m.content })),
 			provider: requestProvider,
 			model: requestModel,
 			reasoningEffort: requestEffort,
-			scope: quote ? "active-note" : requestScope,
+			scope: quote || webPage ? "active-note" : requestScope,
 			mode: requestMode,
 			conversationId: requestConversation,
 			currentChatPath: this.currentChatFile?.path,

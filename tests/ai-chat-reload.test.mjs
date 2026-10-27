@@ -28,6 +28,7 @@ async function load(entry, stubs = {}) {
 
 const OBSIDIAN_STUB = `
 	export { load as parseYaml, dump as stringifyYaml } from "js-yaml";
+	export class View {}
 	export class ItemView {
 		constructor(leaf) { this.leaf = leaf; this.containerEl = { children: [1] }; this.contentEl = { empty(){}, addClass(){} }; }
 	}

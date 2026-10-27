@@ -1,4 +1,7 @@
 export interface SelectionQuote {
+	web?: { url: string; title: string };
+	/** Reading-view DOM offsets are not editable raw Markdown offsets. */
+	rendered?: boolean;
 	path: string;
 	text: string;
 	from: number;
@@ -20,7 +23,19 @@ export function captureSelection(path: string, source: string, from: number, to:
 }
 
 export function selectionLabel(quote: SelectionQuote): string {
+	if (quote.web) return `${quote.web.title} · ${quote.web.url}`;
+	if (quote.rendered && !quote.startLine) return quote.path;
 	return `${quote.path} · L${quote.startLine}${quote.endLine === quote.startLine ? "" : `–${quote.endLine}`}`;
+}
+
+export function captureReadingSelection(path: string, source: string, text: string): SelectionQuote | null {
+	if (!path || !text.trim()) return null;
+	const from = source.indexOf(text);
+	if (from >= 0 && source.indexOf(text, from + 1) < 0) {
+		const quote = captureSelection(path, source, from, from + text.length);
+		return quote ? { ...quote, rendered: true } : null;
+	}
+	return { path, source, text, rendered: true, from: 0, to: 0, startLine: 0, endLine: 0 };
 }
 
 export function getSafeCodeFence(text: string): string {
@@ -78,11 +93,17 @@ export function detectFenceLanguage(path: string, sampleText = ""): string {
 }
 
 export function quoteMessage(question: string, quote: SelectionQuote): string {
-	const label = selectionLabel(quote).replace(/[\\`*_{}[\]<>!|]/g, "\\$&").replace(/[\r\n]/g, " ");
-	const lang = detectFenceLanguage(quote.path, quote.text);
+	const label = (quote.web?.title || selectionLabel(quote)).replace(/[\\`*_{}[\]<>!|]/g, "\\$&").replace(/[\r\n]/g, " ");
+	const lang = quote.web || quote.rendered ? "text" : detectFenceLanguage(quote.path, quote.text);
 	const fence = getSafeCodeFence(quote.text);
 	const quotedLines = quote.text.replace(/\r\n/g, "\n").split("\n");
 	const codeBlock = `${fence}${lang}\n${quotedLines.join("\n")}\n${fence}`;
 	const blockquoted = codeBlock.split("\n").map((line) => `> ${line}`).join("\n");
-	return `${question.trim()}\n\n> **${label}**\n>\n${blockquoted}`;
+	const link = quote.web ? `\n> <${quote.web.url.replace(/[<>\r\n]/g, "")}>` : "";
+	return `${question.trim()}\n\n> **${label}**${link}\n>\n${blockquoted}`;
+}
+
+export function webPageMessage(question: string, page: { title: string; url: string }): string {
+	const title = page.title.replace(/[\\`*_{}[\]<>!|]/g, "\\$&").replace(/[\r\n]/g, " ");
+	return `${question.trim()}\n\n> **${title}**\n> <${page.url.replace(/[<>\r\n]/g, "")}>`;
 }

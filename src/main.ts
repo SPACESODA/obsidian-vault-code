@@ -134,6 +134,8 @@ import { preserveSettingsScroll } from "./settings-scroll";
 import { agentSelectionExtension } from "./ai-selection-extension";
 import type { SelectionQuote } from "./ai-selection";
 import { sizeSvgPreview } from "./svg-preview";
+import { WebViewerChat } from "./ai-web-context";
+import { ReadingSelectionChat } from "./ai-reading-selection";
 import { createCustomMenu } from "./custom-menu";
 import { observeExplorerIgnore, filterExplorerRows } from "./explorer-ignore";
 import { IgnoreMatcher, parseGitignore, type IgnoreRule, EMPTY_IGNORE_RULES } from "./ignore-rules";
@@ -654,6 +656,7 @@ interface VaultCodeSettings {
 	editorFontScale: number;
 	enableGitIntegration: boolean;
 	enableAIChat: boolean;
+	enableSendToChatIcon: boolean;
 	aiProvider: AIProvider;
 	aiConnections: AIConnection[];
 	aiModel: string;
@@ -704,6 +707,7 @@ const DEFAULT_SETTINGS: VaultCodeSettings = {
 	editorFontScale: 100,
 	enableGitIntegration: true,
 	enableAIChat: true,
+	enableSendToChatIcon: true,
 	aiProvider: "antigravity",
 	aiConnections: [],
 	aiModel: "gemini-3.8-flash-medium",
@@ -5044,6 +5048,8 @@ export default class VaultCodePlugin extends Plugin {
 	aiService!: AIService;
 	aiStorage!: AIStorage;
 	private aiChatRibbonIconEl: HTMLElement | null = null;
+	public webViewerChat?: WebViewerChat;
+	private readingSelection?: ReadingSelectionChat;
 	private externalFolders?: ExternalFolderFeature;
 	private aiChatLeaves = new ChatLeafManager<WorkspaceLeaf>();
 	private chatPropertyTypesTask: Promise<void> | null = null;
@@ -5054,6 +5060,13 @@ export default class VaultCodePlugin extends Plugin {
 		// Registering a view can immediately restore it during startup or hot reload.
 		// Its settings and ignore policy must already be ready before onOpen runs.
 		await this.initializeIgnoreFiltering();
+		if (Platform.isDesktop) {
+			this.readingSelection = this.addChild(new ReadingSelectionChat(this.app, () => this.settings.enableAIChat && this.settings.enableSendToChatIcon && !this.unloading, quote => { void this.activateAIChatView(quote); }));
+			this.webViewerChat = this.addChild(new WebViewerChat(this.app, () => this.settings.enableAIChat && !this.unloading,
+				quote => { void this.activateAIChatView(quote); },
+				() => { for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_AI_CHAT)) if (leaf.view instanceof AIChatView) leaf.view.refreshWebContext(); },
+				() => this.settings.enableSendToChatIcon));
+		}
 		if (Platform.isDesktop) {
 			this.externalFolders = new ExternalFolderFeature(this.app, path => this.isPathIgnored(path, true), () => this.applyFileExplorerFiltering());
 			this.register(this.externalFolders.guardDeletion());
@@ -5881,9 +5894,20 @@ export default class VaultCodePlugin extends Plugin {
 		await this.ensureAIChatLeaf();
 	}
 
+	public refreshSendToChatIcons(): void {
+		const docs = new Set<Document>([document]);
+		this.app.workspace.iterateAllLeaves(leaf => { if (leaf.view.containerEl.doc) docs.add(leaf.view.containerEl.doc); });
+		for (const doc of docs) {
+			if (!this.settings.enableSendToChatIcon) for (const button of doc.querySelectorAll<HTMLElement>(".vault-code-selection-agent")) button.hidden = true;
+			doc.dispatchEvent(new Event("vault-code-selection-setting-change"));
+		}
+		this.readingSelection?.refresh();
+		this.webViewerChat?.refreshSelectionAction();
+	}
+
 	public createAgentSelectionExtension(): Extension {
 		return agentSelectionExtension({
-			enabled: () => Platform.isDesktop && this.settings.enableAIChat,
+			enabled: () => Platform.isDesktop && this.settings.enableAIChat && this.settings.enableSendToChatIcon,
 			label: () => t("aiChatQuoteSelection"),
 			filePath: (editor) => {
 				let path: string | null = null;
@@ -6501,7 +6525,7 @@ export default class VaultCodePlugin extends Plugin {
 			Platform.isDesktop &&
 			this.settings.enableAIChat &&
 			!(view instanceof AIChatView) &&
-			Boolean(file);
+			(Boolean(file) || view.getViewType() === "webviewer");
 
 		if (shouldShowAiChatBtn) {
 			if (!existingAiChatBtn) {
@@ -7059,6 +7083,7 @@ export default class VaultCodePlugin extends Plugin {
 	async loadSettings() {
 		const loaded = (await this.loadData()) as Partial<VaultCodeSettings> | null;
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, loaded ?? {});
+		this.settings.enableSendToChatIcon = loaded?.enableSendToChatIcon !== false;
 		this.settings.editorFontScale = normalizeEditorFontScale(loaded?.editorFontScale);
 		this.settings.aiConnections = normalizeConnections(loaded?.aiConnections);
 		if (this.settings.aiProvider === "ollama") {
@@ -8832,7 +8857,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 				}),
 		);
 
-		const fontSetting = new Setting(containerEl).setName(t("settingsEditorFontSize"));
+		const fontSetting = new Setting(containerEl).setName(t("settingsEditorFontSize")).setDesc(t("settingsEditorFontSizeDesc"));
 		let fallbackFontValue: HTMLElement | undefined;
 		let resetFontScale = () => {};
 		const applyFontScale = (value: number) => {
@@ -8919,6 +8944,14 @@ class VaultCodeSettingTab extends PluginSettingTab {
 				);
 
 			if (this.plugin.settings.enableAIChat) {
+			new Setting(containerEl)
+				.setName(t("settingsEnableSendToChatIcon", t("aiChatQuoteSelection")))
+				.setDesc(t("settingsSendToChatIconDesc"))
+				.addToggle(toggle => toggle.setValue(this.plugin.settings.enableSendToChatIcon).onChange(async value => {
+					this.plugin.settings.enableSendToChatIcon = value;
+					this.plugin.refreshSendToChatIcons();
+					await this.plugin.saveSettings();
+				}));
 			const connectionTabs = containerEl.createDiv({ cls: "vault-code-connection-tabs", attr: { role: "tablist" } });
 			const connectionPanels = containerEl.createDiv({ cls: "vault-code-connection-panels" });
 			const panels = new Map<string, HTMLElement>();
@@ -9473,6 +9506,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 						this.plugin.updateAllLeafHeaderActions();
 
 						// Reset any active chat view session to clean initial state
+						this.plugin.refreshSendToChatIcons();
 						this.app.workspace.iterateAllLeaves((leaf) => {
 							if (leaf.view instanceof AIChatView) {
 								leaf.view.startNewChat();
