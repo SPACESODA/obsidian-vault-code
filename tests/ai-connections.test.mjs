@@ -43,7 +43,7 @@ function harness({config=connection,chunks=['data: {"choices":[{"delta":{"conten
 }
 
 test('presets include Atomic Chat, CC Switch, Chinese providers, and unrestricted custom entries',()=>{
-  assert.equal(core.CONNECTION_PRESETS.find(p=>p.id==='atomic').baseUrl,'http://127.0.0.1:1337/v1');
+  assert.equal(core.CONNECTION_PRESETS.find(p=>p.id==='atomic').baseUrl,'http://127.0.0.1:53176/v1');
   assert.equal(core.CONNECTION_PRESETS.find(p=>p.id==='ccswitch').baseUrl,'http://127.0.0.1:15721/v1');
   for(const id of ['deepseek','qwen','kimi','glm','minimax','siliconflow','ccswitch','custom-api','custom-local']) assert.ok(core.CONNECTION_PRESETS.some(p=>p.id===id));
 });

@@ -29,7 +29,7 @@ export const CONNECTION_PRESETS: ConnectionPreset[] = [
 	{ id: "siliconflow", name: "SiliconFlow", kind: "api", baseUrl: "https://api.siliconflow.com/v1", format: "chat-completions" },
 	{ id: "custom-api", name: "Custom", kind: "api", baseUrl: "", format: "chat-completions" },
 	{ id: "ollama", name: "Ollama", kind: "local", baseUrl: "http://127.0.0.1:11434/v1", format: "chat-completions" },
-	{ id: "atomic", name: "Atomic Chat", kind: "local", baseUrl: "http://127.0.0.1:1337/v1", format: "chat-completions" },
+	{ id: "atomic", name: "Atomic Chat", kind: "local", baseUrl: "http://127.0.0.1:53176/v1", format: "chat-completions" },
 	{ id: "lmstudio", name: "LM Studio", kind: "local", baseUrl: "http://127.0.0.1:1234/v1", format: "chat-completions" },
 	{ id: "ccswitch", name: "CC Switch", kind: "local", baseUrl: "http://127.0.0.1:15721/v1", format: "chat-completions" },
 	{ id: "custom-local", name: "Custom", kind: "local", baseUrl: "", format: "chat-completions" },
