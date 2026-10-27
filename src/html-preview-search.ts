@@ -119,7 +119,9 @@ export class HtmlPreviewSearch {
 		this.previous = button("chevron-up", t("searchPreviousMatch"), () => this.move(-1));
 		this.next = button("chevron-down", t("searchNextMatch"), () => this.move(1));
 		button("x", t("modalButtonCancel"), () => this.close(true));
-		this.input.addEventListener("input", event => { if (!(event as InputEvent).isComposing) this.schedule(); });
+			this.input.addEventListener("input", event => {
+				if (!("isComposing" in event && event.isComposing === true)) this.schedule();
+			});
 		this.input.addEventListener("compositionend", () => this.schedule());
 		this.input.addEventListener("keydown", event => {
 			if (event.isComposing) return;
