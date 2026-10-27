@@ -2,25 +2,33 @@
 
 <div align="center" style="color: #3b82f6; font-size: 1.5em; margin-top: 1.5rem;"><strong>Vault Code turns Obsidian into a workspace for notes, code, and files.</strong></div>
 
-View hidden files, create and organize files of any kind, and edit code in a beautiful editor. Preview web pages, diagrams, and data, or work with AI agents, all without leaving Obsidian.
+**Vault Code** is a powerful plugin that integrates with Obsidian's file explorer and editor. View hidden files, create and organize files of any kind, and write code in a beautiful code editor. Preview web pages, diagrams, and data, or work with AI agents without leaving Obsidian.
 
-**Vault Code** follows your Obsidian theme and display language: English, 繁體中文, 简体中文, 日本語, 한국어, Español, Français, Italiano, Deutsch, and Русский.
+**Vault Code** follows your Obsidian display language and supports English, 繁體中文, 简体中文, 日本語, 한국어, Español, Français, Italiano, Deutsch, and Русский.
 
 ---
 
 ## ⚡ Features at a Glance
 
+**File explorer**
 * **Hidden files & folders**: Reveal dotfiles, dotfolders, and extensionless files.
 * **File creation & renaming**: Create any file type or nested path; rename files and extensions.
-* **External folders**: Add folders from your disk by symlink.
+* **External folders (Desktop)**: Add folders from your disk by symlink.
 * **Ignore rules**: Keep the explorer tidy with `.obsidianignore` and `.gitignore`.
-* **Code editor**: Syntax highlighting, line numbers, folding, and familiar editing shortcuts.
+
+**Code editor**
+* **Editing tools**: Syntax highlighting, line numbers, folding, and familiar editing shortcuts.
 * **Markdown source editing**: Switch between Obsidian's note view and the code editor.
 * **Find & replace**: Search across lines with regex, case matching, and whole-word matching.
 * **Live preview**: Render web pages, emails, diagrams, data tables, and diffs.
-* **Git**: Review diffs, keep or revert changes, and commit individual files.
-* **Agent chat**: Connect coding CLIs, hosted APIs, or local model servers.
-* **Mobile & tablet support**: Edit notes, code, and manage files on any device.
+* **Mobile & tablet support**: Edit code and manage files on desktop, tablets, and phones.
+
+**Git** (Desktop only)
+* **Git feature**: Review diffs, keep or revert changes, and commit individual files.
+
+**Agent chat** (Desktop only)
+* **Notes and code**: Ask about your notes and code, or request edits in the sidebar.
+* **Flexible connections**: Use coding CLIs, hosted APIs, or local model servers.
 
 ---
 
@@ -77,7 +85,7 @@ When your vault is inside a Git repository:
 
 ### ✨ Work with an AI agent (Desktop)
 
-Work with AI agent within Obsidian. Choose a connection in settings:
+Work with an AI agent in Obsidian. Choose a connection in settings:
 
 * **CLI**: Use Claude Code, Codex, Copilot, and other coding agents with their workspace tools. Install and update agents from settings.
 * **API**: Bring your own key for OpenAI, Anthropic, Gemini, DeepSeek, Qwen, or another provider. Custom endpoints and model IDs are supported.
