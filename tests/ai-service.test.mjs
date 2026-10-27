@@ -584,3 +584,26 @@ test('review-and-fix requests retain explicit edit authorization without revivin
     else assert.match(prompt,/only to carry out changes explicitly requested by the user/);
   }
 });
+
+test('remaining CLI providers receive read-only controls only for Safe mode',async()=>{
+  const h=harness({bins:Object.fromEntries(['claude','opencode','pi','kimi','grok','aider'].map(name=>[name,'/fake/'+name]))});
+  const required={claude:['--tools','Read,Glob,Grep','--disallowedTools','mcp__*'],opencode:['--agent','vault-code-safe'],
+    pi:['--tools','read,grep,find,ls','--no-extensions','--no-mcp'],kimi:['--plan'],grok:['--sandbox','read-only','--no-subagents'],aider:['--dry-run','--chat-mode','ask','--no-auto-lint','--no-auto-test']};
+  for(const [provider,flags] of Object.entries(required)){
+    await h.send(provider,{mode:'safe'});const safe=h.spawned.at(-1);
+    for(const flag of flags)assert.ok(safe.args.includes(flag),provider+': '+flag);
+    if(provider==='opencode')assert.deepEqual(JSON.parse(safe.options.env.OPENCODE_CONFIG_CONTENT).agent['vault-code-safe'].permission,{'*':'deny',read:'allow',glob:'allow',grep:'allow',list:'allow'});
+    if(provider==='aider')assert.ok(!safe.args.includes('--yes'));
+    await h.send(provider,{mode:'edit'});assert.ok(!h.spawned.at(-1).args.includes(flags[0]),provider);
+  }
+});
+
+test('OpenCode Safe mode overrides permissive agent configuration without changing process settings',async()=>{
+  const h=harness({bins:{opencode:'/fake/opencode'}});
+  const settings=JSON.stringify({provider:{custom:{}},agent:{other:{mode:'subagent'},'vault-code-safe':{permission:{'*':'allow'}}}});
+  window.process.env.OPENCODE_CONFIG_CONTENT=settings;
+  await h.send('opencode',{mode:'safe'});
+  const config=JSON.parse(h.spawned[0].options.env.OPENCODE_CONFIG_CONTENT);
+  assert.equal(config.agent['vault-code-safe'].permission['*'],'deny');assert.deepEqual(config.provider,{custom:{}});
+  assert.equal(config.agent.other.mode,'subagent');assert.equal(window.process.env.OPENCODE_CONFIG_CONTENT,settings);
+});

@@ -1621,6 +1621,8 @@ export class AIService {
 				args = ["-p", effectivePrompt];
 				if (options.mode === "edit") {
 					args.push("--dangerously-skip-permissions");
+				} else {
+					args.push("--permission-mode", "plan", "--tools", "Read,Glob,Grep", "--disallowedTools", "mcp__*", "--disable-slash-commands");
 				}
 				if (options.model && options.model !== "default") {
 					args.push("--model", options.model.trim());
@@ -1649,6 +1651,15 @@ export class AIService {
 				args = ["run", effectivePrompt, "--dir", vaultPath];
 				if (options.mode === "edit") {
 					// OpenCode run has no --auto option; its configured permissions apply.
+				} else {
+					const configured: unknown = env.OPENCODE_CONFIG_CONTENT ? JSON.parse(env.OPENCODE_CONFIG_CONTENT) : {};
+					const base: Record<string, unknown> = configured && typeof configured === "object" && !Array.isArray(configured) ? configured as Record<string, unknown> : {};
+					const agents = base.agent && typeof base.agent === "object" && !Array.isArray(base.agent) ? base.agent : {};
+					env.OPENCODE_CONFIG_CONTENT = JSON.stringify({ ...base, agent: { ...agents, "vault-code-safe": {
+						description: "Read-only vault exploration", mode: "primary",
+						permission: { "*": "deny", read: "allow", glob: "allow", grep: "allow", list: "allow" },
+					} } });
+					args.push("--agent", "vault-code-safe");
 				}
 				if (options.model && options.model !== "default") {
 					args.push("-m", options.model.trim());
@@ -1663,6 +1674,7 @@ export class AIService {
 					return;
 				}
 				args = ["-p", effectivePrompt, "--mode", "text"];
+				if (options.mode === "safe") args.push("--tools", "read,grep,find,ls", "--no-extensions", "--no-mcp", "--no-skills");
 				if (options.model && options.model !== "default") {
 					args.push("--model", options.model.trim());
 				}
@@ -1711,6 +1723,7 @@ export class AIService {
 					return;
 				}
 				args = ["-p", effectivePrompt];
+				if (options.mode === "safe") args.push("--plan");
 				if (options.model && options.model !== "auto" && options.model !== "default") {
 					args.push("--model", options.model.trim());
 				}
@@ -1721,6 +1734,7 @@ export class AIService {
 					return;
 				}
 				args = ["-p", effectivePrompt];
+				if (options.mode === "safe") args.push("--sandbox", "read-only", "--permission-mode", "plan", "--no-subagents");
 				if (options.model && options.model !== "auto" && options.model !== "default") {
 					args.push("--model", options.model.trim());
 				}
@@ -1730,7 +1744,9 @@ export class AIService {
 					options.onError?.(new Error("Aider CLI (aider) not found on system"));
 					return;
 				}
-				args = ["--message", effectivePrompt, "--no-git", "--yes"];
+				args = ["--message", effectivePrompt, "--no-git"];
+				if (options.mode === "safe") args.push("--dry-run", "--chat-mode", "ask", "--no-auto-lint", "--no-auto-test", "--no-suggest-shell-commands");
+				else args.push("--yes");
 				if (options.model && options.model !== "auto" && options.model !== "default") {
 					args.push("--model", options.model.trim());
 				}
