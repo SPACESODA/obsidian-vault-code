@@ -17,8 +17,6 @@ function chatFrontmatter(content: string): { properties: Record<string, unknown>
 export const DEFAULT_AGENT_INSTRUCTIONS = `- Keep a helpful, professional, and concise tone.
 - Respond in clear, readable Markdown.
 - When referencing notes in the vault, use Obsidian wikilinks like [[Note Title]].
-- In \`Safe mode\`, DO NOT edit or modify any files. Suggest switching to \`Edit mode\` if edits are explicitly requested.
-- In \`Edit mode\`, edit files only when explicitly requested.
 `;
 
 export interface ChatMetadata {

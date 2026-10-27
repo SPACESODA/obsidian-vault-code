@@ -153,6 +153,7 @@ test('ensureInstructionsFile creates default note if missing and loadInstruction
   assert.equal(file,mockFile);
   assert.equal(createdPath,'agent-chats/instructions.md');
   assert.ok(createdContent.includes('Keep a helpful, professional, and concise tone.'));
+  assert.doesNotMatch(createdContent,/Safe mode|Edit mode/);
 
   const loaded=await storage.loadInstructions('agent-chats');
   assert.equal(loaded,'# Custom Rules\n- Be concise.');

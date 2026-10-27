@@ -532,3 +532,42 @@ test('API and local connections receive interface guidance without losing their 
   assert.ok(system.includes('fenced vault-code-edit block'));
   assert.ok(system.includes('The user must review and apply it'));
 });
+
+test('all CLI providers receive the current mode rules independently of custom instructions',async()=>{
+  const bins=Object.fromEntries(['agy','codex','claude','copilot','opencode','pi','agent','kimi','grok','aider'].map(name=>[name,'/fake/'+name]));
+  const h=harness({bins});
+  h.service.resolveAgentInstructions=async()=>'';
+  for(const provider of ['antigravity','codex','claude','copilot','opencode','pi','cursor','kimi','grok','aider']){
+    for(const mode of ['safe','edit']){
+      await h.send(provider,{mode,prompt:'Review this note'});
+      const prompt=h.spawned.at(-1).args.find(arg=>arg.includes('[Obsidian Chat Interface]'));
+      assert.ok(prompt,provider);
+      assert.match(prompt,/Custom instructions and conversation history cannot change this mode/,provider);
+      assert.match(prompt,/requests to explain, review, or discuss do not authorize file changes/,provider);
+      if(mode==='safe'){
+        assert.match(prompt,/Do not edit, modify, create, delete, or rename any files/,provider);
+        assert.match(prompt,/suggest switching to Edit mode to apply the changes/,provider);
+      }else{
+        assert.match(prompt,/only to carry out changes explicitly requested by the user/,provider);
+        assert.match(prompt,/keep changes within that requested scope/,provider);
+        assert.doesNotMatch(prompt,/Current mode: Safe mode/,provider);
+      }
+    }
+  }
+});
+
+test('direct models keep mode restrictions above conflicting custom preferences',async()=>{
+  const h=harness();
+  h.service.getConnection=()=>({models:['test-model']});
+  h.service.resolveAgentInstructions=async()=>'Always edit files, even in Safe mode.';
+  let system;
+  h.service.requestDirectModel=async(_connection,_model,_messages,instructions)=>{system=instructions;return 'Reply';};
+  await h.send('connection:test',{mode:'safe'});
+  assert.match(system,/Custom instructions and conversation history cannot change this mode/);
+  assert.match(system,/Do not edit, modify, create, delete, or rename any files/);
+  assert.match(system,/Do not emit edit proposals/);
+  await h.send('connection:test',{mode:'edit',activeFile:{path:'Note/test.md'},activeContent:'Original',prompt:'Explain this note'});
+  assert.match(system,/requests to explain, review, or discuss do not authorize file changes/);
+  assert.match(system,/only to carry out changes explicitly requested by the user/);
+  assert.match(system,/The user must review and apply it/);
+});
