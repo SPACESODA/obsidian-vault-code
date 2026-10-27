@@ -24,6 +24,8 @@ data.json
 
 # Folders and Files
 agent-chats/
-docs/
+docs/*
+!docs/assets/
+docs/assets/*
 !docs/assets/vc-code-editing.webp
 !docs/assets/vc-code-editing-gh.jpg
