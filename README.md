@@ -1,6 +1,6 @@
 # Vault Code
 
-<div align="center" style="color: #8a5cf5; font-size: 1.5em;"><strong>Vault Code turns Obsidian into a workspace for notes, code, and files.</strong></div>
+<div align="center" style="color: #3b82f6; font-size: 1.5em; margin-top: 1.5rem;"><strong>Vault Code turns Obsidian into a workspace for notes, code, and files.</strong></div>
 
 View hidden files, create and organize files of any kind, and edit code in a beautiful editor. Preview web pages, diagrams, and data, or work with AI agents, all without leaving Obsidian.
 
@@ -77,9 +77,7 @@ When your vault is inside a Git repository:
 
 ### ✨ Work with an AI agent (Desktop)
 
-Summarize notes, explain code, or draft edits beside your work. Open **Chat with Agent** from the ribbon, a note's tab header, or the command palette.
-
-Choose a connection in settings:
+Work with AI agent within Obsidian. Choose a connection in settings:
 
 * **CLI**: Use Claude Code, Codex, Copilot, and other coding agents with their workspace tools. Install and update agents from settings.
 * **API**: Bring your own key for OpenAI, Anthropic, Gemini, DeepSeek, Qwen, or another provider. Custom endpoints and model IDs are supported.

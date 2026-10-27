@@ -108,6 +108,7 @@ import {
 	rejectChunk,
 } from "@codemirror/merge";
 import { PreviewError } from "./preview-errors";
+import { forwardPreviewAppLink } from "./html-preview-links";
 import { DATA_PREVIEW_EXTENSIONS, PREVIEW_LIMITS } from "./file-preview-data";
 import { FilePreviewRenderer, formatPreviewError } from "./file-preview";
 import { PreviewSaveGuard, previewLineEnding, previewDocumentBytes, decodePreviewBytes, tableEditModel, type CellChange } from "./file-preview-edit";
@@ -4419,6 +4420,13 @@ export class DotfileView extends TextFileView {
 			"sandbox",
 			"allow-scripts allow-forms allow-modals allow-same-origin allow-popups",
 		);
+		iframe.addEventListener("load", () => {
+			try {
+				iframe.contentDocument?.addEventListener("click", event => forwardPreviewAppLink(event, openInDefaultBrowser));
+			} catch {
+				// A preview navigated to another origin; leave its document alone.
+			}
+		});
 
 		const inlinedHtml = await this.prepareAndInlineHtml(content, baseUrl);
 
