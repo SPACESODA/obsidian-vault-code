@@ -2,6 +2,7 @@ import { App, TFile, TFolder, normalizePath, parseYaml, stringifyYaml } from "ob
 import type { ChatMessage } from "./ai-chat-view";
 import { type AIProvider, type ReasoningEffort, supportsReasoningEffort } from "./ai-service";
 
+import { t } from "./i18n";
 import { parseChatTimestamp } from "./ai-chat-dates";
 import { escapeChatTurnMarkers, parseChatTurns } from "./ai-chat-turns";
 import { CHAT_PROPERTIES, chatProperty, migrateChatProperties } from "./ai-chat-properties";
@@ -188,7 +189,7 @@ export class AIStorage {
 	public parseChat(content: string, defaultModel = "gemini-3.8-flash-high"): ParsedChat {
 		const nowStr = this.formatDateTime();
 		const metadata: ChatMetadata = {
-			title: "Untitled Chat",
+			title: t("aiChatNewChat"),
 			created: nowStr,
 			last_chat: nowStr,
 			model: defaultModel,

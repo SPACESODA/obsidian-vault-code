@@ -866,6 +866,9 @@ body .hidden-files-editor-wrapper .cm-searchMatch-selected {
 		gap: 10px;
 	}
 	.hidden-files-settings .setting-item-info { min-width: 0; margin-right: 0; }
+	.hidden-files-settings .setting-item.mod-toggle { column-gap: 12px; }
+	.hidden-files-settings .setting-item.mod-toggle .setting-item-info { flex: 1; }
+	.hidden-files-settings .setting-item.mod-toggle .setting-item-control { flex: 0 0 auto; }
 	.hidden-files-settings .setting-item-control { min-width: 0; max-width: 100%; flex-wrap: wrap; }
 	.hidden-files-settings .setting-item-control :is(input:not([type="checkbox"]):not([type="range"]), select, textarea) {
 		max-width: 100%;
@@ -3249,8 +3252,19 @@ textarea.vault-code-chat-input:active {
 	transition: opacity 0.15s ease;
 }
 
-.vault-code-history-item:hover .vault-code-history-item-actions {
+.vault-code-history-item:hover .vault-code-history-item-actions,
+.vault-code-history-item:focus-within .vault-code-history-item-actions {
 	opacity: 1;
+}
+
+.vault-code-history-item-main:focus-visible,
+.vault-code-agent-card:focus-visible {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: 2px;
+}
+
+@media (hover: none) {
+	.vault-code-history-item-actions { opacity: 1; }
 }
 
 .vault-code-history-action-btn {

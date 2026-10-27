@@ -315,7 +315,6 @@ export const zhCn: TranslationSchema = {
 	settingsAITabCLI: "CLI",
 	settingsAITabAPI: "API",
 	settingsAITabLocal: "本地",
-	settingsAIConnectionType: "连接类型",
 	settingsAIConnectionsAPI: "API 连接",
 	settingsAIConnectionsLocal: "本地连接",
 	settingsAIAddProvider: "添加提供商",
@@ -456,4 +455,20 @@ export const zhCn: TranslationSchema = {
 	aiChatReadOnlyHint: "{0}为只读模式。如需应用更改，请切换至{1}后，再次提出要求。",
 	aiChatStopped: "回复已停止。",
 
+	// Validation and request errors
+	aiConnectionUrlInvalid: "请使用 HTTP 或 HTTPS 地址，且不要在地址中包含凭据。",
+	aiConnectionIdInvalid: "连接 ID 无效。",
+	aiConnectionNameRequired: "请输入名称。",
+	aiConnectionModelsRequired: "请至少输入一个模型 ID。",
+	aiConnectionFormatInvalid: "请选择支持的 API 格式。",
+	aiConnectionHeaderCredentials: "请将凭据填入 API 密钥字段，不要放在自定义请求头中。",
+	aiConnectionHeaderInvalid: "自定义请求头无效。",
+	aiConnectionModelRequired: "请选择已配置的模型。",
+	aiResponseLimit: "回复已达到模型的输出上限，请要求更短的回复。",
+	aiResponseIncomplete: "模型未完成此次请求。",
+	folderNameRequired: "文件夹名称不能为空。",
+	folderPathInvalid: "文件夹路径不能包含 '.' 或 '..'。",
+	editorPlainText: "纯文本",
+	settingsFooterAuthor: "由 {0} 制作",
+	settingsFooterStar: "在 {0} 点星支持",
 };

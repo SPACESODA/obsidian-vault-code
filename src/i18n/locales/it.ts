@@ -315,7 +315,6 @@ export const it: TranslationSchema = {
 	settingsAITabCLI: "CLI",
 	settingsAITabAPI: "API",
 	settingsAITabLocal: "Locale",
-	settingsAIConnectionType: "Tipo di connessione",
 	settingsAIConnectionsAPI: "Connessioni API",
 	settingsAIConnectionsLocal: "Connessioni locali",
 	settingsAIAddProvider: "Aggiungi fornitore",
@@ -456,4 +455,20 @@ export const it: TranslationSchema = {
 	aiChatReadOnlyHint: "{0} è di sola lettura. Scegli {1} e ripeti la richiesta per applicare le modifiche.",
 	aiChatStopped: "Risposta interrotta.",
 
+	// Validation and request errors
+	aiConnectionUrlInvalid: "Usa un URL HTTP o HTTPS senza credenziali incorporate.",
+	aiConnectionIdInvalid: "L’ID della connessione non è valido.",
+	aiConnectionNameRequired: "Inserisci un nome.",
+	aiConnectionModelsRequired: "Inserisci almeno un ID modello.",
+	aiConnectionFormatInvalid: "Scegli un formato API supportato.",
+	aiConnectionHeaderCredentials: "Inserisci le credenziali nel campo della chiave API, non nelle intestazioni personalizzate.",
+	aiConnectionHeaderInvalid: "L’intestazione personalizzata non è valida.",
+	aiConnectionModelRequired: "Scegli un modello configurato.",
+	aiResponseLimit: "La risposta ha raggiunto il limite di output del modello. Chiedi una risposta più breve.",
+	aiResponseIncomplete: "La richiesta al modello non è stata completata.",
+	folderNameRequired: "Il nome della cartella non può essere vuoto.",
+	folderPathInvalid: "Il percorso della cartella non può contenere '.' o '..'.",
+	editorPlainText: "Testo semplice",
+	settingsFooterAuthor: "Creato da {0}",
+	settingsFooterStar: "Lascia una stella su {0}",
 };

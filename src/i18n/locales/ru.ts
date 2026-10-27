@@ -315,7 +315,6 @@ export const ru: TranslationSchema = {
 	settingsAITabCLI: "CLI",
 	settingsAITabAPI: "API",
 	settingsAITabLocal: "Локальные",
-	settingsAIConnectionType: "Тип подключения",
 	settingsAIConnectionsAPI: "API подключения",
 	settingsAIConnectionsLocal: "Локальные подключения",
 	settingsAIAddProvider: "Добавить провайдера",
@@ -456,4 +455,20 @@ export const ru: TranslationSchema = {
 	aiChatReadOnlyHint: "{0} доступен только для чтения. Выберите {1} и попросите ещё раз, чтобы применить изменения.",
 	aiChatStopped: "Ответ остановлен.",
 
+	// Validation and request errors
+	aiConnectionUrlInvalid: "Укажите HTTP- или HTTPS-адрес без встроенных учётных данных.",
+	aiConnectionIdInvalid: "Недопустимый ID подключения.",
+	aiConnectionNameRequired: "Введите название.",
+	aiConnectionModelsRequired: "Введите хотя бы один ID модели.",
+	aiConnectionFormatInvalid: "Выберите поддерживаемый формат API.",
+	aiConnectionHeaderCredentials: "Указывайте учётные данные в поле ключа API, а не в пользовательских заголовках.",
+	aiConnectionHeaderInvalid: "Недопустимый пользовательский заголовок.",
+	aiConnectionModelRequired: "Выберите настроенную модель.",
+	aiResponseLimit: "Ответ достиг лимита вывода модели. Попросите ответить короче.",
+	aiResponseIncomplete: "Запрос к модели не был завершён.",
+	folderNameRequired: "Название папки не может быть пустым.",
+	folderPathInvalid: "Путь к папке не может содержать '.' или '..'.",
+	editorPlainText: "Обычный текст",
+	settingsFooterAuthor: "Разработано {0}",
+	settingsFooterStar: "Поставить звезду на {0}",
 };

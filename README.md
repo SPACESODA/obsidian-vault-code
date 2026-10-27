@@ -30,7 +30,7 @@ View hidden files, create and organize files of any kind, and edit code in a bea
 
 Open scripts, styles, and configuration files alongside your notes.
 
-* **150+ languages supported**: Python, JavaScript, TypeScript, Rust, Go, SQL, HTML, CSS, JSON, YAML, and more!
+* **170+ file extensions supported**: Python, JavaScript, TypeScript, Rust, Go, SQL, HTML, CSS, JSON, YAML, and more.
 * **Markdown source**: Right-click a `.md` file and choose **Edit in code editor**, or click `</>` in the tab header. Useful for frontmatter, tables, and regex edits.
 * **Familiar controls**: Line numbers, bracket matching, code folding, line duplication, commenting, and go-to-line.
 * **Native foundation**: Built on Obsidian's editor engine, with your theme, font size, and light or dark mode.
@@ -70,7 +70,7 @@ Right-click a file or folder in the explorer:
 
 When your vault is inside a Git repository:
 
-* Compare unstaged changes with the last commit directly in the editor.
+* Compare file contents with the last commit directly in the editor.
 * Jump between changes and keep or revert individual hunks.
 * See the current branch and changed-file count in the status bar.
 * Commit an individual file with a message, or discard its changes.

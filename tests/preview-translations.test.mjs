@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { build } from 'esbuild';
+import { readFileSync, readdirSync } from 'node:fs';
 const names={en:'en','zh-tw':'zhTw','zh-cn':'zhCn',ja:'ja',ko:'ko',es:'es',fr:'fr',it:'it',de:'de',ru:'ru'};
 const imports=Object.entries(names).map(([path,name])=>`import { ${name} } from './src/i18n/locales/${path}';`).join('\n');
 const compiled=await build({stdin:{contents:imports+'\nexport const translations={'+Object.entries(names).map(([path,name])=>JSON.stringify(path)+':'+name).join(',')+'};',resolveDir:process.cwd(),sourcefile:'preview-translations-entry.ts'},bundle:true,write:false,platform:'node',format:'cjs'});
@@ -32,5 +33,14 @@ test('all UI translations have matching keys, placeholders and nonempty values',
       assert.ok(typeof strings[key]==='string'&&strings[key].trim(),`${language}: ${key}`);
       assert.deepEqual((strings[key].match(/\{\d+\}/g)||[]).sort(),(translations.en[key].match(/\{\d+\}/g)||[]).sort(),`${language}: ${key}`);
     }
+  }
+});
+
+test('translation keys remain referenced by plugin code',()=>{
+  const source=readdirSync('src',{recursive:true})
+    .filter(file=>file.endsWith('.ts')&&!file.startsWith('i18n/'))
+    .map(file=>readFileSync('src/'+file,'utf8')).join('\n');
+  for(const key of Object.keys(translations.en)) {
+    assert.ok(source.includes('"'+key+'"')||source.includes("'"+key+"'"),`Unused translation: ${key}`);
   }
 });

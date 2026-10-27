@@ -313,7 +313,6 @@ export const en = {
 	settingsAITabCLI: "CLI",
 	settingsAITabAPI: "API",
 	settingsAITabLocal: "Local",
-	settingsAIConnectionType: "Connection type",
 	settingsAIConnectionsAPI: "API connections",
 	settingsAIConnectionsLocal: "Local connections",
 	settingsAIAddProvider: "Add provider",
@@ -454,6 +453,22 @@ export const en = {
 	aiChatReadOnlyHint: "{0} is read-only. Choose {1}, then ask again to apply changes.",
 	aiChatStopped: "Response stopped.",
 
+	// Validation and request errors
+	aiConnectionUrlInvalid: "Use an HTTP or HTTPS base URL without embedded credentials.",
+	aiConnectionIdInvalid: "Invalid connection ID.",
+	aiConnectionNameRequired: "Enter a name.",
+	aiConnectionModelsRequired: "Enter at least one model ID.",
+	aiConnectionFormatInvalid: "Choose a supported API format.",
+	aiConnectionHeaderCredentials: "Use the API key field for credentials, not custom headers.",
+	aiConnectionHeaderInvalid: "Invalid custom header.",
+	aiConnectionModelRequired: "Choose a configured model.",
+	aiResponseLimit: "The response reached the model’s output limit. Ask for a shorter response.",
+	aiResponseIncomplete: "The model request did not complete.",
+	folderNameRequired: "Folder name cannot be empty.",
+	folderPathInvalid: "Folder path cannot contain '.' or '..'.",
+	editorPlainText: "Plain text",
+	settingsFooterAuthor: "Brought to you by {0}",
+	settingsFooterStar: "Star on {0}",
 };
 
 export type TranslationSchema = typeof en;

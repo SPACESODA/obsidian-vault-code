@@ -315,7 +315,6 @@ export const ja: TranslationSchema = {
 	settingsAITabCLI: "CLI",
 	settingsAITabAPI: "API",
 	settingsAITabLocal: "ローカル",
-	settingsAIConnectionType: "接続タイプ",
 	settingsAIConnectionsAPI: "API 接続",
 	settingsAIConnectionsLocal: "ローカル接続",
 	settingsAIAddProvider: "プロバイダーを追加",
@@ -456,4 +455,20 @@ export const ja: TranslationSchema = {
 	aiChatReadOnlyHint: "{0}は読み取り専用です。変更を適用するには、{1}に切り替えてから、もう一度依頼してください。",
 	aiChatStopped: "応答を停止しました。",
 
+	// Validation and request errors
+	aiConnectionUrlInvalid: "認証情報を含まない HTTP または HTTPS の URL を入力してください。",
+	aiConnectionIdInvalid: "接続 ID が無効です。",
+	aiConnectionNameRequired: "名前を入力してください。",
+	aiConnectionModelsRequired: "モデル ID を1つ以上入力してください。",
+	aiConnectionFormatInvalid: "対応する API 形式を選択してください。",
+	aiConnectionHeaderCredentials: "認証情報はカスタムヘッダーではなく、API キー欄に入力してください。",
+	aiConnectionHeaderInvalid: "カスタムヘッダーが無効です。",
+	aiConnectionModelRequired: "設定済みのモデルを選択してください。",
+	aiResponseLimit: "モデルの出力上限に達しました。より短い回答を依頼してください。",
+	aiResponseIncomplete: "モデルへのリクエストが完了しませんでした。",
+	folderNameRequired: "フォルダー名を入力してください。",
+	folderPathInvalid: "フォルダーのパスに '.' や '..' は使用できません。",
+	editorPlainText: "プレーンテキスト",
+	settingsFooterAuthor: "{0} が制作",
+	settingsFooterStar: "{0} でスターを付ける",
 };

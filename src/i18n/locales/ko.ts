@@ -315,7 +315,6 @@ export const ko: TranslationSchema = {
 	settingsAITabCLI: "CLI",
 	settingsAITabAPI: "API",
 	settingsAITabLocal: "로컬",
-	settingsAIConnectionType: "연결 유형",
 	settingsAIConnectionsAPI: "API 연결",
 	settingsAIConnectionsLocal: "로컬 연결",
 	settingsAIAddProvider: "제공자 추가",
@@ -456,4 +455,20 @@ export const ko: TranslationSchema = {
 	aiChatReadOnlyHint: "{0}에서는 읽기만 가능합니다. 변경하려면 {1}로 전환한 뒤 다시 요청하세요.",
 	aiChatStopped: "응답이 중지되었습니다.",
 
+	// Validation and request errors
+	aiConnectionUrlInvalid: "인증 정보가 포함되지 않은 HTTP 또는 HTTPS URL을 입력하세요.",
+	aiConnectionIdInvalid: "연결 ID가 올바르지 않습니다.",
+	aiConnectionNameRequired: "이름을 입력하세요.",
+	aiConnectionModelsRequired: "모델 ID를 하나 이상 입력하세요.",
+	aiConnectionFormatInvalid: "지원되는 API 형식을 선택하세요.",
+	aiConnectionHeaderCredentials: "인증 정보는 사용자 지정 헤더가 아닌 API 키 입력란에 입력하세요.",
+	aiConnectionHeaderInvalid: "사용자 지정 헤더가 올바르지 않습니다.",
+	aiConnectionModelRequired: "설정된 모델을 선택하세요.",
+	aiResponseLimit: "모델의 출력 한도에 도달했습니다. 더 짧게 답변해 달라고 요청하세요.",
+	aiResponseIncomplete: "모델 요청이 완료되지 않았습니다.",
+	folderNameRequired: "폴더 이름을 입력하세요.",
+	folderPathInvalid: "폴더 경로에는 '.' 또는 '..'를 사용할 수 없습니다.",
+	editorPlainText: "일반 텍스트",
+	settingsFooterAuthor: "제작: {0}",
+	settingsFooterStar: "{0}에서 별표로 응원하기",
 };

@@ -41,20 +41,21 @@ export function parseModelIds(text: string): string[] {
 	return [...new Set(text.split(/[\n,]/).map((m) => m.trim()).filter(Boolean))];
 }
 export function endpointUrl(baseUrl: string, path: string): string {
-	const url = new URL(baseUrl.trim());
-	if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.hash || [...url.searchParams.keys()].some((key) => /^(?:key|api[-_]?key|token|access_token|authorization)$/i.test(key))) throw new Error("Use an HTTP or HTTPS base URL without embedded credentials.");
+	let url: URL;
+	try { url = new URL(baseUrl.trim()); } catch { throw new Error(t("aiConnectionUrlInvalid")); }
+	if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.hash || [...url.searchParams.keys()].some((key) => /^(?:key|api[-_]?key|token|access_token|authorization)$/i.test(key))) throw new Error(t("aiConnectionUrlInvalid"));
 	url.pathname = `${url.pathname.replace(/\/+$/, "")}/${path}`;
 	return url.toString();
 }
 export function validateConnection(connection: AIConnection): void {
-	if (!/^[a-z0-9-]+$/.test(connection.id)) throw new Error("Invalid connection ID.");
-	if (!connection.name.trim()) throw new Error("Enter a name.");
-	if (!connection.models.length || connection.models.some((m) => !m.trim() || /[\r\n]/.test(m))) throw new Error("Enter at least one model ID.");
+	if (!/^[a-z0-9-]+$/.test(connection.id)) throw new Error(t("aiConnectionIdInvalid"));
+	if (!connection.name.trim()) throw new Error(t("aiConnectionNameRequired"));
+	if (!connection.models.length || connection.models.some((m) => !m.trim() || /[\r\n]/.test(m))) throw new Error(t("aiConnectionModelsRequired"));
 	endpointUrl(connection.baseUrl, "models");
-	if (!["chat-completions", "responses", "anthropic"].includes(connection.format)) throw new Error("Choose a supported API format.");
+	if (!["chat-completions", "responses", "anthropic"].includes(connection.format)) throw new Error(t("aiConnectionFormatInvalid"));
 	for (const [header, value] of Object.entries(connection.headers || {})) {
-		if (/authorization|key|token|secret|cookie/i.test(header)) throw new Error("Use the API key field for credentials, not custom headers.");
-		if (!/^[a-z0-9-]+$/i.test(header) || /[\r\n]/.test(value) || ["host", "content-length", "connection"].includes(header.toLowerCase())) throw new Error("Invalid custom header.");
+		if (/authorization|key|token|secret|cookie/i.test(header)) throw new Error(t("aiConnectionHeaderCredentials"));
+		if (!/^[a-z0-9-]+$/i.test(header) || /[\r\n]/.test(value) || ["host", "content-length", "connection"].includes(header.toLowerCase())) throw new Error(t("aiConnectionHeaderInvalid"));
 	}
 }
 /** Load metadata defensively, retaining only supported non-secret fields. */
@@ -78,7 +79,7 @@ export interface DirectMessage { role: "user" | "assistant"; content: string }
 export interface DirectRequest { url: string; headers: Record<string, string>; body: Record<string, unknown> }
 export function buildDirectRequest(connection: AIConnection, model: string, key: string | null, messages: DirectMessage[], system: string, stream: boolean): DirectRequest {
 	validateConnection(connection);
-	if (!model || model === "default" || !connection.models.includes(model)) throw new Error("Choose a configured model.");
+	if (!model || model === "default" || !connection.models.includes(model)) throw new Error(t("aiConnectionModelRequired"));
 	const headers: Record<string, string> = { ...connection.headers, "Content-Type": "application/json" };
 	if (key) headers[connection.format === "anthropic" ? "x-api-key" : "Authorization"] = connection.format === "anthropic" ? key : `Bearer ${key}`;
 	if (connection.format === "anthropic") {
@@ -97,8 +98,8 @@ interface ModelReply {
 }
 export function modelReplyText(data: ModelReply): string {
 	const stopReason = data.stop_reason ?? (typeof data.delta === "object" ? data.delta.stop_reason : undefined);
-	if (data.choices?.[0]?.finish_reason === "length" || stopReason === "max_tokens" || stopReason === "model_context_window_exceeded") throw new Error("The response reached the model’s output limit. Ask for a shorter response.");
-	if (data.error || data.type === "error" || data.type === "response.failed" || data.type === "response.incomplete") throw new Error(data.error?.message || data.response?.error?.message || data.message || "The model request did not complete.");
+	if (data.choices?.[0]?.finish_reason === "length" || stopReason === "max_tokens" || stopReason === "model_context_window_exceeded") throw new Error(t("aiResponseLimit"));
+	if (data.error || data.type === "error" || data.type === "response.failed" || data.type === "response.incomplete") throw new Error(data.error?.message || data.response?.error?.message || data.message || t("aiResponseIncomplete"));
 	if (data.type === "response.output_text.delta" && typeof data.delta === "string") return data.delta;
 	if (typeof data.delta === "object") return data.delta.text || "";
 	return data.choices?.[0]?.delta?.content || data.choices?.[0]?.message?.content || data.output_text ||

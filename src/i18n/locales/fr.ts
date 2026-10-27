@@ -315,7 +315,6 @@ export const fr: TranslationSchema = {
 	settingsAITabCLI: "CLI",
 	settingsAITabAPI: "API",
 	settingsAITabLocal: "Local",
-	settingsAIConnectionType: "Type de connexion",
 	settingsAIConnectionsAPI: "Connexions API",
 	settingsAIConnectionsLocal: "Connexions locales",
 	settingsAIAddProvider: "Ajouter un fournisseur",
@@ -456,4 +455,20 @@ export const fr: TranslationSchema = {
 	aiChatReadOnlyHint: "{0} est en lecture seule. Choisissez {1} et faites à nouveau votre demande pour appliquer les modifications.",
 	aiChatStopped: "Réponse arrêtée.",
 
+	// Validation and request errors
+	aiConnectionUrlInvalid: "Utilisez une URL HTTP ou HTTPS sans identifiants intégrés.",
+	aiConnectionIdInvalid: "L’identifiant de connexion est invalide.",
+	aiConnectionNameRequired: "Saisissez un nom.",
+	aiConnectionModelsRequired: "Saisissez au moins un identifiant de modèle.",
+	aiConnectionFormatInvalid: "Choisissez un format d’API pris en charge.",
+	aiConnectionHeaderCredentials: "Saisissez les identifiants dans le champ de clé API, pas dans les en-têtes personnalisés.",
+	aiConnectionHeaderInvalid: "L’en-tête personnalisé est invalide.",
+	aiConnectionModelRequired: "Choisissez un modèle configuré.",
+	aiResponseLimit: "La réponse a atteint la limite de sortie du modèle. Demandez une réponse plus courte.",
+	aiResponseIncomplete: "La requête au modèle n’a pas abouti.",
+	folderNameRequired: "Le nom du dossier ne peut pas être vide.",
+	folderPathInvalid: "Le chemin du dossier ne peut pas contenir '.' ou '..'.",
+	editorPlainText: "Texte brut",
+	settingsFooterAuthor: "Créé par {0}",
+	settingsFooterStar: "Ajouter une étoile sur {0}",
 };

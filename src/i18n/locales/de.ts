@@ -315,7 +315,6 @@ export const de: TranslationSchema = {
 	settingsAITabCLI: "CLI",
 	settingsAITabAPI: "API",
 	settingsAITabLocal: "Lokal",
-	settingsAIConnectionType: "Verbindungstyp",
 	settingsAIConnectionsAPI: "API-Verbindungen",
 	settingsAIConnectionsLocal: "Lokale Verbindungen",
 	settingsAIAddProvider: "Anbieter hinzufügen",
@@ -456,4 +455,20 @@ export const de: TranslationSchema = {
 	aiChatReadOnlyHint: "{0} ist schreibgeschützt. Wähle {1} und frage noch einmal, um Änderungen anzuwenden.",
 	aiChatStopped: "Antwort gestoppt.",
 
+	// Validation and request errors
+	aiConnectionUrlInvalid: "Verwende eine HTTP- oder HTTPS-URL ohne eingebettete Zugangsdaten.",
+	aiConnectionIdInvalid: "Die Verbindungs-ID ist ungültig.",
+	aiConnectionNameRequired: "Gib einen Namen ein.",
+	aiConnectionModelsRequired: "Gib mindestens eine Modell-ID ein.",
+	aiConnectionFormatInvalid: "Wähle ein unterstütztes API-Format.",
+	aiConnectionHeaderCredentials: "Trage Zugangsdaten im API-Schlüsselfeld ein, nicht in benutzerdefinierten Headern.",
+	aiConnectionHeaderInvalid: "Der benutzerdefinierte Header ist ungültig.",
+	aiConnectionModelRequired: "Wähle ein konfiguriertes Modell.",
+	aiResponseLimit: "Die Antwort hat das Ausgabelimit des Modells erreicht. Bitte um eine kürzere Antwort.",
+	aiResponseIncomplete: "Die Modellanfrage wurde nicht abgeschlossen.",
+	folderNameRequired: "Der Ordnername darf nicht leer sein.",
+	folderPathInvalid: "Der Ordnerpfad darf weder '.' noch '..' enthalten.",
+	editorPlainText: "Nur Text",
+	settingsFooterAuthor: "Entwickelt von {0}",
+	settingsFooterStar: "Stern auf {0} vergeben",
 };

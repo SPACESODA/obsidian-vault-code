@@ -121,7 +121,7 @@ export class AIChatView extends ItemView {
 
 	// Active chat file in vault
 	private currentChatFile: TFile | null = null;
-	private currentChatTitle = "Untitled Chat";
+	private currentChatTitle = t("aiChatNewChat");
 
 	// Context pinning state
 	private pinnedContextFile: TFile | null = null;
@@ -1088,7 +1088,7 @@ export class AIChatView extends ItemView {
 		this.pendingQuote = null;
 		this.renderSelectionQuote();
 		this.currentChatFile = null;
-		this.currentChatTitle = "Untitled Chat";
+		this.currentChatTitle = t("aiChatNewChat");
 		this.conversationId = undefined;
 		this.messages = [];
 		this.isContextPinned = false;

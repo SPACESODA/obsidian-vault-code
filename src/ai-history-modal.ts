@@ -123,7 +123,7 @@ export class AIChatHistoryModal extends Modal {
 			cls: "vault-code-history-item",
 		});
 
-		const mainEl = itemEl.createDiv({ cls: "vault-code-history-item-main" });
+		const mainEl = itemEl.createDiv({ cls: "vault-code-history-item-main", attr: { role: "button", tabindex: "0" } });
 
 		const fileIcon = mainEl.createSpan({ cls: "vault-code-history-item-icon" });
 		setIcon(fileIcon, "message-square");
@@ -141,9 +141,13 @@ export class AIChatHistoryModal extends Modal {
 		});
 
 		// Clicking row selects and loads this chat
-		mainEl.addEventListener("click", () => {
+		const select = () => {
 			this.onSelectChat(file);
 			this.close();
+		};
+		mainEl.addEventListener("click", select);
+		mainEl.addEventListener("keydown", (event) => {
+			if (event.key === "Enter" || event.key === " ") { event.preventDefault(); select(); }
 		});
 
 		// Hover action buttons
@@ -178,7 +182,7 @@ export class AIChatHistoryModal extends Modal {
 		if (fmTitle) return fmTitle;
 
 		const cleaned = file.basename.replace(/--(\d{2})(\d{2})(\d{2})$/, " $1:$2:$3");
-		return cleaned || "Untitled Chat";
+		return cleaned || t("aiChatNewChat");
 	}
 
 	private formatDate(file: TFile): string {

@@ -1257,7 +1257,7 @@ class CreateFileModal extends Modal {
 
 		const folderPath =
 			this.targetFolder.isRoot() || !this.targetFolder.path
-				? "Vault root"
+				? this.app.vault.getName()
 				: this.targetFolder.path;
 		const infoDiv = contentEl.createDiv({
 			cls: "hidden-files-modal-destination",
@@ -1376,9 +1376,7 @@ class CreateFileModal extends Modal {
 				stat = null;
 			}
 			if (stat && stat.type === "file") {
-				this.showError(
-					`Cannot create: '${segment}' is an existing file, not a folder.`,
-				);
+				this.showError(t("modalCreateFileExistsError", segment));
 				return;
 			}
 		}
@@ -2967,7 +2965,16 @@ export class DotfileView extends TextFileView {
 		this.data = this.getViewData();
 		this.isModified = false;
 		this.discardOnClose = false;
-		await super.save();
+		const file = this.file;
+		try {
+			await super.save();
+		} catch (error: unknown) {
+			if (this.file === file) {
+				this.isModified = true;
+				this.updateDirtyUI();
+			}
+			throw error;
+		}
 		this.updateDirtyUI();
 		this.updateStatus();
 		void this.updateGitStatus();
@@ -2993,7 +3000,16 @@ export class DotfileView extends TextFileView {
 		if (this.previewSave?.file === this.file) { await this.saveGuardedPreview(); return; }
 		this.data = this.getViewData();
 		this.isModified = false;
-		await super.save(clear);
+		const file = this.file;
+		try {
+			await super.save(clear);
+		} catch (error: unknown) {
+			if (this.file === file) {
+				this.isModified = true;
+				this.updateDirtyUI();
+			}
+			throw error;
+		}
 		this.updateDirtyUI();
 		void this.updateGitStatus();
 		this.plugin.debouncedUpdateGitStatus();
@@ -3582,7 +3598,7 @@ export class DotfileView extends TextFileView {
 	}
 
 	private getLanguageLabel(): string {
-		if (!this.file) return "Plain Text";
+		if (!this.file) return t("editorPlainText");
 		const ext = this.file.extension?.toLowerCase() ?? "";
 		const name = this.file.name.toLowerCase();
 
@@ -3751,7 +3767,7 @@ export class DotfileView extends TextFileView {
 			svg: "SVG",
 			swift: "Swift",
 			tex: "LaTeX",
-			text: "Plain Text",
+			text: t("editorPlainText"),
 			tf: "Terraform",
 			tfvars: "Terraform Vars",
 			toml: "TOML",
@@ -3761,7 +3777,7 @@ export class DotfileView extends TextFileView {
 			tsrx: "TradingView Script",
 			tsv: "TSV",
 			tsx: "TSX (React)",
-			txt: "Plain Text",
+			txt: t("editorPlainText"),
 			vert: "GLSL Vertex",
 			vue: "Vue",
 			wat: "WebAssembly Text",
@@ -3775,7 +3791,7 @@ export class DotfileView extends TextFileView {
 			zsh: "Zsh",
 		};
 
-		return labels[ext] ?? (ext ? ext.toUpperCase() : "Plain Text");
+		return labels[ext] ?? (ext ? ext.toUpperCase() : t("editorPlainText"));
 	}
 
 	private updateStatus(): void {
@@ -5056,6 +5072,7 @@ export default class VaultCodePlugin extends Plugin {
 		);
 
 		this.app.workspace.onLayoutReady(async () => {
+			if (this.unloading) return;
 			this.patchFileExplorer();
 			if (this.settings.showHiddenFiles) {
 				this.patchAdapter();
@@ -5072,6 +5089,7 @@ export default class VaultCodePlugin extends Plugin {
 
 			// Seamlessly restore code editor leaves on launch or after plugin update/reload
 			await this.reloadCodeEditorLeaves();
+			if (this.unloading) return;
 			this.updateAllLeafHeaderActions();
 
 			if (Platform.isDesktop) {
@@ -5088,16 +5106,6 @@ export default class VaultCodePlugin extends Plugin {
 				}
 			}
 		});
-
-		if (this.app.workspace.layoutReady) {
-			void this.reloadCodeEditorLeaves();
-			if (Platform.isDesktop && this.isGitAvailable()) {
-				void this.gitService.getRepoRoot().then(() => {
-					this.updateAllLeafHeaderActions();
-					void this.updateStatusBarGit();
-				});
-			}
-		}
 
 		this.registerEvent(
 			this.app.workspace.on("layout-change", () => {
@@ -5653,6 +5661,7 @@ export default class VaultCodePlugin extends Plugin {
 	}
 
 	private async reloadCodeEditorLeaves(): Promise<void> {
+		if (this.unloading) return;
 		const leavesToReload: WorkspaceLeaf[] = [];
 		const sidebarLeavesToDetach: WorkspaceLeaf[] = [];
 
@@ -5681,6 +5690,7 @@ export default class VaultCodePlugin extends Plugin {
 		}
 
 		for (const leaf of leavesToReload) {
+			if (this.unloading) return;
 			const viewState = leaf.getViewState();
 			const filePath =
 				(viewState?.state as { file?: string } | undefined)?.file ||
@@ -5697,6 +5707,7 @@ export default class VaultCodePlugin extends Plugin {
 			// Clear view state first so Obsidian purges the stale instance and re-invokes
 			// the newly registered DotfileView constructor cleanly
 			await leaf.setViewState({ type: "empty" });
+			if (this.unloading) return;
 			await leaf.setViewState({
 				type: VIEW_TYPE_DOTFILE,
 				state: targetState,
@@ -7456,7 +7467,7 @@ export default class VaultCodePlugin extends Plugin {
 			if (stat) {
 				if (stat.type === "file") {
 					throw new Error(
-						`Cannot create folder: '${segment}' already exists as a file.`,
+						t("modalCreateFileExistsError", segment),
 					);
 				}
 				continue;
@@ -7487,7 +7498,7 @@ export default class VaultCodePlugin extends Plugin {
 		data = "",
 	): Promise<TFile | null> {
 		const normalized = normalizePath(filePath);
-		if (!normalized) throw new Error("File path cannot be empty.");
+		if (!normalized) throw new Error(t("modalCreateFileEmptyError"));
 
 		const lastSlash = normalized.lastIndexOf("/");
 		const parentDir =
@@ -7495,14 +7506,14 @@ export default class VaultCodePlugin extends Plugin {
 		const fileName =
 			lastSlash !== -1 ? normalized.substring(lastSlash + 1) : normalized;
 
-		if (!fileName) throw new Error("File name cannot be empty.");
+		if (!fileName) throw new Error(t("modalCreateFileEmptyError"));
 
 		if (parentDir) {
 			await this.createFolderRecursive(parentDir);
 		}
 
 		if (await this.app.vault.adapter.exists(normalized)) {
-			throw new Error(`A file or folder named '${fileName}' already exists.`);
+			throw new Error(t("modalCreateFileExistsError", fileName));
 		}
 
 		const isDotfile =
@@ -7513,11 +7524,8 @@ export default class VaultCodePlugin extends Plugin {
 			await this.app.vault.adapter.write(normalized, data);
 			await this.registerHiddenPath(normalized);
 		} else {
-			try {
-				await this.app.vault.create(normalized, data);
-			} catch {
-				await this.app.vault.adapter.write(normalized, data);
-			}
+			// A failed create may mean another operation created this path. Never overwrite it.
+			await this.app.vault.create(normalized, data);
 		}
 
 		let file = this.app.vault.getAbstractFileByPath(normalized);
@@ -7987,13 +7995,13 @@ export default class VaultCodePlugin extends Plugin {
 		// eslint-disable-next-line no-control-regex -- Needed to strip control characters from folder input
 		const cleanInput = input.replace(/[\x00-\x1F]/g, " ").trim();
 		if (!cleanInput) {
-			view.displayError?.("Folder name cannot be empty.", item);
+			view.displayError?.(t("folderNameRequired"), item);
 			return false;
 		}
 
 		if (/[\\:*?"<>|]/.test(cleanInput)) {
 			view.displayError?.(
-				"Path cannot contain invalid characters (\\ : * ? \" < > |).",
+				t("modalCreateFilePathInvalidError"),
 				item,
 			);
 			return false;
@@ -8005,12 +8013,12 @@ export default class VaultCodePlugin extends Plugin {
 			.filter(Boolean);
 
 		if (segments.length === 0) {
-			view.displayError?.("Folder name cannot be empty.", item);
+			view.displayError?.(t("folderNameRequired"), item);
 			return false;
 		}
 
 		if (segments.some((s) => s === "." || s === "..")) {
-			view.displayError?.("Folder path cannot contain '.' or '..'.", item);
+			view.displayError?.(t("folderPathInvalid"), item);
 			return false;
 		}
 
@@ -8029,7 +8037,7 @@ export default class VaultCodePlugin extends Plugin {
 		if (await this.app.vault.adapter.exists(targetRelPath)) {
 			const folderName = segments[segments.length - 1];
 			view.displayError?.(
-				`A file or folder named '${folderName}' already exists.`,
+				t("modalCreateFileExistsError", folderName ?? ""),
 				item,
 			);
 			return false;
@@ -8974,6 +8982,11 @@ class VaultCodeSettingTab extends PluginSettingTab {
 					textEl.createDiv({ cls: "vault-code-agent-card-name", text: agent.name });
 
 					const isInstalled = !!agent.isInstalled;
+					if (isInstalled && !isChecking) {
+						cardEl.setAttribute("role", "button");
+						cardEl.setAttribute("aria-pressed", String(isActive));
+						cardEl.tabIndex = 0;
+					}
 					if (!isChecking) {
 						const versionText = isInstalled
 							? (agent.version ? statusLabels[agent.version] ?? agent.version : t("settingsAIAgentNotDetected"))
@@ -9071,12 +9084,16 @@ class VaultCodeSettingTab extends PluginSettingTab {
 						});
 					}
 
-					cardEl.addEventListener("click", () => {
+					const selectAgent = () => {
 						if (!isInstalled || isChecking || maintenanceRunning || refreshingProviders) return;
 						this.plugin.settings.aiProvider = agent.id;
 						void this.plugin.saveSettings().then(() => {
 							renderCards(currentAgents, false);
 						});
+					};
+					cardEl.addEventListener("click", selectAgent);
+					cardEl.addEventListener("keydown", (event) => {
+						if (event.target === cardEl && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); selectAgent(); }
 					});
 				}
 			};
@@ -9126,7 +9143,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 				updateAllBtn.disabled = true;
 				updateIcon.addClass("vault-code-spin");
 				updateText.setText(t("settingsAIAgentUpdating"));
-				logOperation("Checking installed CLIs before updating…", "Updating installed CLIs...");
+				logOperation(t("settingsAIAgentChecking"), t("settingsAIUpdatingCLIs"));
 
 				void (async () => {
 					try {
@@ -9134,7 +9151,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 						const result = await this.plugin.aiService.updateAllConnectedAgents(
 							(agent, success, error) => {
 								setAgentActivity(agent.id, success ? "updated" : "failed");
-								logOperation(`${agent.name}: ${success ? "Updated and version check passed" : error || "Update failed"}`);
+								logOperation(`${agent.name}: ${success ? t("settingsAIAgentUpdated") : error || t("settingsAIAgentUpdateFailedSingle", agent.name)}`);
 								if (!success) {
 									new Notice(t("settingsAIAgentUpdateFailedSingle", agent.name), 5000);
 								}
@@ -9159,7 +9176,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 					} catch (err: unknown) {
 						const msg = err instanceof Error ? err.message : String(err);
 						new Notice(`${t("settingsAIUpdateFailed")}: ${msg}`);
-						logOperation(msg, "Update stopped - see details");
+						logOperation(msg, t("settingsAIUpdateFailed"));
 					} finally {
 						maintenanceRunning = false;
 						refreshProvidersButton.disabled = false;
@@ -9406,39 +9423,9 @@ class VaultCodeSettingTab extends PluginSettingTab {
 		const footerEl = containerEl.createDiv({
 			cls: "vault-code-settings-footer",
 		});
-		footerEl.createSpan({ text: "Brought to you by " });
-		const authorLink = footerEl.createEl("a", {
-			text: "SPACESODA",
-			href: "https://github.com/SPACESODA",
-			attr: {
-				target: "_blank",
-				rel: "noopener noreferrer",
-			},
-		});
-		const handleAuthorClick = (e: MouseEvent): void => {
-			e.preventDefault();
-			e.stopPropagation();
-			openInDefaultBrowser("https://github.com/SPACESODA");
-		};
-		authorLink.addEventListener("click", handleAuthorClick);
-		authorLink.addEventListener("auxclick", handleAuthorClick);
-
-		footerEl.createSpan({ text: " | Star on " });
-		const starLink = footerEl.createEl("a", {
-			text: "GitHub",
-			href: "https://github.com/SPACESODA/obsidian-vault-code",
-			attr: {
-				target: "_blank",
-				rel: "noopener noreferrer",
-			},
-		});
-		const handleStarClick = (e: MouseEvent): void => {
-			e.preventDefault();
-			e.stopPropagation();
-			openInDefaultBrowser("https://github.com/SPACESODA/obsidian-vault-code");
-		};
-		starLink.addEventListener("click", handleStarClick);
-		starLink.addEventListener("auxclick", handleStarClick);
+		this.renderTextWithLinks(footerEl, t("settingsFooterAuthor"), [{ text: "SPACESODA", url: "https://github.com/SPACESODA" }]);
+		footerEl.createSpan({ text: " | " });
+		this.renderTextWithLinks(footerEl, t("settingsFooterStar"), [{ text: "GitHub", url: "https://github.com/SPACESODA/obsidian-vault-code" }]);
 	}
 
 	private renderTextWithLinks(
@@ -9459,11 +9446,13 @@ class VaultCodeSettingTab extends PluginSettingTab {
 						rel: "noopener noreferrer",
 					},
 				});
-				a.addEventListener("click", (e: MouseEvent) => {
+				const openLink = (e: MouseEvent) => {
 					e.preventDefault();
 					e.stopPropagation();
 					openInDefaultBrowser(linkInfo.url);
-				});
+				};
+				a.addEventListener("click", openLink);
+				a.addEventListener("auxclick", openLink);
 			} else if (part) {
 				container.createSpan({ text: part });
 			}

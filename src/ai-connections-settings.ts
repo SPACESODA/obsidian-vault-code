@@ -108,7 +108,9 @@ class ConnectionModal extends Modal {
 		const keyOverride = () => this.clearKey ? "" : this.key || undefined;
 		const prepare = (requireModels = true) => {
 			this.draft.name = this.draft.name.trim(); this.draft.baseUrl = this.draft.baseUrl.trim().replace(/\/+$/, "");
-			const headers: unknown = JSON.parse(headersText || "{}");
+			let headers: unknown;
+			try { headers = JSON.parse(headersText || "{}"); }
+			catch { throw new Error(t("settingsAIConnectionInvalidHeaders")); }
 			if (!headers || typeof headers !== "object" || Array.isArray(headers) || Object.values(headers).some((v) => typeof v !== "string")) throw new Error(t("settingsAIConnectionInvalidHeaders"));
 			this.draft.headers = headers as Record<string, string>;
 			validateConnection(requireModels ? this.draft : { ...this.draft, models: ["discovery"] });

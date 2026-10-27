@@ -39,3 +39,44 @@ test('chat Enter confirms IME composition without sending a message',()=>{
   assert.equal(sends,1);assert.equal(prevented,1);
   callback.call(view,{key:'Enter',shiftKey:true,isComposing:false});assert.equal(sends,1);
 });
+
+test('ready layouts restore code editors once, and delayed callbacks stop after unload',async()=>{
+  const layoutStatements=onload.body.statements.filter(statement=>{
+    const text=statement.getText(ast);
+    return text.startsWith('this.app.workspace.onLayoutReady(')||text.startsWith('if (this.app.workspace.layoutReady)');
+  });
+  const setup=new Function('Platform',`return function(){${layoutStatements.map(statement=>statement.getText(ast)).join('\n')}};`)({isDesktop:false});
+  for(const ready of [true,false]){
+    let callback;let restores=0;
+    const owner={unloading:false,settings:{showHiddenFiles:false},app:{workspace:{layoutReady:ready,onLayoutReady(fn){if(ready)void fn();else callback=fn;}}},patchFileExplorer(){},updateAllLeafHeaderActions(){},async reloadCodeEditorLeaves(){restores++;}};
+    setup.call(owner);
+    await new Promise(resolve=>setImmediate(resolve));
+    assert.equal(restores,ready?1:0);
+    if(!ready){owner.unloading=true;await callback();assert.equal(restores,0);}
+  }
+});
+
+test('a failed file creation never falls back to overwriting the destination',async()=>{
+  const method=plugin.members.find(node=>ts.isMethodDeclaration(node)&&node.name.getText(ast)==='createFileWithFolders');
+  const output=ts.transpileModule(`class Subject {${method.getText(ast)}}`,{compilerOptions:{target:ts.ScriptTarget.ES2021}}).outputText;
+  const Subject=new Function('normalizePath','isDotPath','TFile','t',`${output};return Subject;`)(path=>path,()=>false,class{},key=>key);
+  const subject=new Subject();let writes=0;
+  subject.app={vault:{adapter:{exists:async()=>false,write:async()=>{writes++;}},create:async()=>{throw Error('Another process created this file');}}};
+  await assert.rejects(subject.createFileWithFolders('example.txt'),/Another process/);
+  assert.equal(writes,0);
+});
+
+test('failed editor saves retain the unsaved indicator and leave a different file alone',async()=>{
+  const editor=ast.statements.find(node=>ts.isClassDeclaration(node)&&node.name?.text==='DotfileView');
+  const methods=['saveExplicitly','save'].map(name=>editor.members.find(node=>ts.isMethodDeclaration(node)&&node.name.getText(ast)===name).getText(ast));
+  const output=ts.transpileModule(`class Subject extends Base {${methods.join('\n')}}`,{compilerOptions:{target:ts.ScriptTarget.ES2021}}).outputText;
+  class Base {async save(){await this.performSave();}}
+  const Subject=new Function('Base',`${output};return Subject;`)(Base);
+  for(const method of ['saveExplicitly','save'])for(const switchFile of [false,true]){
+    const subject=new Subject();let updates=0;
+    Object.assign(subject,{file:{path:'draft.txt'},isModified:true,discardOnClose:false,plugin:{settings:{disableAutoSave:true}},isBinaryOrNonEditable:()=>false,getViewData:()=>'Unsaved draft',updateDirtyUI(){updates++;},async performSave(){if(switchFile){this.file={path:'other.txt'};this.isModified=false;}throw Error('Disk full');}});
+    await assert.rejects(subject[method](),/Disk full/);
+    assert.equal(subject.isModified,!switchFile);
+    assert.equal(updates,switchFile?0:1);
+  }
+});
