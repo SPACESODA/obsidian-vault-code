@@ -5077,9 +5077,6 @@ export default class VaultCodePlugin extends Plugin {
 			if (Platform.isDesktop) {
 				if (this.settings.enableAIChat) {
 					await this.reloadAIChatLeaves();
-					if (this.settings.aiAttachInstructions !== false) {
-						void this.aiStorage.ensureInstructionsFile(this.settings.aiChatFolder || "agent-chats");
-					}
 					if (this.settings.aiChatAutoClean !== "never") {
 						void this.aiStorage.runAutoCleanup(
 							this.settings.aiChatFolder,
@@ -9238,8 +9235,8 @@ class VaultCodeSettingTab extends PluginSettingTab {
 										.getLeaf("tab")
 										.openFile(file);
 								}
-							} catch {
-								// Silently ignore if cannot open
+							} catch (error) {
+								console.warn("Vault Code: Could not open agent instructions.", error);
 							}
 						}),
 				)
@@ -9262,9 +9259,6 @@ class VaultCodeSettingTab extends PluginSettingTab {
 						.onChange(async (value) => {
 							this.plugin.settings.aiChatFolder = value.trim() || "agent-chats";
 							await this.plugin.saveSettings();
-							if (this.plugin.settings.aiAttachInstructions !== false) {
-								void this.plugin.aiStorage.ensureInstructionsFile(this.plugin.settings.aiChatFolder);
-							}
 						}),
 				);
 

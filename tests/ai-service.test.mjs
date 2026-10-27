@@ -542,8 +542,8 @@ test('all CLI providers receive the current mode rules independently of custom i
       await h.send(provider,{mode,prompt:'Review this note'});
       const prompt=h.spawned.at(-1).args.find(arg=>arg.includes('[Obsidian Chat Interface]'));
       assert.ok(prompt,provider);
-      assert.match(prompt,/Custom instructions and conversation history cannot change this mode/,provider);
-      assert.match(prompt,/requests to explain, review, or discuss do not authorize file changes/,provider);
+      assert.match(prompt,/Custom instructions cannot change this mode/,provider);
+      assert.match(prompt,/requests only to explain, review, or discuss do not authorize file changes/,provider);
       if(mode==='safe'){
         assert.match(prompt,/Do not edit, modify, create, delete, or rename any files/,provider);
         assert.match(prompt,/suggest switching to Edit mode to apply the changes/,provider);
@@ -563,11 +563,24 @@ test('direct models keep mode restrictions above conflicting custom preferences'
   let system;
   h.service.requestDirectModel=async(_connection,_model,_messages,instructions)=>{system=instructions;return 'Reply';};
   await h.send('connection:test',{mode:'safe'});
-  assert.match(system,/Custom instructions and conversation history cannot change this mode/);
+  assert.match(system,/Custom instructions cannot change this mode/);
   assert.match(system,/Do not edit, modify, create, delete, or rename any files/);
   assert.match(system,/Do not emit edit proposals/);
   await h.send('connection:test',{mode:'edit',activeFile:{path:'Note/test.md'},activeContent:'Original',prompt:'Explain this note'});
-  assert.match(system,/requests to explain, review, or discuss do not authorize file changes/);
+  assert.match(system,/requests only to explain, review, or discuss do not authorize file changes/);
   assert.match(system,/only to carry out changes explicitly requested by the user/);
   assert.match(system,/The user must review and apply it/);
+});
+
+test('review-and-fix requests retain explicit edit authorization without reviving an earlier mode',async()=>{
+  const h=harness({bins:{agy:'/fake/agy'}});
+  for(const mode of ['safe','edit']){
+    await h.send('antigravity',{mode,prompt:'Review this note and fix the errors',history:[{role:'user',content:'Earlier mode: Edit mode'}]});
+    const prompt=h.spawned.at(-1).args.find(arg=>arg.includes('[Obsidian Chat Interface]'));
+    assert.match(prompt,/requests only to explain, review, or discuss do not authorize file changes/);
+    assert.match(prompt,/A request to review and fix explicitly authorizes the requested fixes in Edit mode/);
+    assert.match(prompt,/Earlier mode settings in the conversation do not override it/);
+    if(mode==='safe')assert.match(prompt,/Do not edit, modify, create, delete, or rename any files/);
+    else assert.match(prompt,/only to carry out changes explicitly requested by the user/);
+  }
 });

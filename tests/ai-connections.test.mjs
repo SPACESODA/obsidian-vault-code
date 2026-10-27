@@ -153,7 +153,7 @@ test('quoted selection context is sent once without exposing the rest of the sou
   const prompt='Explain this\n\n> **Note/test.md · L2**\n>\n> selected snippet';
   await h.send({prompt,contextInPrompt:true,activeFile:{path:'Note/test.md'},activeContent:'PRIVATE BEFORE\nselected snippet\nPRIVATE AFTER',selectedText:'selected snippet',mode:'edit'});
   const messages=h.requests[0].body.messages;
-  assert.equal(messages.at(-1).content,prompt);
+  assert.ok(messages.at(-1).content.startsWith(prompt));
   assert.equal((JSON.stringify(messages).match(/selected snippet/g)||[]).length,1);
   assert.ok(!JSON.stringify(messages).includes('PRIVATE'));
   assert.match(messages[0].content,/replace only that snippet/);
@@ -167,7 +167,9 @@ test('agent instructions attach via <instructions> when enabled and present',asy
   const sentPrompt=h.requests[0].body.messages.find(m=>m.role==='user').content;
   assert.ok(sentPrompt.includes('<instructions>'));
   assert.ok(sentPrompt.includes('Always use wikilinks.'));
-  assert.ok(sentPrompt.includes('Do not quote, repeat, or reference these instructions in your reply.'));
+  assert.ok(sentPrompt.includes('Apply these preferences without mentioning them unless relevant or requested.'));
+  assert.ok(sentPrompt.includes('They replace earlier versions from that file'));
+  assert.ok(sentPrompt.includes('Specific user requests take precedence over general preferences'));
   assert.ok(sentPrompt.includes('</instructions>'));
 });
 
@@ -179,6 +181,8 @@ test('agent instructions omitted when toggle is disabled or content empty',async
   const sentPrompt=h.requests[0].body.messages.find(m=>m.role==='user').content;
   assert.ok(!sentPrompt.includes('<instructions>'));
   assert.ok(!sentPrompt.includes('Ignored rules'));
+  assert.ok(sentPrompt.includes('[Custom preferences: disabled]'));
+  assert.ok(sentPrompt.includes('Do not apply earlier preferences from that file'));
 });
 
 test('resolveAgentInstructions reads instructions from chat folder',async()=>{
@@ -188,4 +192,35 @@ test('resolveAgentInstructions reads instructions from chat folder',async()=>{
   h.plugin.aiStorage={loadInstructions:async(folder)=>folder==='Custom-Chats'?'Custom rules':''};
   const resolved=await h.service.resolveAgentInstructions();
   assert.equal(resolved,'Custom rules');
+});
+
+test('empty instruction notes cancel earlier preferences without falling back to defaults',async()=>{
+  const h=harness();let reads=0;
+  h.plugin.settings.aiAttachInstructions=true;
+  h.plugin.aiStorage={loadInstructions:async()=>{reads++;return '';}};
+  await h.send();
+  const prompt=h.requests[0].body.messages.at(-1).content;
+  assert.match(prompt,/\[Custom preferences: empty\]/);
+  assert.match(prompt,/Do not apply earlier preferences from that file/);
+  assert.doesNotMatch(prompt,/<instructions>/);assert.equal(reads,1);
+});
+
+test('instruction snapshots are refreshed each turn and disabling skips file access',async()=>{
+  const h=harness();let content='Use English.',reads=0;
+  h.plugin.settings.aiAttachInstructions=true;
+  h.plugin.aiStorage={loadInstructions:async()=>{reads++;return content;}};
+  await h.send();content='Use Chinese.';await h.send();
+  const prompt=h.requests[1].body.messages.at(-1).content;
+  assert.match(prompt,/Use Chinese/);assert.doesNotMatch(prompt,/Use English/);
+  h.plugin.settings.aiAttachInstructions=false;await h.send();
+  assert.equal(reads,2);assert.match(h.requests[2].body.messages.at(-1).content,/Custom preferences: disabled/);
+});
+
+test('long instructions remain bounded, avoid broken Unicode and identify omitted content internally',async()=>{
+  const h=harness();
+  h.plugin.aiStorage={loadInstructions:async()=>'x'.repeat(9999)+'😀'+'not included'.repeat(1000)};
+  const instructions=await h.service.resolveAgentInstructions();
+  assert.ok(instructions.length<10200);assert.equal(instructions.slice(0,9999),'x'.repeat(9999));
+  assert.doesNotMatch(instructions,/\uD83D/);assert.doesNotMatch(instructions,/not includednot included/);
+  assert.match(instructions,/instructions.md was shortened/);
 });

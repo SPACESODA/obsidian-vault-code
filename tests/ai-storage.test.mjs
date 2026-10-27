@@ -7,7 +7,7 @@ const {load:yamlLoad,dump:yamlDump,JSON_SCHEMA}=require('js-yaml');
 // Obsidian keeps date-time scalars as strings rather than coercing them to UTC Date objects.
 const yaml=source=>yamlLoad(source,{schema:JSON_SCHEMA});
 const dump=value=>yamlDump(value,{schema:JSON_SCHEMA});
-const compiled=await build({stdin:{contents:'export * from "./src/ai-chat-dates"; export * from "./src/ai-storage"; export * from "./src/ai-chat-properties"; export { AIChatHistoryModal } from "./src/ai-history-modal";',resolveDir:process.cwd(),sourcefile:'chat-storage-test.ts'},bundle:true,write:false,format:'cjs',platform:'node',plugins:[{name:'obsidian',setup(b){
+const compiled=await build({stdin:{contents:'export * from "./src/ai-chat-dates"; export * from "./src/ai-storage"; export * from "./src/ai-chat-properties"; export { AIChatHistoryModal } from "./src/ai-history-modal"; export { TFile, TFolder } from "obsidian";',resolveDir:process.cwd(),sourcefile:'chat-storage-test.ts'},bundle:true,write:false,format:'cjs',platform:'node',plugins:[{name:'obsidian',setup(b){
   b.onResolve({filter:/^obsidian$/},()=>({path:'obsidian',namespace:'stub'}));
   b.onLoad({filter:/.*/,namespace:'stub'},()=>({resolveDir:process.cwd(),contents:`
     import {load,dump,JSON_SCHEMA} from 'js-yaml';
@@ -183,4 +183,93 @@ test('instruction read failures return the built-in instructions',async()=>{
     storage.ensureInstructionsFile=async()=>{if(failAt==='ensure')throw Error('creation failed');return {};};
     assert.equal(await storage.loadInstructions('agent-chats'),mod.exports.DEFAULT_AGENT_INSTRUCTIONS.trim());
   }
+});
+
+test('concurrent instruction creation is shared and a deleted note can be recreated',async()=>{
+  const {TFile,TFolder}=mod.exports;
+  const files=new Map([['agent-chats',new TFolder()]]);
+  let creates=0,release;
+  const ready=new Promise(resolve=>{release=resolve;});
+  const storage=new AIStorage({vault:{
+    getAbstractFileByPath:path=>files.get(path),
+    create:async(path,content)=>{creates++;await ready;assert.ok(!files.has(path));const file=new TFile();file.content=content;files.set(path,file);return file;},
+  }});
+  const pending=Array.from({length:5},()=>storage.ensureInstructionsFile('agent-chats'));
+  release();
+  const results=await Promise.all(pending);
+  assert.equal(creates,1);assert.ok(results.every(file=>file===results[0]));
+  files.delete('agent-chats/instructions.md');
+  await storage.ensureInstructionsFile('agent-chats');assert.equal(creates,2);
+});
+
+test('instruction creation preserves existing notes and recovers from an external creation race',async()=>{
+  const {TFile,TFolder}=mod.exports;
+  let existing;const external=new TFile();external.content='Custom preferences';let creates=0;
+  const storage=new AIStorage({vault:{
+    getAbstractFileByPath:path=>path==='agent-chats'?new TFolder():existing,
+    create:async()=>{creates++;existing=external;throw Error('File already exists');},
+  }});
+  assert.equal(await storage.ensureInstructionsFile('agent-chats'),external);
+  assert.equal(await storage.ensureInstructionsFile('agent-chats'),external);
+  assert.equal(creates,1);assert.equal(external.content,'Custom preferences');
+});
+
+test('failed instruction creation releases pending work so a later request can retry',async()=>{
+  let attempts=0;const {TFile,TFolder}=mod.exports;
+  const storage=new AIStorage({vault:{
+    getAbstractFileByPath:path=>path==='agent-chats'?new TFolder():null,
+    create:async()=>{attempts++;if(attempts===1)throw Error('Unavailable');return new TFile();},
+  }});
+  await assert.rejects(storage.ensureInstructionsFile('agent-chats'),/Unavailable/);
+  assert.ok(await storage.ensureInstructionsFile('agent-chats') instanceof TFile);
+  assert.equal(attempts,2);
+});
+
+test('folder creation tolerates another operation creating the folder but preserves other failures',async()=>{
+  const {TFile,TFolder}=mod.exports;let existing;
+  const storage=new AIStorage({vault:{
+    getAbstractFileByPath:()=>existing,
+    createFolder:async()=>{if(!existing)existing=new TFolder();throw Error('Already exists');},
+  }});
+  assert.ok(await storage.ensureFolder('agent-chats') instanceof TFolder);
+  existing=new TFile();
+  await assert.rejects(storage.ensureFolder('agent-chats'),/Already exists/);
+});
+
+test('instruction frontmatter accepts BOM, CRLF and empty mappings and requires full delimiter lines',async()=>{
+  const cases=[
+    ['\uFEFF---\r\ntags: [metadata]\r\n---\r\nRules','Rules'],
+    ['---\n---\nRules','Rules'],
+    ['--- \nname: rules\n--- \nRules','Rules'],
+    ['---\nname: rules\n---',''],
+    ['---\nname: rules\n----\nRules','---\nname: rules\n----\nRules'],
+    ['---\nname: rules\n---not-a-delimiter\nRules','---\nname: rules\n---not-a-delimiter\nRules'],
+    ['Text\n---\nname: rules\n---\nRules','Text\n---\nname: rules\n---\nRules'],
+    ['\uFEFFPlain preferences','Plain preferences'],
+  ];
+  for(const [source,expected] of cases){
+    const storage=new AIStorage({vault:{read:async()=>source}});storage.ensureInstructionsFile=async()=>({});
+    assert.equal(await storage.loadInstructions('agent-chats'),expected);
+  }
+});
+
+test('only the designated instruction note is excluded from chat history',async()=>{
+  const files=['agent-chats/instructions.md','other/instructions.md','agent-chats/nested/instructions.md'].map(path=>({path,name:'instructions.md',stat:{mtime:0}}));
+  const storage=new AIStorage({vault:{getMarkdownFiles:()=>files},metadataCache:{getFileCache:()=>({frontmatter:{type:'Agent Chat'}})}});
+  assert.deepEqual((await storage.listChatNotes('agent-chats')).map(file=>file.path),['agent-chats/nested/instructions.md','other/instructions.md']);
+});
+
+test('changing the chat folder to a parent never lists or cleans up older instruction notes',async()=>{
+  const oldInstructions={path:'agent-chats/old/instructions.md',name:'instructions.md',stat:{mtime:0}};
+  const currentInstructions={path:'agent-chats/instructions.md',name:'instructions.md',stat:{mtime:0}};
+  const chat={path:'agent-chats/chat.md',name:'chat.md',stat:{mtime:0}};
+  const trashed=[];
+  const storage=new AIStorage({
+    vault:{getMarkdownFiles:()=>[currentInstructions,oldInstructions,chat],read:async file=>file===chat?'---\ntype: Agent Chat\n---\n##### You\nQuestion':'Preferences'},
+    metadataCache:{getFileCache:file=>({frontmatter:file===chat?{type:'Agent Chat'}:{}})},
+    fileManager:{trashFile:async file=>{trashed.push(file.path);}},
+  });
+  assert.deepEqual((await storage.listChatNotes('agent-chats')).map(file=>file.path),[chat.path]);
+  await storage.cleanupOldChats('agent-chats','all');
+  assert.deepEqual(trashed,[chat.path]);
 });

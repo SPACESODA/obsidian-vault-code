@@ -15,8 +15,11 @@ function chatFrontmatter(content: string): { properties: Record<string, unknown>
 }
 
 export const DEFAULT_AGENT_INSTRUCTIONS = `- Keep a helpful, professional, and concise tone.
-- Respond in clear, readable Markdown.
-- When referencing notes in the vault, use Obsidian wikilinks like [[Note Title]].
+- Respond in clear, readable Markdown unless another format is requested.
+- Distinguish facts from assumptions. Ask a brief question when missing information would materially affect the result.
+- When referencing Markdown notes in the vault, use Obsidian wikilinks such as [[Note Title]]. Use file paths for other file types.
+- Preserve each file's language, structure, formatting, and conventions unless the requested change requires otherwise.
+- Keep edits focused on the request. Preserve unrelated content, links, metadata, and functionality.
 `;
 
 export interface ChatMetadata {
@@ -38,6 +41,7 @@ export interface ParsedChat {
 
 export class AIStorage {
 	private app: App;
+	private pendingInstructions = new Map<string, Promise<TFile>>();
 
 	constructor(app: App) {
 		this.app = app;
@@ -58,7 +62,14 @@ export class AIStorage {
 			return this.app.vault.getRoot();
 		}
 
-		return await this.app.vault.createFolder(normalized);
+		try {
+			return await this.app.vault.createFolder(normalized);
+		} catch (error) {
+			// Another operation may have created the same folder while we awaited it.
+			const created = this.app.vault.getAbstractFileByPath(normalized);
+			if (created instanceof TFolder) return created;
+			throw error;
+		}
 	}
 
 	/**
@@ -379,11 +390,18 @@ export class AIStorage {
 	public async listChatNotes(folderPath: string): Promise<TFile[]> {
 		const normalized = normalizePath(folderPath).replace(/^\/+|\/+$/g, "");
 		const allFiles = this.app.vault.getMarkdownFiles();
+		const instructionsPath = this.getInstructionsPath(normalized);
 
 		const chatFiles: TFile[] = [];
 
 		for (const file of allFiles) {
-			if (file.name === "instructions.md") continue;
+			if (file.path === instructionsPath) continue;
+			// Keep instruction notes from previous chat folders out of cleanup, while
+			// allowing explicitly marked chat histories that happen to use this name.
+			if (file.name === "instructions.md") {
+				const type: unknown = this.app.metadataCache.getFileCache(file)?.frontmatter?.type;
+				if (type !== "Agent Chat" && type !== "AI Chat") continue;
+			}
 			const inFolder = normalized.length === 0 || file.path.startsWith(`${normalized}/`);
 
 			if (inFolder) {
@@ -418,8 +436,27 @@ export class AIStorage {
 		if (existing instanceof TFile) {
 			return existing;
 		}
-		await this.ensureFolder(folderPath);
-		return await this.app.vault.create(filePath, DEFAULT_AGENT_INSTRUCTIONS);
+		const pending = this.pendingInstructions.get(filePath);
+		if (pending) return pending;
+		const task = (async () => {
+			try {
+				await this.ensureFolder(folderPath);
+				const created = this.app.vault.getAbstractFileByPath(filePath);
+				if (created instanceof TFile) return created;
+				return await this.app.vault.create(filePath, DEFAULT_AGENT_INSTRUCTIONS);
+			} catch (error) {
+				// Sync or another plugin may have created the note in the meantime.
+				const created = this.app.vault.getAbstractFileByPath(filePath);
+				if (created instanceof TFile) return created;
+				throw error;
+			}
+		})();
+		this.pendingInstructions.set(filePath, task);
+		try {
+			return await task;
+		} finally {
+			this.pendingInstructions.delete(filePath);
+		}
 	}
 
 	/** Loads instructions text, recreating the default note if deleted or missing. */
@@ -432,7 +469,7 @@ export class AIStorage {
 			// Fall back to the built-in instructions if the note cannot be read.
 		}
 		return raw
-			.replace(/^---[\s\S]*?\r?\n---\s*/, "")
+			.replace(/^\uFEFF?---[\t ]*\r?\n(?:[\s\S]*?\r?\n)?---[\t ]*(?:\r?\n|$)/, "")
 			// Keep a boundary so removing a comment cannot form a new comment opener.
 			.replace(/<!--[\s\S]*?(?:-->|$)/g, "\n")
 			.trim();
