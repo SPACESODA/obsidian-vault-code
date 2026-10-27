@@ -5073,13 +5073,7 @@ export default class VaultCodePlugin extends Plugin {
 		// Registering a view can immediately restore it during startup or hot reload.
 		// Its settings and ignore policy must already be ready before onOpen runs.
 		await this.initializeIgnoreFiltering();
-		if (Platform.isDesktop) {
-			this.readingSelection = this.addChild(new ReadingSelectionChat(this.app, () => this.settings.enableAIChat && this.settings.enableSendToChatIcon && !this.unloading, quote => { void this.activateAIChatView(quote); }));
-			this.webViewerChat = this.addChild(new WebViewerChat(this.app, () => this.settings.enableAIChat && !this.unloading,
-				quote => { void this.activateAIChatView(quote); },
-				() => { for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_AI_CHAT)) if (leaf.view instanceof AIChatView) leaf.view.refreshWebContext(); },
-				() => this.settings.enableSendToChatIcon));
-		}
+		this.syncAIChatFeatures();
 		if (Platform.isDesktop) {
 			this.externalFolders = new ExternalFolderFeature(this.app, path => this.isPathIgnored(path, true), () => this.applyFileExplorerFiltering());
 			this.register(this.externalFolders.guardDeletion());
@@ -5182,6 +5176,7 @@ export default class VaultCodePlugin extends Plugin {
 			if (this.unloading) return;
 			this.updateAllLeafHeaderActions();
 
+			if (!Platform.isDesktop) this.app.workspace.detachLeavesOfType(VIEW_TYPE_AI_CHAT);
 			if (Platform.isDesktop) {
 				if (this.settings.enableAIChat) {
 					await this.reloadAIChatLeaves();
@@ -5808,6 +5803,7 @@ export default class VaultCodePlugin extends Plugin {
 
 	onunload() {
 		this.unloading = true;
+		this.aiService.suspend();
 		if (this.gitStatusDebounceTimer !== null) {
 			window.clearTimeout(this.gitStatusDebounceTimer);
 			this.gitStatusDebounceTimer = null;
@@ -5850,6 +5846,34 @@ export default class VaultCodePlugin extends Plugin {
 		this.removeAIChatRibbon();
 
 		DotfileView.clearCssCache();
+	}
+
+	/** Keep AI helpers dormant when chat is disabled or unavailable on this device. */
+	public syncAIChatFeatures(): void {
+		const enabled = Platform.isDesktop && this.settings.enableAIChat && !this.unloading;
+		if (enabled) {
+			this.aiService.resume();
+			if (!this.readingSelection) this.readingSelection = this.addChild(new ReadingSelectionChat(this.app,
+				() => this.settings.enableAIChat && this.settings.enableSendToChatIcon && !this.unloading,
+				quote => { void this.activateAIChatView(quote); }));
+			if (!this.webViewerChat) this.webViewerChat = this.addChild(new WebViewerChat(this.app,
+				() => this.settings.enableAIChat && !this.unloading,
+				quote => { void this.activateAIChatView(quote); },
+				() => { for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_AI_CHAT)) if (leaf.view instanceof AIChatView) leaf.view.refreshWebContext(); },
+				() => this.settings.enableSendToChatIcon));
+			this.addAIChatRibbon();
+		} else {
+			for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_AI_CHAT)) if (leaf.view instanceof AIChatView) leaf.view.deactivate();
+			this.aiService.suspend();
+			if (this.readingSelection) this.removeChild(this.readingSelection);
+			if (this.webViewerChat) this.removeChild(this.webViewerChat);
+			this.readingSelection = undefined;
+			this.webViewerChat = undefined;
+			this.removeAIChatRibbon();
+			this.app.workspace.detachLeavesOfType(VIEW_TYPE_AI_CHAT);
+		}
+		this.refreshSendToChatIcons();
+		this.updateAllLeafHeaderActions();
 	}
 
 	public addAIChatRibbon(): void {
@@ -5911,7 +5935,7 @@ export default class VaultCodePlugin extends Plugin {
 		const docs = new Set<Document>([document]);
 		this.app.workspace.iterateAllLeaves(leaf => { if (leaf.view.containerEl.doc) docs.add(leaf.view.containerEl.doc); });
 		for (const doc of docs) {
-			if (!this.settings.enableSendToChatIcon) for (const button of doc.querySelectorAll<HTMLElement>(".vault-code-selection-agent")) button.hidden = true;
+			if (!Platform.isDesktop || !this.settings.enableAIChat || !this.settings.enableSendToChatIcon) for (const button of doc.querySelectorAll<HTMLElement>(".vault-code-selection-agent")) button.hidden = true;
 			doc.dispatchEvent(new Event("vault-code-selection-setting-change"));
 		}
 		this.readingSelection?.refresh();
@@ -8942,16 +8966,9 @@ class VaultCodeSettingTab extends PluginSettingTab {
 						.setValue(this.plugin.settings.enableAIChat)
 						.onChange(async (value) => {
 							this.plugin.settings.enableAIChat = value;
+							this.plugin.syncAIChatFeatures();
 							await this.plugin.saveSettings();
-							if (value) {
-								this.plugin.addAIChatRibbon();
-								void this.plugin.initAIChatLeaf();
-							} else {
-								this.plugin.removeAIChatRibbon();
-								this.plugin.aiService.clearCache();
-								this.app.workspace.detachLeavesOfType(VIEW_TYPE_AI_CHAT);
-							}
-							this.plugin.updateAllLeafHeaderActions();
+							if (value) void this.plugin.initAIChatLeaf();
 							this.refreshSettings(".vault-code-ai-enable-setting");
 						}),
 				);
@@ -9507,16 +9524,10 @@ class VaultCodeSettingTab extends PluginSettingTab {
 							}
 						});
 
-						// Reset AI service cache, ribbon icon and views
+						// Reset AI service cache and apply the same lifecycle as the switch.
 						this.plugin.aiService.clearCache();
-						if (this.plugin.settings.enableAIChat) {
-							this.plugin.addAIChatRibbon();
-							void this.plugin.initAIChatLeaf();
-						} else {
-							this.plugin.removeAIChatRibbon();
-							this.app.workspace.detachLeavesOfType(VIEW_TYPE_AI_CHAT);
-						}
-						this.plugin.updateAllLeafHeaderActions();
+						this.plugin.syncAIChatFeatures();
+						if (this.plugin.settings.enableAIChat) void this.plugin.initAIChatLeaf();
 
 						// Reset any active chat view session to clean initial state
 						this.plugin.refreshSendToChatIcons();

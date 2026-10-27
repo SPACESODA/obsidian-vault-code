@@ -4194,3 +4194,38 @@ body.vault-code-ignore-loading .nav-files-container { visibility: hidden; }
 	.vault-code-preview-find { gap: 3px; padding: 6px; }
 	.vault-code-preview-find button { padding: 5px; }
 }
+
+.vault-code-model-suggest-controls {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 4px 12px;
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+}
+
+.vault-code-model-suggest-refresh {
+	position: absolute;
+	top: 12px;
+	right: 44px;
+	width: 24px;
+	height: 24px;
+	padding: 0;
+	color: var(--text-muted);
+	background: transparent;
+	box-shadow: none;
+}
+
+.vault-code-model-refresh-label {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
+.vault-code-model-picker .prompt-input {
+	padding-right: 80px;
+}

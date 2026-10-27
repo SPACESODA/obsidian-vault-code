@@ -313,7 +313,14 @@ export const ru: TranslationSchema = {
 	settingsAICommandCopied: "Команда терминала скопирована в буфер обмена: {0}",
 	settingsAIAgentChecking: "Проверка...",
 	settingsAIAgentUpdateFailedSingle: "Не удалось обновить {0}",
-	aiChatSearchModelPlaceholder: "Фильтр моделей...",
+	aiChatSearchModelPlaceholder: "Поиск моделей...",
+	aiChatLoadingModels: "Загрузка моделей...",
+	aiChatRefreshModels: "Обновить модели",
+	aiChatAgentDefault: "По умолчанию",
+	aiChatMoreModels: "Другие модели...",
+	aiChatAgentDefaultDescription: "Используется модель по умолчанию, заданная у провайдера.",
+	aiChatDisabled: "Чат с агентом отключён.",
+	aiChatConnectionUnavailable: "Подключение недоступно",
 
 	// AI Connections & Settings Tabs
 	settingsAITabCLI: "CLI",

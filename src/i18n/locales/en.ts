@@ -311,7 +311,14 @@ export const en = {
 	settingsAICommandCopied: "Command copied to clipboard to run in Terminal: {0}",
 	settingsAIAgentChecking: "Checking...",
 	settingsAIAgentUpdateFailedSingle: "Failed to update {0}",
-	aiChatSearchModelPlaceholder: "Filter models...",
+	aiChatSearchModelPlaceholder: "Search models...",
+	aiChatLoadingModels: "Loading models...",
+	aiChatRefreshModels: "Refresh models",
+	aiChatAgentDefault: "Default",
+	aiChatMoreModels: "More models...",
+	aiChatAgentDefaultDescription: "Use the provider’s configured default model.",
+	aiChatDisabled: "Agent chat is disabled.",
+	aiChatConnectionUnavailable: "Connection unavailable",
 
 	// AI Connections & Settings Tabs
 	settingsAITabCLI: "CLI",

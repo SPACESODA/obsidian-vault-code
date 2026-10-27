@@ -42,9 +42,21 @@ const OBSIDIAN_STUB = `
 	export class Component { registerEvent(){} }
 	export class Modal {}
 	export class SuggestModal {}
-	export class Menu {}
+	export class Menu {
+		constructor() { this.items = []; globalThis.__TestMenu = this; }
+		addItem(fn) {
+			const item = { setTitle(value) { this.title = value; return this; }, setIcon() { return this; },
+				setChecked() { return this; }, onClick(fn) { this.click = fn; return this; } };
+			fn(item); this.items.push(item); return this;
+		}
+		addSeparator() { return this; }
+		showAtMouseEvent() { this.shown = true; }
+		onHide(fn) { this.onHidden = fn; }
+		hide() { this.onHidden?.(); }
+	}
 	export class ToggleComponent { setValue(){ return this; } onChange(){ return this; } }
 	export const Platform = { isDesktop: true, isMacOS: true, isWin: false };
+	globalThis.__ChatPlatform = Platform;
 	export const setIcon = () => {};
 	export const Notice = class {};
 	export const debounce = (fn) => fn;
@@ -57,6 +69,7 @@ const OBSIDIAN_STUB = `
 const { AIChatView, VIEW_TYPE_AI_CHAT } = await load("src/ai-chat-view.ts", {
 	obsidian: OBSIDIAN_STUB,
 });
+const CHAT_PLATFORM = globalThis.__ChatPlatform;
 
 test("AIChatView getState and setState preserve active chat file across view reloads", async () => {
 	const leaf = {};
@@ -718,4 +731,80 @@ test('queued transcript snapshots remain ordered and a failed save does not prev
     const first=h.view.persistChat();h.view.messages[0].content='Second';const second=h.view.persistChat();
     await Promise.all([first,second]);assert.equal(calls,2);assert.equal(h.saves[0].messages[0].content,'Second');
   }finally{console.error=previous;}
+});
+
+test('pending model discovery updates the open picker without replacing an explicit selection', async () => {
+  const h = chatFixHarness();
+  let finish, calls = 0, shown;
+  h.plugin.aiService.getModelsForProvider = () => { calls++; return new Promise(resolve => { finish = resolve; }); };
+  h.view.modelPicker = { provider: 'antigravity', modal: { setModels: (models, loading) => { shown = { models, loading }; } } };
+  const first = h.view.loadModelsForProvider('antigravity');
+  const second = h.view.loadModelsForProvider('antigravity');
+  assert.equal(calls, 1);
+  assert.equal(h.view.loadingProvider, 'antigravity');
+  finish([{ id: 'new-model', displayName: 'New model' }]);
+  await Promise.all([first, second]);
+  assert.equal(h.view.selectedModel, 'chosen-model');
+  assert.deepEqual(shown.models.map(model => model.id), ['new-model', 'chosen-model']);
+  assert.equal(shown.loading, false);
+  assert.equal(h.view.loadingProvider, null);
+});
+
+test('a slow previous provider cannot replace the current model list', async () => {
+  const h = chatFixHarness();
+  let finish;
+  h.plugin.aiService.getModelsForProvider = provider => provider === 'antigravity'
+    ? new Promise(resolve => { finish = resolve; })
+    : Promise.resolve([{ id: 'codex-model', displayName: 'Codex model' }]);
+  const old = h.view.loadModelsForProvider('antigravity');
+  h.view.selectedProvider = 'codex';
+  await h.view.loadModelsForProvider('codex');
+  finish([{ id: 'old-model', displayName: 'Old model' }]);
+  await old;
+  assert.deepEqual(h.view.availableModels.map(model => model.id), ['codex-model']);
+});
+
+
+test('short CLI model lists use a compact dropdown with Default and access to more models', () => {
+  const h = chatFixHarness();
+  h.view.availableModels = [{ id: 'default', displayName: 'Agent default' }, { id: 'chosen-model', displayName: 'Chosen model' }];
+  h.view.showModelMenu({});
+  assert.equal(globalThis.__TestMenu.shown, true);
+  assert.deepEqual(globalThis.__TestMenu.items.map(item => item.title), ['Default', 'Chosen model', 'More models...']);
+  assert.equal(h.view.modelPicker, undefined);
+});
+
+
+test('disabled or mobile chat panes detach before UI, model loading or history restoration', async () => {
+  for (const mobile of [false, true]) {
+    const h = chatFixHarness(); let detached = 0;
+    h.plugin.settings.enableAIChat = mobile;
+    CHAT_PLATFORM.isDesktop = !mobile;
+    h.view.leaf.detach = () => { detached++; };
+    h.plugin.aiService.getModelsForProvider = () => assert.fail('Unexpected model discovery');
+    h.view.buildHeader = () => assert.fail('Unexpected AI UI');
+    try {
+      await h.view.onOpen();
+      assert.equal(detached, 1);
+      await h.view.loadModelsForProvider('antigravity');
+      await h.view.setState({ chatPath: 'chat.md' }, {});
+      await h.view.loadChatFromFile(h.history);
+      await h.view.handleSubmit();
+      assert.equal(h.requests.length, 0);
+    } finally { CHAT_PLATFORM.isDesktop = true; }
+  }
+});
+
+test('deactivating chat closes its picker and blocks late model results', async () => {
+  const h = chatFixHarness(); let finish, closed = 0;
+  h.plugin.aiService.getModelsForProvider = () => new Promise(resolve => { finish = resolve; });
+  h.view.modelPicker = { provider: 'antigravity', modal: { close() { closed++; }, setModels() { assert.fail('Late picker update'); } } };
+  const pending = h.view.loadModelsForProvider('antigravity');
+  h.plugin.settings.enableAIChat = false;
+  h.view.deactivate();
+  finish([{ id: 'late-model', displayName: 'Late model' }]);
+  await pending;
+  assert.equal(closed, 1);
+  assert.equal(h.view.loadingProvider, null);
+  assert.ok(!h.view.availableModels.some(model => model.id === 'late-model'));
 });

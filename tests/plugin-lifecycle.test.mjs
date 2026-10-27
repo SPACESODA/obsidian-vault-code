@@ -14,7 +14,7 @@ const start=new Function('Platform','AIService','AIStorage','VIEW_TYPE_DOTFILE',
 test('settings and ignore initialization finish before restored views can open',async()=>{
   let finish;
   const opened=[];
-  const owner={ready:false,initializeIgnoreFiltering:()=>new Promise(resolve=>{finish=()=>{owner.ready=true;resolve();};}),registerView:(type,create)=>{opened.push(type);create({});}};
+  const owner={ready:false,syncAIChatFeatures(){},initializeIgnoreFiltering:()=>new Promise(resolve=>{finish=()=>{owner.ready=true;resolve();};}),registerView:(type,create)=>{opened.push(type);create({});}};
   const pending=start.call(owner);
   assert.deepEqual(opened,[]);
   finish();await pending;
@@ -45,10 +45,10 @@ test('ready layouts restore code editors once, and delayed callbacks stop after 
     const text=statement.getText(ast);
     return text.startsWith('this.app.workspace.onLayoutReady(')||text.startsWith('if (this.app.workspace.layoutReady)');
   });
-  const setup=new Function('Platform',`return function(){${layoutStatements.map(statement=>statement.getText(ast)).join('\n')}};`)({isDesktop:false});
+  const setup=new Function('Platform','VIEW_TYPE_AI_CHAT',`return function(){${layoutStatements.map(statement=>statement.getText(ast)).join('\n')}};`)({isDesktop:false},'chat');
   for(const ready of [true,false]){
     let callback;let restores=0;
-    const owner={unloading:false,settings:{showHiddenFiles:false},app:{workspace:{layoutReady:ready,onLayoutReady(fn){if(ready)void fn();else callback=fn;}}},patchFileExplorer(){},updateAllLeafHeaderActions(){},async reloadCodeEditorLeaves(){restores++;}};
+    const owner={unloading:false,settings:{showHiddenFiles:false},app:{workspace:{layoutReady:ready,detachLeavesOfType(){},onLayoutReady(fn){if(ready)void fn();else callback=fn;}}},patchFileExplorer(){},updateAllLeafHeaderActions(){},async reloadCodeEditorLeaves(){restores++;}};
     setup.call(owner);
     await new Promise(resolve=>setImmediate(resolve));
     assert.equal(restores,ready?1:0);
@@ -79,4 +79,29 @@ test('failed editor saves retain the unsaved indicator and leave a different fil
     assert.equal(subject.isModified,!switchFile);
     assert.equal(updates,switchFile?0:1);
   }
+});
+
+
+test('AI lifecycle unloads helpers while disabled or mobile, and re-enables without duplicates', () => {
+  const method = plugin.members.find(node => ts.isMethodDeclaration(node) && node.name.getText(ast) === 'syncAIChatFeatures');
+  const output = ts.transpileModule(`class Subject {${method.getText(ast)}}`, { compilerOptions: { target: ts.ScriptTarget.ES2021 } }).outputText;
+  const platform = { isDesktop: true };
+  class Chat { deactivate() { this.stopped = true; } }
+  class Helper {}
+  const Subject = new Function('Platform', 'ReadingSelectionChat', 'WebViewerChat', 'AIChatView', 'VIEW_TYPE_AI_CHAT', `${output};return Subject;`)(platform, Helper, Helper, Chat, 'chat');
+  const subject = new Subject();
+  let additions = 0, removals = 0, suspends = 0, resumes = 0, detached = 0, refreshed = 0;
+  const chat = new Chat();
+  Object.assign(subject, { settings: { enableAIChat: true }, app: { workspace: { getLeavesOfType: () => [{ view: chat }], detachLeavesOfType() { detached++; } } },
+    aiService: { resume() { resumes++; }, suspend() { suspends++; } }, addChild(child) { additions++; return child; }, removeChild() { removals++; },
+    addAIChatRibbon() {}, removeAIChatRibbon() {}, refreshSendToChatIcons() { refreshed++; }, updateAllLeafHeaderActions() {} });
+  subject.syncAIChatFeatures(); subject.syncAIChatFeatures();
+  assert.equal(additions, 2);
+  subject.settings.enableAIChat = false; subject.syncAIChatFeatures();
+  assert.equal(removals, 2); assert.equal(chat.stopped, true); assert.equal(detached, 1);
+  assert.equal(subject.readingSelection, undefined); assert.equal(subject.webViewerChat, undefined);
+  subject.settings.enableAIChat = true; platform.isDesktop = false; subject.syncAIChatFeatures();
+  assert.equal(additions, 2); assert.equal(suspends, 2);
+  platform.isDesktop = true; subject.syncAIChatFeatures();
+  assert.equal(additions, 4); assert.equal(resumes, 3); assert.equal(refreshed, 5);
 });

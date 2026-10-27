@@ -51,3 +51,12 @@ test('in-page anchors work but navigating away cannot mislabel another page as t
  const h=harness();h.doc.URL='about:srcdoc#section';h.advance();assert.equal(h.button.hidden,false);
  h.doc.URL='app://obsidian.md/other.html';h.frame.emit('load');h.advance();assert.equal(h.button.hidden,true);h.button.emit('click');assert.equal(h.sent.length,0);h.feature.dispose();
 });
+
+
+test('disabled preview selection removes iframe listeners and does not schedule work', () => {
+ const h=harness();h.advance();h.setEnabled(false);h.hostDoc.emit('vault-code-selection-setting-change');
+ assert.equal(h.doc.handlers.get('selectionchange').size,0);assert.equal(h.timers.size,0);
+ h.doc.emit('selectionchange');assert.equal(h.timers.size,0);assert.equal(h.button.hidden,true);
+ h.setEnabled(true);h.hostDoc.emit('vault-code-selection-setting-change');
+ assert.equal(h.doc.handlers.get('selectionchange').size,1);h.advance();assert.equal(h.button.hidden,false);h.feature.dispose();
+});

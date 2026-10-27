@@ -313,7 +313,14 @@ export const ja: TranslationSchema = {
 	settingsAICommandCopied: "ターミナル用コマンドをクリップボードにコピーしました: {0}",
 	settingsAIAgentChecking: "確認中...",
 	settingsAIAgentUpdateFailedSingle: "{0} の更新に失敗しました",
-	aiChatSearchModelPlaceholder: "モデルを絞り込み...",
+	aiChatSearchModelPlaceholder: "モデルを検索...",
+	aiChatLoadingModels: "モデルを読み込み中...",
+	aiChatRefreshModels: "モデルを再読み込み",
+	aiChatAgentDefault: "既定",
+	aiChatMoreModels: "ほかのモデル...",
+	aiChatAgentDefaultDescription: "プロバイダーで設定された既定のモデルを使用します。",
+	aiChatDisabled: "エージェントチャットは無効です。",
+	aiChatConnectionUnavailable: "接続を利用できません",
 
 	// AI Connections & Settings Tabs
 	settingsAITabCLI: "CLI",

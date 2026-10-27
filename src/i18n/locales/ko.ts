@@ -314,6 +314,13 @@ export const ko: TranslationSchema = {
 	settingsAIAgentChecking: "확인 중...",
 	settingsAIAgentUpdateFailedSingle: "{0} 업데이트 실패",
 	aiChatSearchModelPlaceholder: "모델 검색...",
+	aiChatLoadingModels: "모델 불러오는 중...",
+	aiChatRefreshModels: "모델 새로고침",
+	aiChatAgentDefault: "기본값",
+	aiChatMoreModels: "다른 모델...",
+	aiChatAgentDefaultDescription: "제공자에 설정된 기본 모델을 사용합니다.",
+	aiChatDisabled: "에이전트 채팅이 비활성화되어 있습니다.",
+	aiChatConnectionUnavailable: "연결을 사용할 수 없음",
 
 	// AI Connections & Settings Tabs
 	settingsAITabCLI: "CLI",

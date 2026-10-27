@@ -24,7 +24,7 @@ export class HtmlPreviewSelection {
 	private onChange = () => this.schedule();
 	private onFrameBlur = () => this.hide();
 	private onHostBlur = () => { this.pressed = null; this.pointers.clear(); this.hide(); };
-	private onSetting = () => { this.pressed = null; this.schedule(); };
+	private onSetting = () => { this.pressed = null; this.attach(); };
 	private onDown = (event: PointerEvent) => { this.pressed = null; this.pointers.add(event.pointerId); this.hide(); };
 	private onUp = (event: PointerEvent) => {
 		this.pointers.delete(event.pointerId);
@@ -57,6 +57,7 @@ export class HtmlPreviewSelection {
 	}
 	private attach(): void {
 		this.detach();
+		if (!this.options.enabled() || this.disposed) return;
 		try { this.doc = this.frame?.contentDocument ?? null; } catch { this.doc = null; }
 		this.doc?.addEventListener("selectionchange", this.onChange);
 		this.doc?.addEventListener("pointerdown", this.onDown, true);

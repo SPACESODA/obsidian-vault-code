@@ -124,12 +124,18 @@ test('cancelling a direct request suppresses error and completion callbacks',asy
   const handle=h.service.sendMessage({provider:'connection:test-provider',prompt:'Hi',scope:'active-note',mode:'safe',onDone:()=>callbacks++,onError:()=>callbacks++});
   await new Promise(r=>setImmediate(r));handle.kill();await new Promise(r=>setImmediate(r));assert.equal(callbacks,0);
 });
-test('mobile uses non-streaming Obsidian networking with no Node dependency',async()=>{
+test('mobile keeps API and local chat inactive without calling Obsidian networking or Node',async()=>{
   platform.isDesktop=false;
-  try{
-    const h=harness({config:local,key:null});let mobileBody;
-    globalThis.__mobileRequest=async o=>{mobileBody=JSON.parse(o.body);return {status:200,headers:{'content-type':'application/json'},text:'{"choices":[{"message":{"content":"Mobile reply"}}]}'};};
-    assert.equal((await h.send()).text,'Mobile reply');assert.equal(mobileBody.stream,false);assert.equal(h.requests.length,0);
+  try {
+    for(const config of [connection,local]) {
+      const h=harness({config,key:null});let callbacks=0;
+      globalThis.__mobileRequest=async()=>{assert.fail('Mobile AI networking must stay inactive');};
+      h.service.sendMessage({provider:core.connectionProvider(config.id),prompt:'Hi',onDone:()=>callbacks++,onError:()=>callbacks++});
+      assert.deepEqual(await h.service.getModelsForProvider(core.connectionProvider(config.id)),[]);
+      assert.deepEqual(await h.service.discoverConnectionModels(config),[]);
+      await h.service.testConnection(config);
+      assert.equal(callbacks,0);assert.equal(h.requests.length,0);assert.equal(h.service.activeRequests.size,0);
+    }
   }finally{platform.isDesktop=true;}
 });
 

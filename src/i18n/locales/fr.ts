@@ -313,7 +313,14 @@ export const fr: TranslationSchema = {
 	settingsAICommandCopied: "Commande de terminal copiée dans le presse-papiers : {0}",
 	settingsAIAgentChecking: "Vérification...",
 	settingsAIAgentUpdateFailedSingle: "Échec de la mise à jour de {0}",
-	aiChatSearchModelPlaceholder: "Filtrer les modèles...",
+	aiChatSearchModelPlaceholder: "Rechercher un modèle...",
+	aiChatLoadingModels: "Chargement des modèles...",
+	aiChatRefreshModels: "Actualiser les modèles",
+	aiChatAgentDefault: "Par défaut",
+	aiChatMoreModels: "Autres modèles...",
+	aiChatAgentDefaultDescription: "Utilise le modèle par défaut configuré chez le fournisseur.",
+	aiChatDisabled: "Le chat avec les agents est désactivé.",
+	aiChatConnectionUnavailable: "Connexion indisponible",
 
 	// AI Connections & Settings Tabs
 	settingsAITabCLI: "CLI",

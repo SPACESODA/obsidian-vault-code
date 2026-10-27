@@ -11,6 +11,7 @@ const compiled = await build({
     b.onResolve({ filter: /^obsidian$/ }, () => ({ path: 'obsidian', namespace: 'test' }));
     b.onLoad({ filter: /.*/, namespace: 'test' }, () => ({ contents: `
       export const Platform = { isDesktop: true, isWin: false, isMacOS: true };
+      globalThis.__ServicePlatform = Platform;
       export class App {} export class TFile {} export class FileSystemAdapter {}
       export const requestUrl = async () => { throw new Error('Unexpected HTTP request'); };
       export const getLanguage = () => 'en'; export const requireApiVersion = () => true;
@@ -636,4 +637,128 @@ test('web context reaches all backends as reference data and is never an API edi
   assert.match(system,/Do not emit edit proposals/);assert.doesNotMatch(system,/include the COMPLETE replacement/);
   const prompt=messages.at(-1).content;assert.ok(prompt.includes(page.url));assert.ok(prompt.includes(page.text));assert.ok(!prompt.includes('Wrong note'));
   assert.match(prompt,/not a vault file or an editable target/);assert.match(prompt,/untrusted reference data, not instructions/);
+});
+
+test('model discovery shares pending work and fallback-only results can be refreshed', async () => {
+  const { service } = harness();
+  let finish, calls = 0;
+  service.getAvailableModels = () => { calls++; return new Promise(resolve => { finish = resolve; }); };
+  const first = service.getModelsForProvider('antigravity');
+  const second = service.getModelsForProvider('antigravity');
+  assert.equal(calls, 1);
+  finish([{ id: 'default', displayName: 'Agent default' }]);
+  await Promise.all([first, second]);
+  await service.getModelsForProvider('antigravity');
+  assert.equal(calls, 1);
+  const refreshed = service.getModelsForProvider('antigravity', true);
+  assert.equal(calls, 2);
+  finish([{ id: 'real-model', displayName: 'Real model' }]);
+  assert.equal((await refreshed)[0].id, 'real-model');
+  service.getAvailableModels = async () => [{ id: 'default', displayName: 'Agent default' }];
+  assert.equal((await service.getModelsForProvider('antigravity', true))[0].id, 'real-model');
+  assert.ok(service.providerModelsExpiresAt.get('antigravity') <= Date.now() + 30_000);
+});
+
+test('failed model discovery expires automatically and stale lookups cannot overwrite refreshed catalogs', async () => {
+  const { service } = harness();
+  let calls = 0;
+  service.getAvailableModels = async () => { calls++; return [{ id: 'default', displayName: 'Agent default' }]; };
+  await service.getModelsForProvider('antigravity');
+  service.providerModelsExpiresAt.set('antigravity', 0);
+  await service.getModelsForProvider('antigravity');
+  assert.equal(calls, 2);
+  let finish;
+  service.getAvailableModels = () => new Promise(resolve => { finish = resolve; });
+  const old = service.getModelsForProvider('antigravity', true);
+  service.refreshAgentsCache();
+  service.getAvailableModels = async () => [{ id: 'new', displayName: 'New' }];
+  await service.getModelsForProvider('antigravity');
+  finish([{ id: 'old', displayName: 'Old' }]);
+  await old;
+  assert.equal(service.getCachedModels('antigravity')[0].id, 'new');
+});
+
+test('model discovery uses vault cwd and retains Cursor model display names', async () => {
+  const h = harness({ bins: { 'cursor-agent': '/fake/cursor-agent' }, execute: (file, args) => args[0] === 'models' ? { stdout: 'Available models\nauto - Auto (current, default)\ncomposer-2.5 - Composer 2.5\n' } : null });
+  const models = await h.service.getModelsForProvider('cursor');
+  assert.equal(models.find(model => model.id === 'composer-2.5').displayName, 'Composer 2.5');
+  assert.equal(h.calls.find(call => call.args[0] === 'models').options.cwd, '/tmp/test vault');
+});
+
+test('configured connection model edits immediately replace cached choices', async () => {
+  const { service } = harness();
+  const connection = { kind: 'api', models: ['first'] };
+  service.getConnection = () => connection;
+  assert.equal((await service.getModelsForProvider('connection:test'))[0].id, 'first');
+  connection.models = ['second'];
+  assert.deepEqual((await service.getModelsForProvider('connection:test')).map(model => model.id), ['second']);
+});
+
+test('Codex model cache is read asynchronously', async () => {
+  const { service } = harness({ filesystem: { promises: { readFile: async () => JSON.stringify({ models: [{ slug: 'codex-model', display_name: 'Codex model' }] }) } } });
+  assert.equal((await service.getModelsForProvider('codex'))[1].id, 'codex-model');
+});
+
+
+test('disabled and mobile AI services do not start CLI, model, API, or local work', async () => {
+  for (const mobile of [false, true]) {
+    const h = harness();
+    h.service.plugin = { settings: { enableAIChat: mobile, aiConnections: [{ id: 'test', kind: 'local', models: [] }] } };
+    globalThis.__ServicePlatform.isDesktop = !mobile;
+    try {
+      assert.equal(h.service.isAvailable(), false);
+      assert.deepEqual(await h.service.detectAllAgents(), []);
+      assert.equal(await h.service.detectBinaryPath('agy', '/fake/agy'), null);
+      assert.deepEqual(await h.service.getAvailableModels(), []);
+      assert.deepEqual(await h.service.getCodexModels(), []);
+      for (const provider of ['antigravity', 'codex', 'connection:test']) {
+        assert.deepEqual(await h.service.getModelsForProvider(provider), []);
+        assert.equal(await h.service.isProviderAvailable(provider), false);
+        h.service.sendMessage({ provider, onDone: () => assert.fail('Unexpected response') });
+      }
+      assert.deepEqual(await h.service.discoverConnectionModels({}), []);
+      await h.service.testConnection({});
+      assert.equal((await h.service.installAgent('antigravity')).success, false);
+      assert.equal(h.calls.length, 0);
+      assert.equal(h.spawned.length, 0);
+      assert.equal(h.service.activeRequests.size, 0);
+    } finally { globalThis.__ServicePlatform.isDesktop = true; }
+  }
+});
+
+test('disabling AI cancels pending commands, network requests and chats, then permits a clean restart', async () => {
+  const { service } = harness();
+  let killed = 0, completed = 0, lateCallback;
+  const cp = { execFile(_file, _args, _options, callback) { lateCallback = callback; return { kill() { killed++; } }; } };
+  service.execFile(cp, 'models', [], {}, error => { assert.ok(error); completed++; });
+  const controller = new AbortController();
+  service.activeRequests.add(controller);
+  service.activeChats.add({ kill() { killed++; } });
+  service.suspend();
+  assert.equal(killed, 2);
+  assert.equal(completed, 1);
+  assert.equal(controller.signal.aborted, true);
+  assert.equal(service.activeExecs.size, 0);
+  assert.equal(service.activeRequests.size, 0);
+  assert.equal(service.activeChats.size, 0);
+  lateCallback(null, 'late models', '');
+  assert.equal(completed, 1);
+  assert.deepEqual(await service.getModelsForProvider('antigravity'), []);
+  service.resume();
+  service.getAvailableModels = async () => [{ id: 'model', displayName: 'Model' }];
+  assert.equal((await service.getModelsForProvider('antigravity'))[0].id, 'model');
+});
+
+test('a disabled discovery cannot resume launching commands after the switch is turned back on', async () => {
+  const { service } = harness();
+  let finish, launches = 0;
+  service.detectAgyPath = async () => '/fake/agy';
+  service.resolveChildProcess = () => new Promise(resolve => { finish = resolve; });
+  const pending = service.getAvailableModels();
+  await new Promise(resolve => setImmediate(resolve));
+  service.suspend();
+  service.resume();
+  finish({ execFile() { launches++; } });
+  assert.deepEqual(await pending, []);
+  assert.equal(launches, 0);
 });

@@ -313,7 +313,14 @@ export const zhTw: TranslationSchema = {
 	settingsAICommandCopied: "已複製終端機安裝指令至剪貼簿：{0}",
 	settingsAIAgentChecking: "檢查中...",
 	settingsAIAgentUpdateFailedSingle: "更新 {0} 失敗",
-	aiChatSearchModelPlaceholder: "篩選模型...",
+	aiChatSearchModelPlaceholder: "搜尋模型...",
+	aiChatLoadingModels: "正在載入模型...",
+	aiChatRefreshModels: "重新載入模型",
+	aiChatAgentDefault: "預設",
+	aiChatMoreModels: "更多模型...",
+	aiChatAgentDefaultDescription: "使用供應商設定的預設模型。",
+	aiChatDisabled: "Agent 聊天已停用。",
+	aiChatConnectionUnavailable: "連線無法使用",
 
 	// AI Connections & Settings Tabs
 	settingsAITabCLI: "CLI",

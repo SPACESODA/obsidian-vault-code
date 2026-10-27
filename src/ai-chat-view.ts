@@ -8,6 +8,8 @@ import {
 	debounce,
 	SuggestModal,
 	App,
+	Platform,
+	type Menu,
 } from "obsidian";
 import type VaultCodePlugin from "./main";
 import { t } from "./i18n";
@@ -42,28 +44,54 @@ export class ModelSuggestModal extends SuggestModal<AgyModelInfo> {
 	private models: AgyModelInfo[];
 	private selectedModelId: string;
 	private onSelect: (model: AgyModelInfo) => void;
+	private statusEl?: HTMLElement;
+	private refreshEl?: HTMLButtonElement;
 
 	constructor(
 		app: App,
 		models: AgyModelInfo[],
 		selectedModelId: string,
 		onSelect: (model: AgyModelInfo) => void,
+		private options?: { allowCustom: boolean; onRefresh: () => void },
 	) {
 		super(app);
 		this.models = models;
 		this.selectedModelId = selectedModelId;
 		this.onSelect = onSelect;
 		this.setPlaceholder(t("aiChatSearchModelPlaceholder"));
+		this.modalEl.addClass("vault-code-model-picker");
+		if (options) {
+			const controls = this.modalEl.createDiv({ cls: "vault-code-model-suggest-controls" });
+			this.modalEl.insertBefore(controls, this.resultContainerEl);
+			this.statusEl = controls.createSpan();
+			this.refreshEl = this.modalEl.createEl("button", { cls: "clickable-icon vault-code-model-suggest-refresh" });
+			setIcon(this.refreshEl, "refresh-cw");
+			this.refreshEl.createSpan({ cls: "vault-code-model-refresh-label", text: t("aiChatRefreshModels") });
+			controls.hide();
+			this.refreshEl.addEventListener("click", options.onRefresh);
+		}
+	}
+
+	setModels(models: AgyModelInfo[], loading: boolean): void {
+		this.models = models;
+		this.statusEl?.setText(loading ? t("aiChatLoadingModels") : "");
+		if (loading) this.statusEl?.parentElement?.show();
+		else this.statusEl?.parentElement?.hide();
+		if (this.refreshEl) this.refreshEl.disabled = loading;
+		this.inputEl.dispatchEvent(new Event("input", { bubbles: true }));
 	}
 
 	getSuggestions(query: string): AgyModelInfo[] {
 		const q = query.toLowerCase().trim();
 		if (!q) return this.models;
-		return this.models.filter(
+		const matches = this.models.filter(
 			(m) =>
 				m.displayName.toLowerCase().includes(q) ||
 				m.id.toLowerCase().includes(q),
 		);
+		const id = query.trim();
+		return matches.length || !this.options?.allowCustom || !/^[\w./:@+-]+$/.test(id)
+			? matches : [{ id, displayName: id }];
 	}
 
 	renderSuggestion(model: AgyModelInfo, el: HTMLElement): void {
@@ -78,9 +106,9 @@ export class ModelSuggestModal extends SuggestModal<AgyModelInfo> {
 		const textWrapper = el.createDiv({ cls: "vault-code-model-suggest-text" });
 		const titleEl = textWrapper.createDiv({
 			cls: "vault-code-model-suggest-title",
-			text: model.displayName,
+			text: model.id === "default" ? t("aiChatAgentDefault") : model.displayName,
 		});
-		titleEl.setAttribute("title", model.displayName);
+		titleEl.setAttribute("title", model.id === "default" ? t("aiChatAgentDefaultDescription") : model.displayName);
 
 		if (model.id !== model.displayName) {
 			textWrapper.createDiv({
@@ -119,6 +147,11 @@ export class AIChatView extends ItemView {
 	private safeRequest: { userId: string; text: string; file: TFile | null; quote: SelectionQuote | null; scope: "active-note" | "vault"; page?: WebPageContext } | null = null;
 	private activeProcessHandle: AIProcessHandle | null = null;
 	private availableModels: AgyModelInfo[] = [];
+	private modelLoadId = 0;
+	private loadingProvider: AIProvider | null = null;
+	private modelLoadTask: Promise<void> | null = null;
+	private modelPicker?: { provider: AIProvider; modal: ModelSuggestModal };
+	private activeMenu?: Menu;
 
 	// Active chat file in vault
 	private currentChatFile: TFile | null = null;
@@ -171,6 +204,20 @@ export class AIChatView extends ItemView {
 		this.mode = plugin.settings.aiMode || "safe";
 	}
 
+	private isEnabled(): boolean { return Platform.isDesktop && this.plugin.settings.enableAIChat !== false; }
+
+	public deactivate(): void {
+		this.chatLoadId++;
+		this.modelLoadId++;
+		this.modelPicker?.modal.close();
+		this.modelPicker = undefined;
+		this.activeMenu?.hide();
+		this.activeMenu = undefined;
+		this.loadingProvider = null;
+		this.modelLoadTask = null;
+		this.stopGenerating();
+	}
+
 	getViewType(): string {
 		return VIEW_TYPE_AI_CHAT;
 	}
@@ -184,6 +231,7 @@ export class AIChatView extends ItemView {
 	}
 
 	async onOpen(): Promise<void> {
+		if (!this.isEnabled()) { this.leaf.detach(); return; }
 		const container = this.contentEl;
 		container.empty();
 		container.addClass("vault-code-ai-chat-view");
@@ -211,24 +259,54 @@ export class AIChatView extends ItemView {
 		this.updateContextChip();
 	}
 
-	private async loadModelsForProvider(provider: AIProvider): Promise<void> {
-		const models = await this.plugin.aiService.getModelsForProvider(provider);
-		if (provider !== this.selectedProvider) return;
-		this.availableModels = models.filter((m) => m.id !== "auto");
-		if (!this.isGenerating && this.availableModels.length > 0
-			&& !this.availableModels.some((m) => m.id === this.selectedModel)
-			&& (isConnectionProvider(provider) || !this.selectedModel || this.selectedModel === "auto" || this.selectedModel === "default")) {
-			this.selectedModel = this.availableModels.find((m) => m.id === "default")?.id
-				|| this.availableModels[0]?.id || resolveOptimalModel(provider);
-			if (!this.plugin.settings.aiProviderLastModel) this.plugin.settings.aiProviderLastModel = {};
-			this.plugin.settings.aiProviderLastModel[provider] = this.selectedModel;
-			void this.plugin.saveSettings();
-			if (this.currentChatFile) {
-				void this.plugin.aiStorage.updateChatModel(this.currentChatFile, this.selectedModel);
-			}
+	private modelsForPicker(): AgyModelInfo[] {
+		const models = this.availableModels.filter(model => model.id !== "auto");
+		// A saved explicit model remains selectable even if discovery is unavailable.
+		if (!isConnectionProvider(this.selectedProvider) && this.selectedModel && this.selectedModel !== "auto" && !models.some(model => model.id === this.selectedModel)) {
+			return [...models, { id: this.selectedModel, displayName: this.selectedModel }];
 		}
+		return models;
+	}
 
+	private loadModelsForProvider(provider: AIProvider, force = false): Promise<void> {
+		if (!this.isEnabled()) return Promise.resolve();
+		if (this.loadingProvider === provider && this.modelLoadTask) return this.modelLoadTask;
+		const requestId = ++this.modelLoadId;
+		this.availableModels = this.plugin.aiService.getCachedModels?.(provider)
+			?? ALL_AGENT_DEFS.find(def => def.id === provider)?.models ?? [];
+		this.loadingProvider = provider;
 		this.updateModelBtnLabel();
+		const task = (async () => {
+			try {
+				const models = await this.plugin.aiService.getModelsForProvider(provider, force);
+				if (!this.isEnabled() || provider !== this.selectedProvider || requestId !== this.modelLoadId) return;
+				this.availableModels = models.filter((m) => m.id !== "auto");
+				if (!this.isGenerating && this.availableModels.length > 0
+					&& !this.availableModels.some((m) => m.id === this.selectedModel)
+					&& (isConnectionProvider(provider) || !this.selectedModel || this.selectedModel === "auto" || this.selectedModel === "default")) {
+					this.selectedModel = this.availableModels.find((m) => m.id === "default")?.id
+						|| this.availableModels[0]?.id || resolveOptimalModel(provider);
+					if (!this.plugin.settings.aiProviderLastModel) this.plugin.settings.aiProviderLastModel = {};
+					this.plugin.settings.aiProviderLastModel[provider] = this.selectedModel;
+					void this.plugin.saveSettings();
+					if (this.currentChatFile) {
+						void this.plugin.aiStorage.updateChatModel(this.currentChatFile, this.selectedModel);
+					}
+				}
+
+			} catch {
+				// Keep the current choices; the picker can retry discovery.
+			} finally {
+				if (requestId === this.modelLoadId) {
+					this.loadingProvider = null;
+					this.modelLoadTask = null;
+					this.updateModelBtnLabel();
+					if (this.modelPicker?.provider === provider) this.modelPicker.modal.setModels(this.modelsForPicker(), false);
+				}
+			}
+		})();
+		this.modelLoadTask = task;
+		return task;
 	}
 
 	override getState(): Record<string, unknown> {
@@ -238,6 +316,7 @@ export class AIChatView extends ItemView {
 	}
 
 	override async setState(state: Record<string, unknown>, result: unknown): Promise<void> {
+		if (!this.isEnabled()) return;
 		const superSetState = (ItemView.prototype as unknown as { setState?: (s: unknown, r: unknown) => Promise<void> }).setState;
 		if (superSetState) {
 			await superSetState.call(this, state, result);
@@ -251,8 +330,7 @@ export class AIChatView extends ItemView {
 	}
 
 	async onClose(): Promise<void> {
-		this.chatLoadId++;
-		this.stopGenerating();
+		this.deactivate();
 		await this.chatSaveTask;
 		this.disposeMessageRendering();
 		if (this.renderRafId !== null) {
@@ -386,7 +464,7 @@ export class AIChatView extends ItemView {
 			const menu = createCustomMenu();
 			if (selection) {
 				menu.addItem((item) => {
-					item.setTitle("Copy")
+					item.setTitle(t("aiChatCopy"))
 						.setIcon("copy")
 						.onClick(() => {
 							void navigator.clipboard.writeText(selection).then(() => {
@@ -406,7 +484,7 @@ export class AIChatView extends ItemView {
 						});
 				});
 			}
-			menu.showAtMouseEvent(e);
+			this.showChatMenu(menu, e);
 		});
 		this.renderMessages();
 	}
@@ -632,9 +710,12 @@ export class AIChatView extends ItemView {
 		const found =
 			this.availableModels.find((m) => m.id === this.selectedModel) ||
 			def?.models.find((m) => m.id === this.selectedModel);
-		const label = found ? found.displayName : this.selectedModel;
+		const label = this.selectedModel === "default" ? t("aiChatAgentDefault") : found ? found.displayName : this.selectedModel;
 		this.modelBtnEl.createSpan({ cls: "vault-code-pill-label", text: label });
-		this.modelBtnEl.setAttribute("title", label);
+		this.modelBtnEl.setAttribute("title", this.selectedModel === "default" ? t("aiChatAgentDefaultDescription") : label);
+		const loading = this.loadingProvider === this.selectedProvider;
+		this.modelBtnEl.setAttribute("aria-busy", String(loading));
+		if (loading) this.modelBtnEl.createSpan({ cls: "vault-code-badge-spinner" });
 
 		const chevronSpan = this.modelBtnEl.createSpan({ cls: "vault-code-pill-chevron" });
 		setIcon(chevronSpan, "chevron-down");
@@ -862,7 +943,9 @@ export class AIChatView extends ItemView {
 	}
 
 	private selectProvider(provider: AIProvider): void {
-		if (this.isGenerating || this.selectedProvider === provider) return;
+		if (!this.isEnabled() || this.isGenerating || this.selectedProvider === provider) return;
+		this.modelPicker?.modal.close();
+		this.modelPicker = undefined;
 		this.selectedProvider = provider;
 		this.conversationId = undefined;
 		const def = ALL_AGENT_DEFS.find((d) => d.id === provider);
@@ -887,91 +970,87 @@ export class AIChatView extends ItemView {
 		}
 	}
 
-	private async showProviderMenu(event: MouseEvent): Promise<void> {
-		if (this.isGenerating) return;
-		const menu = createCustomMenu();
-		menu.addItem((item) => item.setTitle("CLI").setDisabled(true));
-		const agents = await this.plugin.aiService.detectAllAgents();
-		const installedMap = new Map<string, boolean>();
-		for (const a of agents) {
-			installedMap.set(a.id, a.isInstalled);
-		}
+	private showChatMenu(menu: Menu, event: MouseEvent): void {
+		if (!this.isEnabled()) return;
+		this.activeMenu?.hide();
+		this.activeMenu = menu;
+		menu.onHide(() => { if (this.activeMenu === menu) this.activeMenu = undefined; });
+		menu.showAtMouseEvent(event);
+	}
 
+	private showProviderMenu(event: MouseEvent): void {
+		if (!this.isEnabled() || this.isGenerating) return;
+		const menu = createCustomMenu();
+		menu.addItem((item) => item.setTitle(t("settingsAITabCLI")).setDisabled(true));
 		for (const def of ALL_AGENT_DEFS.filter((d) => d.id !== "ollama")) {
 			const label = getAgentDisplayName(def.id);
-			const isInstalled = installedMap.get(def.id) ?? false;
-			const title = isInstalled ? label : `${label} (${t("settingsAIAgentMissing")})`;
-
+			let available = this.plugin.aiService.getCachedProviderAvailability(def.id);
 			menu.addItem((item) => {
-				item.setTitle(title);
-				item.setIcon(def.icon);
-				item.setChecked(this.selectedProvider === def.id);
-				if (!isInstalled) {
-					item.setDisabled(true);
-				}
-				item.onClick(() => { if (isInstalled) this.selectProvider(def.id); });
+				const update = () => item.setTitle(available === false ? `${label} (${t("settingsAIAgentMissing")})` : label).setDisabled(available === false);
+				update();
+				item.setIcon(def.icon).setChecked(this.selectedProvider === def.id);
+				item.onClick(() => { if (available !== false) this.selectProvider(def.id); });
+				// Only check executable presence here, not every CLI's version and sign-in.
+				void this.plugin.aiService.isProviderAvailable(def.id).then(value => { available = value; update(); }).catch(() => {});
 			});
 		}
-
-		for (const [kind, label] of [["api", "API"], ["local", t("settingsAITabLocal")]] as const) {
+		for (const [kind, label] of [["api", t("settingsAITabAPI")], ["local", t("settingsAITabLocal")]] as const) {
+			const connections = this.plugin.settings.aiConnections.filter((c) => c.kind === kind);
+			if (!connections.length) continue;
 			menu.addSeparator();
 			menu.addItem((item) => item.setTitle(label).setDisabled(true));
-			for (const connection of this.plugin.settings.aiConnections.filter((c) => c.kind === kind)) {
+			for (const connection of connections) {
 				menu.addItem((item) => item.setTitle(connection.name).setIcon(kind === "local" ? "server" : "cloud")
 					.setChecked(this.selectedProvider === connectionProvider(connection.id)).onClick(() => this.selectProvider(connectionProvider(connection.id))));
 			}
 		}
-
-		menu.showAtMouseEvent(event);
+		this.showChatMenu(menu, event);
 	}
 
 	private showModelMenu(event: MouseEvent): void {
-		if (this.isGenerating) return;
-		const def = ALL_AGENT_DEFS.find((d) => d.id === this.selectedProvider);
-		const cached = this.plugin.aiService.getCachedModels?.(this.selectedProvider);
-		const rawModels =
-			this.availableModels.length > 0
-				? this.availableModels
-				: (cached && cached.length > 0
-					? cached
-					: (def?.models || (this.selectedProvider === "antigravity" ? DEFAULT_AGY_MODELS : [])));
-		const modelsToUse = rawModels.filter((m) => m.id !== "auto");
-
+		if (!this.isEnabled() || this.isGenerating) return;
+		const provider = this.selectedProvider;
 		const selectModel = (modelId: string) => {
+			if (!this.isEnabled() || this.isGenerating || this.selectedProvider !== provider) return;
 			this.selectedModel = modelId;
-			if (!this.plugin.settings.aiProviderLastModel) {
-				this.plugin.settings.aiProviderLastModel = {};
-			}
-			this.plugin.settings.aiProviderLastModel[this.selectedProvider] = modelId;
+			if (!this.plugin.settings.aiProviderLastModel) this.plugin.settings.aiProviderLastModel = {};
+			this.plugin.settings.aiProviderLastModel[provider] = modelId;
 			void this.plugin.saveSettings();
 			this.updateModelBtnLabel();
-			if (this.currentChatFile) {
-				void this.plugin.aiStorage.updateChatModel(this.currentChatFile, modelId);
-			}
+			if (this.currentChatFile) void this.plugin.aiStorage.updateChatModel(this.currentChatFile, modelId);
 		};
-
-		// If list is large (> 8 models), open searchable SuggestModal directly
-		if (modelsToUse.length > 8) {
-			new ModelSuggestModal(
-				this.app,
-				modelsToUse,
-				this.selectedModel,
-				(selected) => selectModel(selected.id),
-			).open();
+		const models = this.modelsForPicker();
+		const openPicker = () => {
+			this.modelPicker?.modal.close();
+			const modal = new ModelSuggestModal(this.app, models, this.selectedModel, model => selectModel(model.id), {
+				allowCustom: !isConnectionProvider(provider),
+				onRefresh: () => {
+					if (!this.isEnabled() || this.selectedProvider !== provider) return;
+					modal.setModels(this.modelsForPicker(), true);
+					void this.loadModelsForProvider(provider, true);
+				},
+			});
+			this.modelPicker = { provider, modal };
+			modal.open();
+			modal.setModels(models, true);
+			void this.loadModelsForProvider(provider);
+		};
+		// Small discovered lists stay compact. Use the searchable picker while an
+		// initial catalog is still unknown, so incoming results can appear live.
+		if (models.length > 8 || (this.loadingProvider === provider && !models.some(model => model.id !== "default"))) {
+			openPicker();
 			return;
 		}
-
-		// For short lists (<= 8 models), show compact dropdown menu
 		const menu = createCustomMenu();
-		for (const model of modelsToUse) {
-			menu.addItem((item) => {
-				item.setTitle(model.displayName);
-				item.setChecked(this.selectedModel === model.id);
-				item.onClick(() => selectModel(model.id));
-			});
+		for (const model of models) {
+			menu.addItem(item => item.setTitle(model.id === "default" ? t("aiChatAgentDefault") : model.displayName)
+				.setChecked(this.selectedModel === model.id).onClick(() => selectModel(model.id)));
 		}
-
-		menu.showAtMouseEvent(event);
+		if (!isConnectionProvider(provider)) {
+			menu.addSeparator();
+			menu.addItem(item => item.setTitle(t("aiChatMoreModels")).setIcon("search").onClick(openPicker));
+		}
+		this.showChatMenu(menu, event);
 	}
 
 	private showEffortMenu(event: MouseEvent): void {
@@ -1005,11 +1084,11 @@ export class AIChatView extends ItemView {
 			});
 		}
 
-		menu.showAtMouseEvent(event);
+		this.showChatMenu(menu, event);
 	}
 
 	private showModeMenu(event: MouseEvent): void {
-		if (this.isGenerating) return;
+		if (!this.isEnabled() || this.isGenerating) return;
 		const menu = createCustomMenu();
 
 		menu.addItem((item) => {
@@ -1030,7 +1109,7 @@ export class AIChatView extends ItemView {
 			});
 		});
 
-		menu.showAtMouseEvent(event);
+		this.showChatMenu(menu, event);
 	}
 
 	private openActiveChatAsNote(): void {
@@ -1047,6 +1126,7 @@ export class AIChatView extends ItemView {
 	}
 
 	public async loadChatFromFile(file: TFile): Promise<void> {
+		if (!this.isEnabled()) return;
 		const loadId = ++this.chatLoadId;
 		this.safeRequest = null;
 		this.stopGenerating();
@@ -1135,6 +1215,7 @@ export class AIChatView extends ItemView {
 	}
 
 	public startNewChat(): void {
+		if (!this.isEnabled()) return;
 		this.chatLoadId++;
 		this.safeRequest = null;
 		this.stopGenerating();
@@ -1362,7 +1443,7 @@ export class AIChatView extends ItemView {
 	}
 
 	private async handleSubmit(): Promise<void> {
-		if (this.isGenerating) return;
+		if (!this.isEnabled() || this.isGenerating) return;
 
 		const text = this.inputEl.value.trim();
 		if (!text) return;

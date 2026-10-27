@@ -183,7 +183,7 @@ export interface DetectedAgentInfo {
 }
 
 export const DEFAULT_GENERIC_MODELS: AgyModelInfo[] = [
-	{ id: "default", displayName: "Agent default" },
+	{ id: "default", displayName: "Default" },
 ];
 
 export const DEFAULT_AGY_MODELS = DEFAULT_GENERIC_MODELS;
@@ -434,6 +434,13 @@ export class AIService {
 	private agentsCheckedAt = 0;
 	private detectedAgentsCache: DetectedAgentInfo[] | null = null;
 	private providerModelsCache = new Map<string, AgyModelInfo[]>();
+	private providerModelsExpiresAt = new Map<string, number>();
+	private modelLookups = new Map<string, Promise<AgyModelInfo[]>>();
+	private suspended = false;
+	private activityGeneration = 0;
+	private activeExecs = new Set<() => void>();
+	private activeRequests = new Set<AbortController>();
+	private activeChats = new Set<AIProcessHandle>();
 	private shellPath: string | null = null;
 	private shellPathPromise?: Promise<void>;
 	private shellPathRetryAfter = 0;
@@ -444,11 +451,53 @@ export class AIService {
 	}
 
 	public isAvailable(): boolean {
-		return Platform.isDesktop && (this.plugin?.settings.enableAIChat ?? true);
+		return !this.suspended && Platform.isDesktop && (this.plugin?.settings.enableAIChat ?? true);
+	}
+
+	public resume(): void { this.suspended = false; }
+
+	public suspend(): void {
+		this.suspended = true;
+		this.activityGeneration++;
+		for (const handle of this.activeChats) handle.kill();
+		this.activeChats.clear();
+		for (const controller of this.activeRequests) controller.abort();
+		this.activeRequests.clear();
+		for (const cancel of [...this.activeExecs]) cancel();
+		this.clearCache();
+	}
+
+	private execFile(cp: NodeChildProcess, ...args: Parameters<ExecFileFn>): ReturnType<ExecFileFn> {
+		const [file, parameters, options, callback] = args;
+		if (!this.isAvailable()) { callback(new Error(t("aiChatDisabled")), "", ""); return; }
+		let child: ReturnType<ExecFileFn> = undefined;
+		let settled = false;
+		const finish: Parameters<ExecFileFn>[3] = (error, stdout, stderr) => {
+			if (settled) return;
+			settled = true;
+			this.activeExecs.delete(cancel);
+			callback(error, stdout, stderr);
+		};
+		const cancel = () => {
+			try { child?.kill(); } catch { /* Process may already have exited. */ }
+			finish(new Error(t("aiChatDisabled")), "", "");
+		};
+		this.activeExecs.add(cancel);
+		try { child = cp.execFile(file, parameters, options, finish); }
+		catch (error: unknown) { finish(error instanceof Error ? error : new Error(String(error)), "", ""); }
+		return child;
 	}
 
 	public getCachedModels(provider: AIProvider): AgyModelInfo[] | undefined {
+		if (!this.isAvailable()) return undefined;
 		return this.providerModelsCache.get(provider);
+	}
+	public getCachedProviderAvailability(provider: AIProvider): boolean | undefined {
+		if (!this.isAvailable()) return false;
+		const detected = this.detectedAgentsCache?.find(agent => agent.id === provider);
+		if (detected) return detected.isInstalled;
+		const def = ALL_AGENT_DEFS.find(agent => agent.id === provider);
+		return def && [def.binary, ...(def.fallbackBinaries ?? [])].some(binary => this.cachedPaths.has(binary)) ? true : undefined;
 	}
 
 	public clearCache(): void {
@@ -457,6 +506,7 @@ export class AIService {
 
 	private async resolveChildProcess(): Promise<NodeChildProcess | null> {
 		if (!Platform.isDesktop) return null;
+		if (!this.isAvailable()) return null;
 		if (this.cachedCp) {
 			await this.loadShellPath(this.cachedCp);
 			return this.cachedCp;
@@ -546,8 +596,10 @@ export class AIService {
 	}
 
 	private async isOllamaListening(): Promise<boolean> {
+		if (!this.isAvailable()) return false;
+		const activity = this.activityGeneration;
 		const net = await this.resolveNet();
-		if (!net) return false;
+		if (!net || !this.isAvailable() || activity !== this.activityGeneration) return false;
 		const { host, port } = this.getOllamaHostAndPort();
 		return new Promise((resolve) => {
 			const socket = net.createConnection({ host, port });
@@ -573,7 +625,7 @@ export class AIService {
 			this.shellPathPromise = new Promise<void>((resolve) => {
 				const env = this.getEnv();
 				const shell = env.SHELL?.startsWith("/") ? env.SHELL : Platform.isMacOS ? "/bin/zsh" : "/bin/bash";
-				cp.execFile(shell, ["-ilc", "printf '\nVAULT_CODE_PATH=%s\n' \"$PATH\""],
+				this.execFile(cp, shell, ["-ilc", "printf '\nVAULT_CODE_PATH=%s\n' \"$PATH\""],
 					{ env, timeout: 5000, maxBuffer: 1024 * 1024 }, (_err, stdout) => {
 						const match = stdout?.toString().match(/^VAULT_CODE_PATH=(.+)$/m);
 						if (match?.[1]) { this.shellPath = match[1].trim(); this.shellPathRetryAfter = 0; }
@@ -679,7 +731,7 @@ export class AIService {
 		customOverride?: string,
 		fallbackCandidates: string[] = [],
 	): Promise<string | null> {
-		if (this.plugin && !this.plugin.settings.enableAIChat) {
+		if (!this.isAvailable()) {
 			return null;
 		}
 
@@ -704,14 +756,16 @@ export class AIService {
 	}
 
 	private async findBinaryPath(binary: string, fallbackCandidates: string[]): Promise<string | null> {
+		const activity = this.activityGeneration;
 		const cp = await this.resolveChildProcess();
 		if (!cp) return null;
 
 		const env = this.getEnv();
+		if (!this.isAvailable() || activity !== this.activityGeneration) return null;
 		const checkCommand = Platform.isWin ? "where" : "which";
 
 		const detected = await new Promise<string | null>((resolve) => {
-			cp.execFile(
+			this.execFile(cp,
 				checkCommand,
 				[binary],
 				{ env, timeout: 3000, shell: Platform.isWin },
@@ -723,6 +777,8 @@ export class AIService {
 							return;
 						}
 					}
+
+					if (!this.isAvailable() || activity !== this.activityGeneration) { resolve(null); return; }
 
 					// Fallback candidates check via filesystem
 					const proc = (
@@ -816,7 +872,7 @@ export class AIService {
 		const cp = await this.resolveChildProcess();
 		if (!cp) return undefined;
 		return new Promise((resolve) => {
-			cp.execFile(path, args, { env: this.getEnv(), timeout: 10000, maxBuffer: 1024 * 1024, shell: Platform.isWin }, (err, stdout, stderr) => {
+			this.execFile(cp, path, args, { env: this.getEnv(), timeout: 10000, maxBuffer: 1024 * 1024, shell: Platform.isWin }, (err, stdout, stderr) => {
 				const text = [stdout, stderr].filter(Boolean).join("\n");
 				if (provider === "ollama") {
 					if (err) {
@@ -836,7 +892,7 @@ export class AIService {
 	}
 
 	public async detectAllAgents(): Promise<DetectedAgentInfo[]> {
-		if (this.plugin && !this.plugin.settings.enableAIChat) {
+		if (!this.isAvailable()) {
 			return [];
 		}
 
@@ -856,12 +912,13 @@ export class AIService {
 	}
 
 	private async checkAllAgents(): Promise<DetectedAgentInfo[]> {
+		const generation = this.cacheGeneration;
 		const cp = await this.resolveChildProcess();
 		const env = this.getEnv();
 		const results: DetectedAgentInfo[] = new Array<DetectedAgentInfo>(ALL_AGENT_DEFS.length);
 		let next = 0;
 		const worker = async () => {
-			while (next < ALL_AGENT_DEFS.length) {
+			while (next < ALL_AGENT_DEFS.length && this.isAvailable() && generation === this.cacheGeneration) {
 				const index = next++;
 				const def = ALL_AGENT_DEFS[index]!;
 				const binPath = await this.detectProviderPath(def.id);
@@ -869,10 +926,10 @@ export class AIService {
 				let isInstalled = false;
 				let diagnostic: string | undefined;
 
-				if (binPath && cp) {
+				if (binPath && cp && this.isAvailable() && generation === this.cacheGeneration) {
 					isInstalled = true;
 					version = await new Promise<string>((resolve) => {
-						cp.execFile(
+						this.execFile(cp,
 							binPath,
 							def.versionArgs,
 							{ env, timeout: 10000, shell: Platform.isWin },
@@ -887,7 +944,7 @@ export class AIService {
 					});
 				}
 
-				const connectionStatus = binPath && !diagnostic ? await this.checkConnection(def.id, binPath) : undefined;
+				const connectionStatus = binPath && !diagnostic && this.isAvailable() && generation === this.cacheGeneration ? await this.checkConnection(def.id, binPath) : undefined;
 				results[index] = {
 					id: def.id,
 					name: def.name,
@@ -905,7 +962,7 @@ export class AIService {
 		};
 		// Bound process pressure while avoiding a slow serial check of every provider.
 		await Promise.all(Array.from({ length: 3 }, () => worker()));
-		return results;
+		return results.filter(Boolean);
 	}
 
 	public refreshAgentsCache(): void {
@@ -917,6 +974,8 @@ export class AIService {
 		this.detectedAgentsCache = null;
 		this.cachedPaths.clear();
 		this.providerModelsCache.clear();
+		this.providerModelsExpiresAt.clear();
+		this.modelLookups.clear();
 	}
 
 	public async installAgent(provider: CLIProvider): Promise<{ success: boolean; message: string; command?: string }> {
@@ -928,9 +987,10 @@ export class AIService {
 	}
 
 	private async maintainAgent(provider: CLIProvider, update: boolean): Promise<{ success: boolean; message: string; command?: string }> {
+		const activity = this.activityGeneration;
 		const config = AGENT_INSTALL_CONFIGS[provider];
 		const def = ALL_AGENT_DEFS.find((d) => d.id === provider)!;
-		if (!Platform.isDesktop) return { success: false, message: "CLI management requires desktop Obsidian" };
+		if (!this.isAvailable()) return { success: false, message: t("aiChatDisabled") };
 		const cp = await this.resolveChildProcess();
 		if (!cp) return { success: false, message: "Desktop child_process runtime not available" };
 		const installedPath = update ? await this.detectProviderPath(provider) : null;
@@ -987,8 +1047,9 @@ export class AIService {
 			if (!executable) return { success: false, message: `${binary} is required. Follow ${config.manualUrl} to finish setup.`, command };
 			args = parts;
 		}
+		if (!this.isAvailable() || activity !== this.activityGeneration) return { success: false, message: t("aiChatDisabled") };
 		const result = await new Promise<{ success: boolean; message: string; command?: string }>((resolve) => {
-			const child = cp.execFile(executable, args, { env, timeout: 600000, maxBuffer: 4 * 1024 * 1024, windowsHide: true, shell: Platform.isWin }, (err, stdout, stderr) => {
+			const child = this.execFile(cp, executable, args, { env, timeout: 600000, maxBuffer: 4 * 1024 * 1024, windowsHide: true, shell: Platform.isWin }, (err, stdout, stderr) => {
 				const output = [stdout, stderr].filter(Boolean).join("\n").trim();
 				if (err) {
 					resolve({ success: false, message: `${def.name}: ${output || err.message}`, command });
@@ -1004,7 +1065,7 @@ export class AIService {
 		if (result.success) {
 			const path = await this.detectProviderPath(provider);
 			if (!path) return { success: false, message: `${def.name} installer finished but its executable was not found. Restart Obsidian or check the install output.`, command };
-			const error = await new Promise<string | null>((resolve) => cp.execFile(path, def.versionArgs,
+			const error = await new Promise<string | null>((resolve) => this.execFile(cp, path, def.versionArgs,
 				{ env: this.getEnv(), timeout: 10000, shell: Platform.isWin }, (err, stdout, stderr) => resolve(err ? (stderr || stdout || err.message).toString() : null)));
 			if (error) return { success: false, message: `${def.name} was installed but cannot start: ${error}`, command };
 		}
@@ -1053,17 +1114,20 @@ export class AIService {
 	}
 
 	public async getAvailableModels(customOverride?: string): Promise<AgyModelInfo[]> {
+		if (!this.isAvailable()) return [];
+		const activity = this.activityGeneration;
 		const agyPath = await this.detectAgyPath(customOverride);
 		if (!agyPath) return DEFAULT_AGY_MODELS;
 
 		const cp = await this.resolveChildProcess();
+		if (!this.isAvailable() || activity !== this.activityGeneration) return [];
 		if (!cp) return DEFAULT_AGY_MODELS;
 
 		const env = this.getEnv();
 		const vaultPath = this.getVaultPath() || "";
 
 		return await new Promise<AgyModelInfo[]>((resolve) => {
-			cp.execFile(
+			this.execFile(cp,
 				agyPath,
 				["models"],
 				{ env, cwd: vaultPath, timeout: 6000 },
@@ -1099,6 +1163,7 @@ export class AIService {
 	}
 
 	public async getCodexModels(): Promise<AgyModelInfo[]> {
+		if (!this.isAvailable()) return [];
 		try {
 			const proc = (
 				window as unknown as { process?: { env?: Record<string, string> } }
@@ -1107,8 +1172,7 @@ export class AIService {
 			if (home) {
 				const win = window as unknown as {
 					require?: (mod: string) => {
-						readFileSync?: (path: string, enc: string) => string;
-						existsSync?: (path: string) => boolean;
+						promises?: { readFile: (path: string, enc: string) => Promise<string> };
 					};
 				};
 				if (typeof win.require === "function") {
@@ -1116,8 +1180,8 @@ export class AIService {
 					const sep = Platform.isWin ? "\\" : "/";
 					const codexHome = proc?.env?.CODEX_HOME || `${home}${sep}.codex`;
 					const cacheFile = `${codexHome}${sep}models_cache.json`;
-					if (fs?.existsSync?.(cacheFile) && fs?.readFileSync) {
-						const raw = fs.readFileSync(cacheFile, "utf8");
+					if (fs?.promises) {
+						const raw = await fs.promises.readFile(cacheFile, "utf8");
 						const data = JSON.parse(raw) as {
 							models?: Array<{
 								slug?: string;
@@ -1149,6 +1213,7 @@ export class AIService {
 	}
 
 	public async isProviderAvailable(provider: AIProvider): Promise<boolean> {
+		if (!this.isAvailable()) return false;
 		if (isConnectionProvider(provider)) {
 			const connectionId = provider.slice("connection:".length);
 			return (this.plugin?.settings.aiConnections || []).some((c) => c.id === connectionId);
@@ -1164,16 +1229,19 @@ export class AIService {
 	}
 
 	public getProviderName(provider: AIProvider): string {
-		return this.getConnection(provider)?.name || (isConnectionProvider(provider) ? "Connection unavailable" : getAgentDisplayName(provider));
+		return this.getConnection(provider)?.name || (isConnectionProvider(provider) ? t("aiChatConnectionUnavailable") : getAgentDisplayName(provider));
 	}
 
 	public getConnectionKey(id: string): string | null {
+		if (!this.isAvailable()) return null;
 		if (requireApiVersion("1.11.4")) return this.app.secretStorage?.getSecret(connectionSecretId(id)) || null;
 		return null;
 	}
 
 	public async discoverConnectionModels(connection: AIConnection, keyOverride?: string): Promise<AgyModelInfo[]> {
+		if (!this.isAvailable()) return [];
 		const controller = new AbortController();
+		this.activeRequests.add(controller);
 		const timeout = window.setTimeout(() => controller.abort(), 15000);
 		try {
 			const key = keyOverride === undefined ? this.getConnectionKey(connection.id) : keyOverride;
@@ -1193,20 +1261,23 @@ export class AIService {
 			return list
 				.map((m) => (typeof m === "string" ? { id: m, displayName: m } : { id: m.id || m.model || m.name || "", displayName: m.name || m.id || m.model || "" }))
 				.filter((m) => Boolean(m.id));
-		} finally { window.clearTimeout(timeout); }
+		} finally { window.clearTimeout(timeout); this.activeRequests.delete(controller); }
 	}
 
 	public async testConnection(connection: AIConnection, keyOverride?: string): Promise<void> {
+		if (!this.isAvailable()) return;
 		const controller = new AbortController();
+		this.activeRequests.add(controller);
 		const timeout = window.setTimeout(() => controller.abort(), 30000);
 		try {
 			await this.requestDirectModel(connection, connection.models[0] || "", [{ role: "user", content: "Reply with exactly OK." }],
 				"Reply briefly. This is a connection test.", controller.signal, () => {}, keyOverride);
-		} finally { window.clearTimeout(timeout); }
+		} finally { window.clearTimeout(timeout); this.activeRequests.delete(controller); }
 	}
 
 	private async requestDirectModel(connection: AIConnection, model: string, messages: DirectMessage[], system: string,
 		signal: AbortSignal, onDelta: (text: string) => void, keyOverride?: string): Promise<string> {
+		if (!this.isAvailable() || signal.aborted) throw new Error("Request cancelled.");
 		const key = keyOverride === undefined ? this.getConnectionKey(connection.id) : keyOverride;
 		const request = buildDirectRequest(connection, model, key, messages, system, Platform.isDesktop);
 		try {
@@ -1239,10 +1310,11 @@ export class AIService {
 
 	private sendDirectMessage(options: SendMessageOptions, provider: AIProvider): AIProcessHandle {
 		const controller = new AbortController();
+		this.activeRequests.add(controller);
 		let timedOut = false;
 		const timeout = window.setTimeout(() => { timedOut = true; controller.abort(); }, 120000);
 		void (async () => {
-			if (this.plugin && !this.plugin.settings.enableAIChat) throw new Error("Agent chat is disabled.");
+			if (!this.isAvailable()) throw new Error(t("aiChatDisabled"));
 			const connection = this.getConnection(provider);
 			if (!connection) throw new Error("This connection was removed. Choose another provider.");
 			if (options.scope === "vault") throw new Error("API and local models use attached-note context. Turn off Entire Vault.");
@@ -1259,15 +1331,37 @@ export class AIService {
 		})().catch((error: unknown) => {
 			if (timedOut) options.onError?.(new Error("The model request timed out. Try again."));
 			else if (!controller.signal.aborted) options.onError?.(error instanceof Error ? error : new Error(String(error)));
-		}).finally(() => window.clearTimeout(timeout));
+		}).finally(() => { window.clearTimeout(timeout); this.activeRequests.delete(controller); });
 		return { kill: () => { window.clearTimeout(timeout); controller.abort(); } };
 	}
 
-	public async getModelsForProvider(provider: AIProvider): Promise<AgyModelInfo[]> {
+	public async getModelsForProvider(provider: AIProvider, force = false): Promise<AgyModelInfo[]> {
+		if (!this.isAvailable()) return [];
 		const cached = this.providerModelsCache.get(provider);
-		if (cached && cached.length > 0) {
+		if (!isConnectionProvider(provider) && !force && cached && Date.now() < (this.providerModelsExpiresAt.get(provider) ?? 0)) {
 			return cached;
 		}
+		const pending = this.modelLookups.get(provider);
+		if (pending) return pending;
+		const generation = this.cacheGeneration;
+		const lookup = this.discoverModelsForProvider(provider).then(models => {
+			// A temporary failure should not replace a previously useful catalog.
+			const discovered = models.some(model => !["default", "auto"].includes(model.id));
+			if (!this.isAvailable() || generation !== this.cacheGeneration) return [];
+			const result = !isConnectionProvider(provider) && !discovered && cached?.some(model => !["default", "auto"].includes(model.id)) ? cached : models;
+			if (generation === this.cacheGeneration) {
+				this.providerModelsCache.set(provider, result);
+				this.providerModelsExpiresAt.set(provider, Date.now() + (discovered ? 300_000 : 30_000));
+			}
+			return result;
+		});
+		this.modelLookups.set(provider, lookup);
+		try { return await lookup; }
+		finally { if (this.modelLookups.get(provider) === lookup) this.modelLookups.delete(provider); }
+	}
+
+	private async discoverModelsForProvider(provider: AIProvider): Promise<AgyModelInfo[]> {
+		const activity = this.activityGeneration;
 
 		let result: AgyModelInfo[] = [];
 
@@ -1277,12 +1371,13 @@ export class AIService {
 			if (connection.kind === "local" && !connection.models.length) {
 				try {
 					const models = await this.discoverConnectionModels(connection);
+					if (!this.isAvailable() || activity !== this.activityGeneration) return [];
 					connection.models = models.map((m) => m.id);
 					if (models.length) await this.plugin?.saveSettings();
 				} catch { /* Manual model IDs remain available in settings. */ }
 			}
 			result = connection.models.map((id) => ({ id, displayName: id }));
-		} else if (this.plugin && !this.plugin.settings.enableAIChat) {
+		} else if (!this.isAvailable()) {
 			return [];
 		} else if (provider === "codex") {
 			result = await this.getCodexModels();
@@ -1293,8 +1388,10 @@ export class AIService {
 				cursor: ["models"], ollama: ["list"], opencode: ["models"], pi: ["--list-models"],
 			};
 			const command = discovery[provider];
+			if (!command) return ALL_AGENT_DEFS.find(agent => agent.id === provider)?.models ?? DEFAULT_GENERIC_MODELS;
 			const cp = await this.resolveChildProcess();
 			const path = command ? await this.detectProviderPath(provider) : null;
+			if (!this.isAvailable() || activity !== this.activityGeneration) return [];
 			if (provider === "ollama" && path) {
 				const fs = await this.resolveFileSystem();
 				const isRealBinary = fs ? fs.existsSync(path) : true;
@@ -1305,13 +1402,14 @@ export class AIService {
 			}
 			if (cp && path && command) {
 				const models = await new Promise<AgyModelInfo[]>((resolve) => {
-					cp.execFile(path, command, { env: this.getEnv(), timeout: 15000, maxBuffer: 1024 * 1024, shell: Platform.isWin }, (err, stdout) => {
+					this.execFile(cp, path, command, { env: this.getEnv(), cwd: this.getVaultPath() || undefined, timeout: 15000, maxBuffer: 1024 * 1024, shell: Platform.isWin }, (err, stdout) => {
 						if (err || !stdout) { resolve([]); return; }
 						const models: AgyModelInfo[] = [];
 						for (const raw of stdout.toString().split("\n")) {
 							const line = raw.replace(new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g"), "").trim();
 							if (!line || /^(NAME|provider\s+model|Available models|Model\s)/i.test(line)) continue;
 							let id = "";
+							let displayName = "";
 							if (provider === "opencode") {
 								if (/^[\w.-]+\/[^\s]+$/.test(line)) id = line;
 							} else if (provider === "ollama") {
@@ -1324,8 +1422,9 @@ export class AIService {
 								// Cursor prints model-id - display name (and may mark the default).
 								const match = line.match(/^([\w.:-]+)\s+-\s+(.+)$/);
 								id = match?.[1] || "";
+								displayName = match?.[2]?.replace(/\s*\((?:current|default|current, default)\)$/, "") || "";
 							}
-							if (id && !models.some((m) => m.id === id)) models.push({ id, displayName: id });
+							if (id && !models.some((m) => m.id === id)) models.push({ id, displayName: displayName || id });
 						}
 						resolve(models);
 					});
@@ -1339,9 +1438,6 @@ export class AIService {
 			}
 		}
 
-		if (result.length > 0) {
-			this.providerModelsCache.set(provider, result);
-		}
 		return result;
 	}
 
@@ -1527,6 +1623,7 @@ export class AIService {
 	}
 
 	public sendMessage(options: SendMessageOptions): AIProcessHandle {
+		if (!this.isAvailable()) return { kill: () => {} };
 		const target = options.provider || this.plugin?.settings.aiProvider || "antigravity";
 		if (isConnectionProvider(target)) return this.sendDirectMessage(options, target);
 		const selectedModel = options.model?.trim();
@@ -1537,6 +1634,7 @@ export class AIService {
 
 		const handle: AIProcessHandle = {
 			kill: () => {
+				this.activeChats.delete(handle);
 				isKilled = true;
 				if (spawned) {
 					try {
@@ -1570,6 +1668,7 @@ export class AIService {
 			},
 		};
 
+		this.activeChats.add(handle);
 		const provider: AIProvider = options.provider ?? this.plugin?.settings.aiProvider ?? "antigravity";
 
 		void (async () => {
@@ -1776,7 +1875,7 @@ export class AIService {
 				return;
 			}
 
-			if (isKilled) return;
+			if (isKilled || !this.isAvailable()) return;
 			try {
 				spawned = cp.spawn(binPath, args, {
 					cwd: vaultPath,
@@ -1918,6 +2017,7 @@ export class AIService {
 			});
 
 			spawned.on("close", (code) => {
+				this.activeChats.delete(handle);
 				if (isKilled || finished) return;
 
 				lineBuffer += stdoutDecoder.decode();
@@ -1948,6 +2048,7 @@ export class AIService {
 			});
 
 			spawned.on("error", (err: Error) => {
+				this.activeChats.delete(handle);
 				if (isKilled) return;
 				if ("code" in err && (err.code === "ENOENT" || err.code === "EACCES")) this.refreshAgentsCache();
 				fail(err);
@@ -1956,7 +2057,7 @@ export class AIService {
 			spawned.stdin?.end();
 		})().catch((err: unknown) => {
 			if (!isKilled) options.onError?.(err instanceof Error ? err : new Error(String(err)));
-		});
+		}).finally(() => { if (!spawned) this.activeChats.delete(handle); });
 
 		return handle;
 	}
