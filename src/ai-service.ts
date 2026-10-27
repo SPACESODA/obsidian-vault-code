@@ -1419,12 +1419,19 @@ export class AIService {
 		return expanded;
 	}
 
+	private canResumeConversation(provider: AIProvider, conversationId?: string): boolean {
+		if (!conversationId?.trim()) return false;
+		if (provider === "codex") return /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(conversationId.trim());
+		return ["antigravity", "claude", "cursor", "opencode"].includes(provider);
+	}
+
 	private async buildEffectivePrompt(options: SendMessageOptions, forCli = false): Promise<string> {
 		let effectivePrompt = options.prompt.trim();
 
 		// Chat history transcript (available whether entire vault is on or off)
 		const historyTranscript: string[] = [];
-		if (forCli && options.history && options.history.length > 0) {
+		const provider = options.provider ?? this.plugin?.settings.aiProvider ?? "antigravity";
+		if (forCli && !this.canResumeConversation(provider, options.conversationId) && options.history && options.history.length > 0) {
 			historyTranscript.push("[Current Conversation Transcript]");
 			for (const msg of options.history) {
 				const speaker = msg.role === "user" ? "User" : "Agent";
@@ -1594,7 +1601,7 @@ export class AIService {
 					options.onError?.(new Error("Codex CLI (codex) not found on system"));
 					return;
 				}
-				const isUuid = !!(options.conversationId && /^[0-9a-fA-F-]{36}$/.test(options.conversationId.trim()));
+				const isUuid = this.canResumeConversation(provider, options.conversationId);
 				if (isUuid && options.conversationId) {
 					args.push("-C", vaultPath, "exec", "resume", options.conversationId.trim(), "--skip-git-repo-check", "--json");
 				} else {

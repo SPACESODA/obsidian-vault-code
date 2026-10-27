@@ -90,12 +90,14 @@ export function buildDirectRequest(connection: AIConnection, model: string, key:
 }
 interface ModelReply {
 	type?: string; message?: string; error?: { message?: string }; response?: { error?: { message?: string } };
+	stop_reason?: string;
 	choices?: Array<{ delta?: { content?: string }; message?: { content?: string }; finish_reason?: string }>;
-	delta?: string | { type?: string; text?: string }; content?: Array<{ type?: string; text?: string }>;
+	delta?: string | { type?: string; text?: string; stop_reason?: string }; content?: Array<{ type?: string; text?: string }>;
 	output?: Array<{ content?: Array<{ type?: string; text?: string }> }>; output_text?: string;
 }
 export function modelReplyText(data: ModelReply): string {
-	if (data.choices?.[0]?.finish_reason === "length") throw new Error("The response reached the model’s output limit. Ask for a shorter response.");
+	const stopReason = data.stop_reason ?? (typeof data.delta === "object" ? data.delta.stop_reason : undefined);
+	if (data.choices?.[0]?.finish_reason === "length" || stopReason === "max_tokens" || stopReason === "model_context_window_exceeded") throw new Error("The response reached the model’s output limit. Ask for a shorter response.");
 	if (data.error || data.type === "error" || data.type === "response.failed" || data.type === "response.incomplete") throw new Error(data.error?.message || data.response?.error?.message || data.message || "The model request did not complete.");
 	if (data.type === "response.output_text.delta" && typeof data.delta === "string") return data.delta;
 	if (typeof data.delta === "object") return data.delta.text || "";

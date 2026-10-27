@@ -224,3 +224,14 @@ test('long instructions remain bounded, avoid broken Unicode and identify omitte
   assert.doesNotMatch(instructions,/\uD83D/);assert.doesNotMatch(instructions,/not includednot included/);
   assert.match(instructions,/instructions.md was shortened/);
 });
+
+test('Anthropic truncation is rejected for streaming and non-streaming replies',()=>{
+  for(const reason of ['max_tokens','model_context_window_exceeded']){
+    assert.throws(()=>core.modelReplyText({stop_reason:reason,content:[{type:'text',text:'Partial'}]}),/output limit/);
+    const parts=[];const parser=new core.ModelEventParser(text=>parts.push(text));
+    parser.push('data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"Partial"}}\n\n');
+    assert.throws(()=>parser.push(`data: ${JSON.stringify({type:'message_delta',delta:{stop_reason:reason}})}\n\n`),/output limit/);
+    assert.deepEqual(parts,['Partial']);
+  }
+  assert.equal(core.modelReplyText({stop_reason:'end_turn',content:[{type:'text',text:'Complete'}]}),'Complete');
+});

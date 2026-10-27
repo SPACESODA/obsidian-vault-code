@@ -585,6 +585,23 @@ test('review-and-fix requests retain explicit edit authorization without revivin
   }
 });
 
+test('resumed CLI sessions omit redundant transcripts while fresh sessions retain them',async()=>{
+  const bins=Object.fromEntries(['agy','codex','claude','copilot','opencode','pi','agent','kimi','grok','aider'].map(name=>[name,'/fake/'+name]));
+  const h=harness({bins});const history=[{role:'user',content:'Previous question'},{role:'assistant',content:'Previous answer'}];
+  for(const provider of ['antigravity','codex','claude','cursor','opencode','copilot','pi','kimi','grok','aider']){
+    const id=provider==='codex'?'12345678-1234-1234-1234-123456789abc':'saved-session';
+    await h.send(provider,{conversationId:id,history,currentChatPath:'agent-chats/current.md'});
+    const prompt=h.spawned.at(-1).args.find(arg=>arg.includes('[Obsidian Chat Interface]'));
+    assert.equal(prompt.includes('Previous answer'),!['antigravity','codex','claude','cursor','opencode'].includes(provider),provider);
+    assert.match(prompt,/Active Chat File/);
+    await h.send(provider,{history});
+    assert.match(h.spawned.at(-1).args.find(arg=>arg.includes('[Obsidian Chat Interface]')),/Previous answer/,provider);
+  }
+  await h.send('codex',{conversationId:'not-a-thread-id',history});
+  assert.match(h.spawned.at(-1).args.at(-1),/Previous answer/);
+  assert.ok(!h.spawned.at(-1).args.includes('resume'));
+});
+
 test('remaining CLI providers receive read-only controls only for Safe mode',async()=>{
   const h=harness({bins:Object.fromEntries(['claude','opencode','pi','kimi','grok','aider'].map(name=>[name,'/fake/'+name]))});
   const required={claude:['--tools','Read,Glob,Grep','--disallowedTools','mcp__*'],opencode:['--agent','vault-code-safe'],
