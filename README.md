@@ -4,6 +4,8 @@
 
 **Vault Code** is a powerful plugin that integrates with Obsidian's file explorer and editor. View hidden files, create and organize files of any kind, and write code in a beautiful code editor. Preview web pages, diagrams, and data, or work with AI agents without leaving Obsidian.
 
+![Vault Code editor and HTML preview in Obsidian](docs/assets/vc-code-editing-gh.jpg)
+
 **Vault Code** follows your Obsidian display language and supports English, 繁體中文, 简体中文, 日本語, 한국어, Español, Français, Italiano, Deutsch, and Русский.
 
 ---
