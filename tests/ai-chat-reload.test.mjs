@@ -621,3 +621,93 @@ test("an older chat load cannot replace a more recently opened conversation", as
 	assert.equal(view.currentChatTitle, "Latest");
 	assert.equal(view.messages[0].content, "Latest");
 });
+
+function chatFixHarness({read=async()=> 'Attached text',create}={}) {
+  const saves=[],requests=[],rendered=[];
+  const note=new globalThis.__TestTFile('Note/test.md');note.name='test.md';
+  const history=new globalThis.__TestTFile('agent-chats/test.md');
+  const plugin={settings:{aiProvider:'antigravity',aiProviderLastModel:{antigravity:'chosen-model'},aiMode:'safe',aiScope:'active-note',aiReasoningEffort:'auto',aiChatFolder:'agent-chats',aiConnections:[]},
+    isPathIgnored:()=>false,saveSettings:async()=>{},
+    aiStorage:{formatDateTime:()=> '2026-10-27T12:00:00',updateChatNote:async(file,metadata,messages)=>{saves.push({file,metadata,messages});},
+      createChatNote:create||(async()=>history),updateChatModel:async()=>{}},
+    aiService:{getModelsForProvider:async()=>[{id:'default',displayName:'Agent default'}],sendMessage:options=>{requests.push(options);return {kill(){}};}}};
+  const view=new AIChatView({},plugin);
+  function element(options={}) {
+    const children=[];const el={children,attributes:{...options.attr},cls:options.cls||'',empty(){children.length=0;},remove(){},
+      createDiv:o=>add(o),createSpan:o=>add(o),createEl:(_tag,o)=>add(o),getAttribute:key=>el.attributes[key],
+      querySelector:selector=>children.find(child=>selector.startsWith('.')&&child.cls.split(' ').includes(selector.slice(1)))||null,
+      querySelectorAll:()=>[],addEventListener(){},setText(){},addClass(){},removeClass(){},removeAttribute(){},show(){}};
+    function add(o){const child=element(o);children.push(child);return child;}return el;
+  }
+  view.app={vault:{read,getAbstractFileByPath:()=>note},workspace:{getActiveFile:()=>note}};
+  view.inputEl={value:'Explain this note',focus(){}};view.messagesContainerEl=element();view.headerTitleEl=element();
+  view.currentChatFile=history;
+  for(const name of ['renderSelectionQuote','updateVaultToggleState','updateContextChip','autoResizeTextarea','updateSendButtonState','renderMessageBubble','scrollToBottom','updateProviderBtnLabel','updateModelBtnLabel','updateEffortBtn','updateModeBtnLabel','renderMessages'])view[name]=()=>{};
+  view.renderMessageBody=async text=>{rendered.push(text);};view.scheduleStreamingRender=()=>{};
+  return {view,plugin,saves,requests,rendered,note,history};
+}
+
+test('Stop persists the user request and partial response and rejects late callbacks',async()=>{
+  const h=chatFixHarness();await h.view.handleSubmit();
+  h.requests[0].onDelta('Partial answer');h.view.stopGenerating();await h.view.chatSaveTask;
+  assert.equal(h.saves.at(-1).messages.at(-1).content,'Partial answer');
+  assert.equal(h.saves.at(-1).messages.at(-2).content,'Explain this note');
+  h.requests[0].onDone('Late completion');assert.equal(h.view.messages.at(-1).content,'Partial answer');
+});
+
+test('switching chats keeps the saved file, metadata and transcript snapshots together',async()=>{
+  const h=chatFixHarness();await h.view.handleSubmit();h.requests[0].onDelta('Old partial');
+  h.view.startNewChat();await h.view.chatSaveTask;
+  const saved=h.saves.at(-1);assert.equal(saved.file,h.history);assert.equal(saved.messages.at(-1).content,'Old partial');
+  assert.equal(h.view.messages.length,0);assert.equal(h.view.currentChatFile,null);
+});
+
+test('closing a chat waits for the interrupted transcript save',async()=>{
+  const h=chatFixHarness();await h.view.handleSubmit();h.requests[0].onDelta('Before closing');
+  await h.view.onClose();assert.equal(h.saves.at(-1).messages.at(-1).content,'Before closing');
+});
+
+test('unreadable attached notes stop submission and preserve a translated error in history',async()=>{
+  const h=chatFixHarness({read:async()=>{throw Error('Read failed');}});
+  await h.view.handleSubmit();await h.view.chatSaveTask;
+  assert.equal(h.requests.length,0);assert.equal(h.view.isGenerating,false);
+  assert.match(h.saves.at(-1).messages.at(-1).content,/original note is no longer available/);
+});
+
+test('stopping while the first history file is being created retains the partial conversation',async()=>{
+  let resolve,creating;
+  const begun=new Promise(r=>{creating=r;});const created=new Promise(r=>{resolve=r;});
+  const h=chatFixHarness({create:async()=>{creating();return created;}});h.view.currentChatFile=null;
+  const submission=h.view.handleSubmit();await begun;h.view.stopGenerating();resolve(h.history);await submission;await h.view.chatSaveTask;
+  assert.equal(h.requests.length,0);assert.equal(h.view.currentChatFile,h.history);
+  assert.equal(h.saves.at(-1).messages[0].content,'Explain this note');assert.equal(h.saves.at(-1).messages.at(-1).content,'Response stopped.');
+});
+
+test('late first-file creation cannot attach its old transcript to a new chat',async()=>{
+  let resolve,creating;const begun=new Promise(r=>{creating=r;});const created=new Promise(r=>{resolve=r;});
+  const h=chatFixHarness({create:async()=>{creating();return created;}});h.view.currentChatFile=null;
+  const submission=h.view.handleSubmit();await begun;h.view.startNewChat();resolve(h.history);await submission;await h.view.chatSaveTask;
+  assert.equal(h.view.currentChatFile,null);assert.equal(h.view.messages.length,0);
+  assert.equal(h.saves.at(-1).file,h.history);assert.equal(h.saves.at(-1).messages[0].content,'Explain this note');
+});
+
+test('continuing after Stop shares a pending first chat file instead of splitting the history',async()=>{
+  let resolve,creating,creates=0;const begun=new Promise(r=>{creating=r;});const created=new Promise(r=>{resolve=r;});
+  const h=chatFixHarness({create:async()=>{creates++;creating();return created;}});h.view.currentChatFile=null;
+  const first=h.view.handleSubmit();await begun;h.view.stopGenerating();
+  h.view.inputEl.value='Continue please';const second=h.view.handleSubmit();
+  await Promise.resolve();resolve(h.history);await Promise.all([first,second]);
+  assert.equal(creates,1);assert.equal(h.requests.length,1);assert.equal(h.view.currentChatFile,h.history);
+  h.requests[0].onDone('Continued answer');await h.view.chatSaveTask;
+  assert.equal(h.saves.at(-1).messages.length,4);assert.equal(h.saves.at(-1).messages.at(-1).content,'Continued answer');
+});
+
+test('queued transcript snapshots remain ordered and a failed save does not prevent a later save',async()=>{
+  const h=chatFixHarness();h.view.messages=[{id:'a',role:'assistant',content:'First',timestamp:0}];
+  let calls=0;const previous=console.error;console.error=()=>{};
+  h.plugin.aiStorage.updateChatNote=async(file,metadata,messages)=>{calls++;if(calls===1)throw Error('Temporary failure');h.saves.push({file,metadata,messages});};
+  try{
+    const first=h.view.persistChat();h.view.messages[0].content='Second';const second=h.view.persistChat();
+    await Promise.all([first,second]);assert.equal(calls,2);assert.equal(h.saves[0].messages[0].content,'Second');
+  }finally{console.error=previous;}
+});

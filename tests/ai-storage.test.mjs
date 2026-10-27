@@ -273,3 +273,25 @@ test('changing the chat folder to a parent never lists or cleans up older instru
   await storage.cleanupOldChats('agent-chats','all');
   assert.deepEqual(trashed,[chat.path]);
 });
+
+test('cleanup checks actual chat contents and preserves unrelated, malformed and unreadable notes',async()=>{
+  const contents=new Map([
+    ['agent-chats/README.md','---\ntype: Project documentation\n---\n##### You\nExample question\n##### Agent\nExample response'],
+    ['agent-chats/tagged.md','---\ntype: Agent Chat\n---\n##### You\nQuestion'],
+    ['agent-chats/legacy.md','##### You\nQuestion\n\n##### Agent\nAnswer'],
+    ['agent-chats/invalid.md','---\ntype: [unclosed\n---\nImportant text'],
+    ['agent-chats/missing.md',null],
+  ]);
+  const files=[...contents.keys()].map(path=>({path,name:path.split('/').at(-1),stat:{mtime:0}}));const trashed=[];
+  const storage=new AIStorage({vault:{getMarkdownFiles:()=>files,read:async file=>{const text=contents.get(file.path);if(text===null)throw Error('Unavailable');return text;}},
+    metadataCache:{getFileCache:()=>({frontmatter:{type:'Agent Chat'}})},fileManager:{trashFile:async file=>{trashed.push(file.path);}}});
+  assert.equal(await storage.cleanupOldChats('agent-chats','all'),2);
+  assert.deepEqual(trashed,['agent-chats/legacy.md','agent-chats/tagged.md']);
+});
+
+test('age-based cleanup uses last chat time consistently with history sorting',async()=>{
+  const files=[{path:'agent-chats/recent.md',stat:{mtime:0}},{path:'agent-chats/old.md',stat:{mtime:Date.now()}}];
+  const trashed=[];const storage=new AIStorage({vault:{getMarkdownFiles:()=>files,read:async file=>'---\ntype: Agent Chat\nchat_last: '+new Date(file===files[0]?Date.now():0).toISOString()+'\n---\n'},
+    metadataCache:{getFileCache:file=>({frontmatter:{chat_last:new Date(file===files[0]?0:Date.now()).toISOString()}})},fileManager:{trashFile:async file=>{trashed.push(file.path);}}});
+  assert.equal(await storage.cleanupOldChats('agent-chats','7d'),1);assert.deepEqual(trashed,['agent-chats/old.md']);
+});

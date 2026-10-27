@@ -492,22 +492,27 @@ export class AIStorage {
 		const files = await this.listChatNotes(folderPath);
 		if (files.length === 0) return 0;
 
-		if (rule === "all") {
-			for (const file of files) {
-				await this.deleteChatNote(file);
-			}
-			return files.length;
-		}
-
 		const days = rule === "7d" ? 7 : rule === "30d" ? 30 : 90;
 		const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
 
 		let deletedCount = 0;
 		for (const file of files) {
-			if (file.stat.mtime < cutoff) {
-				await this.deleteChatNote(file);
-				deletedCount++;
-			}
+			// Recheck actual contents before destructive cleanup; folder membership
+			// and cached metadata alone do not prove that a note is a chat.
+			let isChat = false;
+			try {
+				const content = await this.app.vault.read(file);
+				const frontmatter = chatFrontmatter(content);
+				const type = frontmatter?.properties.type;
+				const turns = parseChatTurns(frontmatter?.body ?? content);
+				isChat = type === "Agent Chat" || type === "AI Chat"
+					|| (type === undefined && turns.some(turn => turn.role === "user") && turns.some(turn => turn.role === "assistant"));
+				const lastChat = parseChatTimestamp(chatProperty(frontmatter?.properties ?? {}, "last_chat")) ?? file.stat.mtime;
+				if (rule !== "all" && lastChat >= cutoff) isChat = false;
+			} catch { /* Unreadable or malformed notes are never cleanup candidates. */ }
+			if (!isChat) continue;
+			await this.deleteChatNote(file);
+			deletedCount++;
 		}
 
 		return deletedCount;

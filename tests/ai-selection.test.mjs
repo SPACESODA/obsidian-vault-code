@@ -128,13 +128,14 @@ function chat() {
   const view=Object.create(AIChatView.prototype);
   view.inputEl=node('textarea');view.inputEl.value='My existing question';view.quoteContainerEl=node();
   view.renderRafId=null;view.submissionId=0;view.pendingQuote=null;view.isGenerating=false;view.chatScope='active-note';view.messages=[];
+  view.chatSaveTask=Promise.resolve();view.pendingChatFiles=new WeakMap();
   view.selectedProvider='connection:test';view.selectedModel='test-model';view.mode='safe';
   view.updateVaultToggleState=()=>{};view.updateContextChip=()=>{};view.autoResizeTextarea=()=>{};
   view.updateSendButtonState=()=>{};view.scrollToBottom=()=>{};view.renderMessageBubble=()=>{};
   view.messagesContainerEl=node(); view.currentChatFile={path:'agent-chats/test.md'};
   const file=new globalThis.__SelectionTestFile('Note/test.md');
   view.app={vault:{getAbstractFileByPath:path=>path===file.path?file:null},workspace:{getActiveFile:()=>{throw Error('Must not use another active note');}}};
-  const requests=[];view.plugin={settings:{},aiService:{sendMessage:options=>{requests.push(options);return {kill(){}};}}};
+  const requests=[];view.plugin={settings:{},aiStorage:{formatDateTime:()=> '2026-10-27T12:00:00',updateChatNote:async()=>{}},aiService:{sendMessage:options=>{requests.push(options);return {kill(){}};}}};
   return {view,requests,file};
 }
 test('attaching and removing a quote preserves the typed draft without starting generation',()=>{
@@ -162,16 +163,17 @@ test('an empty question leaves the quote attached and sends nothing',async()=>{
   await view.handleSubmit(); assert.ok(view.pendingQuote);assert.equal(requests.length,0);
 });
 
-test('cancelling while a chat note is being created cannot send or attach a stale note',async()=>{
+test('switching conversations while a chat note is being created cannot send or attach a stale note',async()=>{
   const {view,requests,file}=chat();
   view.attachSelection(captureSelection(file.path,'selected text',0,13));
   view.currentChatFile=null;
   let resolveNote;
-  view.plugin.aiStorage={createChatNote:()=>new Promise(resolve=>{resolveNote=resolve;})};
+  view.plugin.aiStorage.createChatNote=()=>new Promise(resolve=>{resolveNote=resolve;});
   const submission=view.handleSubmit();
   assert.equal(view.isGenerating,true);
   view.submissionId++;
   view.isGenerating=false;
+  view.messages=[];
   resolveNote({path:'agent-chats/cancelled.md'});
   await submission;
   assert.equal(requests.length,0);

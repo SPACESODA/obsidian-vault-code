@@ -26,6 +26,7 @@ import { AIEditReviewModal } from "./ai-edit-review";
 import { chatErrorContent, isChatPermissionError } from "./ai-chat-feedback";
 import { renderChatMarkdown, disposeChatMarkdown } from "./ai-chat-markdown";
 import { type SelectionQuote, selectionLabel, quoteMessage, captureSelection } from "./ai-selection";
+import type { ChatMetadata } from "./ai-storage";
 
 export const VIEW_TYPE_AI_CHAT = "vault-code-ai-chat";
 
@@ -112,6 +113,8 @@ export class AIChatView extends ItemView {
 	private messageResizeObserver: ResizeObserver | null = null;
 	private submissionId = 0;
 	private chatLoadId = 0;
+	private chatSaveTask: Promise<void> = Promise.resolve();
+	private pendingChatFiles = new WeakMap<ChatMessage[], Promise<TFile>>();
 	private safeRequest: { userId: string; file: TFile | null; quote: SelectionQuote | null; scope: "active-note" | "vault" } | null = null;
 	private activeProcessHandle: AIProcessHandle | null = null;
 	private availableModels: AgyModelInfo[] = [];
@@ -245,6 +248,7 @@ export class AIChatView extends ItemView {
 	async onClose(): Promise<void> {
 		this.chatLoadId++;
 		this.stopGenerating();
+		await this.chatSaveTask;
 		this.disposeMessageRendering();
 		if (this.renderRafId !== null) {
 			window.cancelAnimationFrame(this.renderRafId);
@@ -1339,6 +1343,7 @@ export class AIChatView extends ItemView {
 			timestamp: Date.now(),
 		};
 		this.messages.push(assistantMsg);
+		const submittedMessages = this.messages;
 
 		const asstBubbleEl = this.messagesContainerEl.createDiv({
 			cls: "vault-code-chat-msg is-assistant",
@@ -1360,6 +1365,7 @@ export class AIChatView extends ItemView {
 		this.followOutput = true;
 
 		this.isGenerating = true;
+		void this.persistChat();
 		this.updateSendButtonState();
 		this.scrollToBottom();
 
@@ -1384,10 +1390,19 @@ export class AIChatView extends ItemView {
 				try {
 					activeContent = await this.app.vault.read(activeFile);
 				} catch {
-					// ignore
+					if (submission !== this.submissionId || !this.isGenerating) return;
+					assistantMsg.content = chatErrorContent(t("aiEditMissing"), this.mode);
+					this.currentTypingIndicatorEl?.remove();
+					this.currentTypingIndicatorEl = null;
+					void this.renderMessageBody(assistantMsg.content, asstBodyEl);
+					await this.ensureSubmittedChatFile(text, submission, submittedMessages);
+					if (submission !== this.submissionId || !this.isGenerating) return;
+					this.finishGenerating();
+					void this.persistChat();
+					return;
 				}
 				const editor = this.app.workspace.activeEditor?.editor;
-				if (editor && (!this.isContextPinned || this.app.workspace.getActiveFile()?.path === activeFile.path)) {
+				if (editor && this.app.workspace.getActiveFile()?.path === activeFile.path) {
 					selectedText = editor.getSelection();
 					selectionStart = editor.posToOffset(editor.getCursor("from"));
 				}
@@ -1398,39 +1413,11 @@ export class AIChatView extends ItemView {
 
 		if (submission !== this.submissionId || !this.isGenerating) return;
 
-		// Auto-create chat note on first turn if not yet saved
-		if (!this.currentChatFile) {
-			this.currentChatTitle = text.slice(0, 50);
-			const folder = this.plugin.settings.aiChatFolder || "agent-chats";
-			try {
-				const createdChat = await this.plugin.aiStorage.createChatNote(
-					folder,
-					this.currentChatTitle,
-					this.messages,
-					{
-						provider: this.selectedProvider,
-						model: this.selectedModel,
-						reasoning_effort: supportsReasoningEffort(this.selectedProvider)
-							? this.selectedReasoningEffort
-							: undefined,
-						scope: this.chatScope,
-						mode: this.mode,
-						conversationId: this.conversationId,
-					},
-				);
-				if (submission !== this.submissionId || !this.isGenerating) return;
-				this.currentChatFile = createdChat;
-				this.headerTitleEl?.setText(this.currentChatTitle);
-				this.headerTitleEl.title = `${this.currentChatTitle} (${t("aiChatRenameChat")})`;
-				this.headerTitleEl.addClass("is-editable");
-				this.openNoteBtnEl?.show();
-			} catch (e) {
-				console.error("Vault Code: Failed to create chat note", e);
-			}
-		}
+		await this.ensureSubmittedChatFile(text, submission, submittedMessages);
 
 		if (submission !== this.submissionId || !this.isGenerating) return;
 		const requestMode = this.mode;
+		const requestProvider = this.selectedProvider;
 		if (requestMode === "safe") {
 			const contextQuote = quote || (activeFile && selectedText && selectionStart !== undefined
 				? captureSelection(activeFile.path, activeContent, selectionStart, selectionStart + selectedText.length) : null);
@@ -1473,8 +1460,8 @@ export class AIChatView extends ItemView {
 				}
 				assistantMsg.content = fullText;
 				if (this.renderRafId !== null) { window.cancelAnimationFrame(this.renderRafId); this.renderRafId = null; }
-				const proposal = isConnectionProvider(this.selectedProvider) ? extractEditProposal(fullText) : null;
-				if (proposal && this.mode === "edit" && activeFile) {
+				const proposal = isConnectionProvider(requestProvider) ? extractEditProposal(fullText) : null;
+				if (proposal && requestMode === "edit" && activeFile) {
 					const file = activeFile;
 					let proposedContent = proposal.content;
 					const validSelection = !selectedText || (selectionStart !== undefined && activeContent.slice(selectionStart, selectionStart + selectedText.length) === selectedText);
@@ -1505,25 +1492,7 @@ export class AIChatView extends ItemView {
 
 				this.finishGenerating();
 
-				// Persist updated transcript to the Markdown chat note
-				if (this.currentChatFile) {
-					void this.plugin.aiStorage.updateChatNote(
-						this.currentChatFile,
-						{
-							title: this.currentChatTitle,
-							created: this.plugin.aiStorage.formatDateTime(),
-							provider: this.selectedProvider,
-							model: this.selectedModel,
-							reasoning_effort: supportsReasoningEffort(this.selectedProvider)
-								? this.selectedReasoningEffort
-								: undefined,
-							scope: this.chatScope,
-							mode: this.mode,
-							conversationId: this.conversationId,
-						},
-						this.messages,
-					);
-				}
+				void this.persistChat();
 			},
 			onError: (err: Error) => {
 				if (submission !== this.submissionId || !this.isGenerating) return;
@@ -1564,29 +1533,80 @@ export class AIChatView extends ItemView {
 				}
 				this.finishGenerating();
 
-				if (this.currentChatFile) {
-					void this.plugin.aiStorage.updateChatNote(
-						this.currentChatFile,
-						{
-							title: this.currentChatTitle,
-							created: this.plugin.aiStorage.formatDateTime(),
-							provider: this.selectedProvider,
-							model: this.selectedModel,
-							reasoning_effort: supportsReasoningEffort(this.selectedProvider)
-								? this.selectedReasoningEffort
-								: undefined,
-							scope: this.chatScope,
-							mode: this.mode,
-							conversationId: this.conversationId,
-						},
-						this.messages,
-					);
-				}
+				void this.persistChat();
 			},
 		});
 	}
 
+	private async ensureSubmittedChatFile(title: string, submission: number, submittedMessages: ChatMessage[]): Promise<void> {
+		if (!this.currentChatFile) {
+			this.currentChatTitle = (submittedMessages.find(message => message.role === "user")?.content ?? title).slice(0, 50);
+			const folder = this.plugin.settings.aiChatFolder || "agent-chats";
+			const metadata: ChatMetadata = {
+				title: this.currentChatTitle, created: this.plugin.aiStorage.formatDateTime(),
+				provider: this.selectedProvider, model: this.selectedModel,
+				reasoning_effort: supportsReasoningEffort(this.selectedProvider) ? this.selectedReasoningEffort : undefined,
+				scope: this.chatScope, mode: this.mode, conversationId: this.conversationId,
+			};
+			let creation = this.pendingChatFiles.get(submittedMessages);
+			if (!creation) {
+				creation = this.plugin.aiStorage.createChatNote(
+					folder,
+					this.currentChatTitle,
+					submittedMessages,
+					{
+						provider: this.selectedProvider,
+						model: this.selectedModel,
+						reasoning_effort: supportsReasoningEffort(this.selectedProvider)
+							? this.selectedReasoningEffort
+							: undefined,
+						scope: this.chatScope,
+						mode: this.mode,
+						conversationId: this.conversationId,
+					},
+				);
+				this.pendingChatFiles.set(submittedMessages, creation);
+			}
+			try {
+				const createdChat = await creation;
+				if (submission !== this.submissionId || !this.isGenerating) {
+					await this.persistChat(createdChat, metadata, submittedMessages);
+					if (this.messages !== submittedMessages || this.currentChatFile) return;
+				}
+				this.currentChatFile = createdChat;
+				this.currentChatTitle = metadata.title;
+				if (this.headerTitleEl) {
+					this.headerTitleEl.setText(this.currentChatTitle);
+					this.headerTitleEl.title = `${this.currentChatTitle} (${t("aiChatRenameChat")})`;
+					this.headerTitleEl.addClass("is-editable");
+				}
+				this.openNoteBtnEl?.show();
+			} catch (e) {
+				console.error("Vault Code: Failed to create chat note", e);
+			} finally {
+				this.pendingChatFiles.delete(submittedMessages);
+			}
+		}
+	}
+
+	/** Snapshot each save before queueing it so switching chats cannot redirect it. */
+	private persistChat(file = this.currentChatFile, metadata?: ChatMetadata, messages = this.messages): Promise<void> {
+		if (!file || !messages?.length) return Promise.resolve();
+		const snapshot = messages.map(message => ({ ...message }));
+		const properties: ChatMetadata = metadata ?? {
+			title: this.currentChatTitle, created: this.plugin.aiStorage.formatDateTime(),
+			provider: this.selectedProvider, model: this.selectedModel,
+			reasoning_effort: supportsReasoningEffort(this.selectedProvider) ? this.selectedReasoningEffort : undefined,
+			scope: this.chatScope, mode: this.mode, conversationId: this.conversationId,
+		};
+		this.chatSaveTask = (this.chatSaveTask ?? Promise.resolve())
+			.then(() => this.plugin.aiStorage.updateChatNote(file, properties, snapshot))
+			.catch((error: unknown) => { console.error("Vault Code: Failed to save chat history", error); });
+		return this.chatSaveTask;
+	}
+
 	private stopGenerating(): void {
+		const wasGenerating = this.isGenerating;
 		this.safeRequest = null;
 		this.submissionId++;
 		if (this.renderRafId !== null) {
@@ -1610,6 +1630,7 @@ export class AIChatView extends ItemView {
 			}
 		}
 
+		if (wasGenerating) void this.persistChat();
 		this.finishGenerating();
 	}
 
