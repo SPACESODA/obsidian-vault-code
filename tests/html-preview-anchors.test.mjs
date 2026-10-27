@@ -13,13 +13,16 @@ function visit(node){
 }
 visit(ast);
 assert.ok(script);
+// This is our generated wrapper, not untrusted HTML requiring sanitization.
+assert.ok(script.startsWith('<script>') && script.endsWith('</script>'));
+const scriptBody=script.slice('<script>'.length,-'</script>'.length);
 function harness(initialHash=''){
   let click;let prevented=0;let top=0;let scrolled=0;
   const target={scrollIntoView(){scrolled++;}};
   const location={hash:initialHash};
   const document={addEventListener(type,callback){if(type==='click')click=callback;},getElementById:name=>name==='section one'?target:null,getElementsByName:name=>name==='legacy'?[target]:[]};
   const window={location,scrollTo(){top++;}};
-  runInNewContext(script.replace(/^<script>\s*|\s*<\/script>$/g,''),{window,document,XMLHttpRequest:class {}});
+  runInNewContext(scriptBody,{window,document,XMLHttpRequest:class {}});
   return {location,get prevented(){return prevented;},get top(){return top;},get scrolled(){return scrolled;},click(href,attrs={},event={}){
     const link={getAttribute:name=>name==='href'?href:attrs[name]??null,hasAttribute:name=>Object.hasOwn(attrs,name)};
     click({button:0,target:{closest:()=>link},preventDefault(){prevented++;},...event});
