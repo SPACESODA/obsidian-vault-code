@@ -38,6 +38,15 @@ test('new chats serialize exactly the requested YAML property names and retain i
   assert.match(source,/^chat_created: 2026-10-24T10:00:00$/m);
   assert.deepEqual(storage.parseChat(source).messages.map(m=>m.content),['Question','Answer']);
 });
+test('saved role markers roundtrip content without treating response headings as turns',()=>{
+  const storage=new AIStorage({});
+  const turns=[{...messages[0],content:'<!-- agent -->'}, {...messages[1],content:'## You\nExample\n##### Agent\n<!-- user -->\n\\<!-- agent -->\n```md\nUnfinished fence'}, {...messages[0],content:'Continue'}];
+  const source=storage.serializeChat(metadata,turns);
+  assert.ok(source.includes('<!-- user -->\n##### You'));
+  assert.ok(source.includes('<!-- agent -->\n##### Agent'));
+  assert.deepEqual(storage.parseChat(source).messages.map(({role,content})=>({role,content})),turns.map(({role,content})=>({role,content})));
+});
+
 test('legacy properties remain readable, including conversation ID and reasoning effort',()=>{
   const parsed=new AIStorage({}).parseChat(legacyNote());
   assert.equal(parsed.metadata.provider,'codex');assert.equal(parsed.metadata.scope,'vault');assert.equal(parsed.metadata.mode,'edit');

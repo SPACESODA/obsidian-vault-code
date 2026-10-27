@@ -4,7 +4,7 @@ import {createRequire} from 'node:module';
 import {build} from 'esbuild';
 const compiled=await build({stdin:{contents:'export * from "./src/ai-chat-feedback"; export * from "./src/ai-chat-turns"; export {setLanguage,t} from "./src/i18n";',resolveDir:process.cwd(),sourcefile:'chat-feedback-test.ts'},bundle:true,write:false,platform:'node',format:'cjs',plugins:[{name:'obsidian',setup(b){b.onResolve({filter:/^obsidian$/},()=>({path:'obsidian',namespace:'stub'}));b.onLoad({filter:/.*/,namespace:'stub'},()=>({contents:'export const getLanguage=()=>"en"; export const requireApiVersion=()=>true;'}));}}]});
 const mod={exports:{}};new Function('module','exports','require',compiled.outputFiles[0].text)(mod,mod.exports,createRequire(import.meta.url));
-const {chatErrorContent,isChatPermissionError,parseChatTurns,setLanguage,t}=mod.exports;
+const {chatErrorContent,isChatPermissionError,parseChatTurns,escapeChatTurnMarkers,setLanguage,t}=mod.exports;
 const denied='A tool required the "command" permission that headless mode cannot prompt for, so it was auto-denied.';
 test('Safe-mode errors explain the mode choice without executing or resending anything',()=>{
   assert.equal(isChatPermissionError(denied),true);
@@ -25,6 +25,23 @@ test('saved responses retain rules and role-like headings inside fenced examples
 });
 test('legacy emoji headings, CRLF, and tilde fences retain their turn boundaries',()=>{
   const body='## 👤 You\r\nRequest\r\n#### ✨ Agent\r\n~~~~text\r\n##### Assistant\r\nExample\r\n~~~~\r\nFinal';const turns=parseChatTurns(body);assert.equal(turns.length,2);assert.ok(turns[1].content.includes('##### Assistant\nExample'));
+});
+
+test('explicit markers keep role headings inside responses and preserve literal markers',()=>{
+  const messages=[
+    {role:'user',content:'Question'},
+    {role:'assistant',content:'## You\nExample heading\n##### Agent\n```md\n<!-- user -->\n\\<!-- agent -->\n\\\\<!-- user -->\n```\n## Assistant'},
+    {role:'user',content:'Next request'},
+  ];
+  const body=messages.map(message=>`${message.role==='user'?'<!-- user -->\n##### You':'<!-- agent -->\n##### Agent'}\n\n${escapeChatTurnMarkers(message.content)}\n`).join('\n');
+  assert.deepEqual(parseChatTurns(body),messages);
+  assert.deepEqual(parseChatTurns('\r\n'+body.replaceAll('\n','\r\n')),messages);
+});
+
+test('an unfinished code fence cannot swallow later explicitly marked turns',()=>{
+  const body='<!-- agent -->\n##### Agent\n\n```md\nUnfinished example\n\n<!-- user -->\n##### You\n\nContinue';
+  assert.deepEqual(parseChatTurns(body),[{role:'assistant',content:'```md\nUnfinished example'},{role:'user',content:'Continue'}]);
+  assert.deepEqual(parseChatTurns('<!-- user -->\n##### You\n\n<!-- agent -->\n##### Agent'),[]);
 });
 
 test('the concise read-only reminder is translated with the actual mode labels',()=>{

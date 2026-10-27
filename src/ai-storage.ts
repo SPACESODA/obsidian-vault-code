@@ -3,7 +3,7 @@ import type { ChatMessage } from "./ai-chat-view";
 import { type AIProvider, type ReasoningEffort, supportsReasoningEffort } from "./ai-service";
 
 import { parseChatTimestamp } from "./ai-chat-dates";
-import { parseChatTurns } from "./ai-chat-turns";
+import { escapeChatTurnMarkers, parseChatTurns } from "./ai-chat-turns";
 import { CHAT_PROPERTIES, chatProperty, migrateChatProperties } from "./ai-chat-properties";
 
 function chatFrontmatter(content: string): { properties: Record<string, unknown>; body: string } | null {
@@ -172,9 +172,9 @@ export class AIStorage {
 
 		for (const msg of messages) {
 			if (msg.role === "user") {
-				yamlLines.push("##### You", "", msg.content.trim(), "");
+				yamlLines.push("<!-- user -->", "##### You", "", escapeChatTurnMarkers(msg.content.trim()), "");
 			} else {
-				yamlLines.push("##### Agent", "", msg.content.trim(), "");
+				yamlLines.push("<!-- agent -->", "##### Agent", "", escapeChatTurnMarkers(msg.content.trim()), "");
 			}
 		}
 
@@ -183,7 +183,7 @@ export class AIStorage {
 
 	/**
 	 * Parses a Markdown chat note back into structured metadata and messages.
-	 * Supports '##### You' / '##### Agent' as well as legacy header formats.
+	 * Uses explicit role markers for new notes and accepts legacy heading formats.
 	 */
 	public parseChat(content: string, defaultModel = "gemini-3.8-flash-high"): ParsedChat {
 		const nowStr = this.formatDateTime();
