@@ -4341,6 +4341,30 @@ export class DotfileView extends TextFileView {
     arguments[1] = fixUrl(url);
     return origOpen.apply(this, arguments);
   };
+
+  // Fragment links belong to srcdoc, even when a base URL resolves local assets.
+  document.addEventListener("click", function(event) {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    var link = event.target && event.target.closest ? event.target.closest("a[href], area[href]") : null;
+    if (!link || link.hasAttribute("download")) return;
+    var target = (link.getAttribute("target") || "_self").toLowerCase();
+    if (target !== "_self") return;
+    var hash = (link.getAttribute("href") || "").trim();
+    if (!hash || hash.charAt(0) !== "#") return;
+    event.preventDefault();
+    var previousHash = window.location.hash;
+    window.location.hash = hash;
+    if (previousHash !== window.location.hash) return;
+    if (hash === "#") {
+      window.scrollTo(0, 0);
+    } else {
+      var name = hash.slice(1);
+      try { name = decodeURIComponent(name); } catch(e) {}
+      var destination = document.getElementById(name) || document.getElementsByName(name)[0];
+      if (destination) destination.scrollIntoView();
+      else if (name.toLowerCase() === "top") window.scrollTo(0, 0);
+    }
+  });
 })();
 </script>`;
 

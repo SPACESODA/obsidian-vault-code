@@ -866,7 +866,7 @@ body .hidden-files-editor-wrapper .cm-searchMatch-selected {
 		gap: 10px;
 	}
 	.hidden-files-settings .setting-item-info { min-width: 0; margin-right: 0; }
-	.hidden-files-settings .setting-item.mod-toggle { column-gap: 12px; }
+	.hidden-files-settings .setting-item.mod-toggle { gap: 12px; }
 	.hidden-files-settings .setting-item.mod-toggle .setting-item-info { flex: 1; }
 	.hidden-files-settings .setting-item.mod-toggle .setting-item-control { flex: 0 0 auto; }
 	.hidden-files-settings .setting-item-control { min-width: 0; max-width: 100%; flex-wrap: wrap; }
