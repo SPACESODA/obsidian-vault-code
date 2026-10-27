@@ -1,6 +1,7 @@
 import { App, Component, Platform, setIcon, View, type WorkspaceLeaf } from "obsidian";
 import { t } from "./i18n";
 import type { SelectionQuote } from "./ai-selection";
+import { selectionActionPosition, type SelectionRect } from "./ai-selection-position";
 
 export interface WebPageContext { url: string; title: string; text: string }
 export interface WebPageTarget { url: string; title: string; read: () => Promise<WebPageContext> }
@@ -9,7 +10,7 @@ interface BrowserElement extends HTMLElement {
 	getURL?: () => string;
 }
 interface PageView extends View { url?: string; title?: string; mode?: string }
-interface PageSelection { text: string; top: number; bottom: number; moving: boolean; scroll: number }
+interface PageSelection { text: string; rects: SelectionRect[]; moving: boolean; scroll: number; viewportWidth?: number; viewportHeight?: number; contentWidth?: number }
 const LIMIT = 60_000;
 export function webUrl(value: unknown): string | null {
 	if (typeof value !== "string") return null;
@@ -68,8 +69,8 @@ const SELECTION_SCRIPT = `(() => {
  }
  const s=getSelection();if(!s||s.isCollapsed||!s.rangeCount||!document.hasFocus())return null;
  const parent=s.anchorNode?.parentElement;if(parent?.closest('input,textarea,select,[contenteditable]'))return null;
- const rect=s.getRangeAt(0).getBoundingClientRect();
- return {text:s.toString().slice(0,20000),top:rect.top,bottom:rect.bottom,moving:window[key].moving,scroll:scrollY};
+ const rects=Array.from(s.getRangeAt(0).getClientRects()).filter(r=>r.width>0&&r.height>0&&r.bottom>0&&r.top<innerHeight).slice(0,2000).map(r=>({left:r.left,right:r.right,top:r.top,bottom:r.bottom}));
+ return {text:s.toString().slice(0,20000),rects,moving:window[key].moving,scroll:scrollY,viewportWidth:innerWidth,viewportHeight:innerHeight,contentWidth:document.documentElement.clientWidth};
 })()`;
 
 /** Optional integration: no core-plugin imports or patches, and no work in background tabs. */
@@ -125,8 +126,8 @@ export class WebViewerChat extends Component {
 			if (content) {
 				const selection = host.getSelection();
 				if (selection?.rangeCount && !selection.isCollapsed && content.contains(selection.anchorNode) && content.contains(selection.focusNode)) {
-					const rect = selection.getRangeAt(0).getBoundingClientRect();
-					value = { text: selection.toString().slice(0, 20000), top: rect.top, bottom: rect.bottom, moving: this.readerDragging, scroll: content.scrollTop };
+					const rects = Array.from(selection.getRangeAt(0).getClientRects()).map(rect => ({ left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom }));
+					value = { text: selection.toString().slice(0, 20000), rects, moving: this.readerDragging, scroll: content.scrollTop };
 				}
 			} else {
 				this.instrumented = browser(leaf.view);
@@ -135,18 +136,22 @@ export class WebViewerChat extends Component {
 			if (this.disposed || this.leaf !== leaf || this.app.workspace.getActiveViewOfType(View)?.leaf !== leaf || this.target?.url !== target.url || !this.enabled() || !this.selectionEnabled()) return;
 			if (!value || typeof value !== "object") { this.hide(); return; }
 			const data = value as Partial<PageSelection>;
-			if (typeof data.text !== "string" || !data.text.trim() || !Number.isFinite(data.top) || !Number.isFinite(data.bottom) || data.moving) { this.hide(); return; }
+			if (typeof data.text !== "string" || !data.text.trim() || !Array.isArray(data.rects) || data.moving) { this.hide(); return; }
 			const key = JSON.stringify(data);
 			if (key !== this.lastSelection) { this.hide(); this.lastSelection = key; this.stableSince = Date.now(); return; }
 			if (Date.now() - this.stableSince < 300) return;
 			if (!this.button || this.button.doc !== host) this.makeButton(leaf.view);
-			const box = content ? leaf.view.containerEl.getBoundingClientRect() : browser(leaf.view)?.getBoundingClientRect();
+			const box = content ? content.getBoundingClientRect() : browser(leaf.view)?.getBoundingClientRect();
 			if (!box || !this.button) return;
-			const top = (data.top ?? 0) + (content ? 0 : box.top);
-			if (top < box.top || top > box.bottom) { this.hide(); return; }
+			const scaleX = !content && data.viewportWidth && data.viewportWidth > 0 ? box.width / data.viewportWidth : 1;
+			const scaleY = !content && data.viewportHeight && data.viewportHeight > 0 ? box.height / data.viewportHeight : 1;
+			const rects = data.rects.filter((rect): rect is SelectionRect => !!rect && typeof rect === "object").map(rect => ({ left: rect.left * scaleX + (content ? 0 : box.left), right: rect.right * scaleX + (content ? 0 : box.left), top: rect.top * scaleY + (content ? 0 : box.top), bottom: rect.bottom * scaleY + (content ? 0 : box.top) }));
+			const pane = { left: box.left, right: content ? box.left + content.clientWidth : data.contentWidth ? Math.min(box.right, box.left + data.contentWidth * scaleX) : box.right, top: box.top, bottom: box.bottom };
+			const position = selectionActionPosition(rects, pane, { width: host.defaultView!.innerWidth, height: host.defaultView!.innerHeight });
+			if (!position) { this.hide(); return; }
 			this.quote = { path: target.url, text: data.text, source: data.text, from: 0, to: data.text.length, startLine: 0, endLine: 0, web: { url: target.url, title: target.title } };
 			this.button.setAttribute("aria-label", t("aiChatQuoteSelection"));
-			this.button.setCssProps({ "--selection-agent-left": `${Math.max(8, Math.min(box.right - 56, host.defaultView!.innerWidth - 40))}px`, "--selection-agent-top": `${Math.max(8, Math.min(top, host.defaultView!.innerHeight - 38))}px` });
+			this.button.setCssProps({ "--selection-agent-left": `${position.left}px`, "--selection-agent-top": `${position.top}px` });
 			this.button.hidden = false;
 		} catch { this.hide(); } finally { this.busy = false; }
 	}

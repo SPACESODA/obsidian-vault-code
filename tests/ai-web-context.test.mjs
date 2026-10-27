@@ -46,11 +46,11 @@ test('missing or disabled Web Viewer remains dormant without browser calls',asyn
 
 test('web selections wait for release and stability, cite their URL, and disappear on tab changes',async()=>{
  const h=viewer(),sent=[],listeners={};
- const button={hidden:true,events:{},setAttribute(){},setCssProps(){},addEventListener(n,fn){this.events[n]=fn;},remove(){this.removed=true;}};
+ const button={hidden:true,events:{},setAttribute(){},setCssProps(p){this.styles=p;},addEventListener(n,fn){this.events[n]=fn;},remove(){this.removed=true;}};
  const doc={body:{createEl:()=>button},defaultView:{innerWidth:1000,innerHeight:800,addEventListener(){},removeEventListener(){}},addEventListener(n,fn){listeners[n]=fn;},removeEventListener(n){delete listeners[n];}};button.doc=doc;
- const box={top:0,bottom:700,right:800};h.v.containerEl.doc=doc;h.v.containerEl.getClientRects=()=>[{}];h.v.containerEl.getBoundingClientRect=()=>box;
+ const box={left:0,top:0,bottom:700,right:800,width:800,height:700};h.v.containerEl.doc=doc;h.v.containerEl.getClientRects=()=>[{}];h.v.containerEl.getBoundingClientRect=()=>box;
  h.browser.getBoundingClientRect=()=>box;
- let data={text:'Selected words',top:50,bottom:70,moving:true,scroll:0};h.browser.executeJavaScript=async script=>script.includes('__vaultCodeSelectionState')?data:data.text;
+ let data={text:'Selected words',rects:[{left:100,right:280,top:50,bottom:70}],moving:true,scroll:0};h.browser.executeJavaScript=async script=>script.includes('__vaultCodeSelectionState')?data:data.text;
  const leaf={view:h.v};let active=leaf;
  const app={workspace:{getLeavesOfType:()=>[leaf],getActiveViewOfType:()=>active?{leaf:active}:null}};
  const feature=new WebViewerChat(app,()=>true,q=>sent.push(q),()=>{});feature.leaf=leaf;
@@ -65,6 +65,10 @@ test('web selections wait for release and stability, cite their URL, and disappe
   button.events.click();assert.equal(sent.length,1);assert.equal(sent[0].text,'Selected words');assert.equal(sent[0].web.title,'Lesson');assert.equal(button.hidden,true);
   h.browser.executeJavaScript=async()=>data;
   await feature.tick();now+=300;await feature.tick();assert.equal(button.hidden,false);
+  assert.equal(button.styles['--selection-agent-left'],'288px');
+  data={...data,viewportWidth:400,viewportHeight:350,contentWidth:400};
+  await feature.tick();now+=300;await feature.tick();
+  assert.equal(button.styles['--selection-agent-left'],'568px');assert.equal(button.styles['--selection-agent-top'],'105px');
   data={...data,scroll:100};await feature.tick();assert.equal(button.hidden,true);
   active=null;await feature.tick();assert.equal(feature.quote,null);
   feature.onunload();assert.equal(button.removed,true);assert.deepEqual(listeners,{});
