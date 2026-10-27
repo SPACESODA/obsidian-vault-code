@@ -1,6 +1,6 @@
 # Vault Code
 
-<div align="center" style="color: #3b82f6; font-size: 1.5em; margin-top: 1.5rem;"><strong>Vault Code turns Obsidian into a workspace for notes, code, and files.</strong></div>
+<h3 align="center" style="color: #3b82f6; margin: 1rem 0; "><strong>Vault Code turns Obsidian into a workspace for notes, code, and files.</strong></h3>
 
 **Vault Code** is a powerful plugin that integrates with Obsidian's file explorer and editor. View hidden files, create and organize files of any kind, and write code in a beautiful code editor. Preview web pages, diagrams, and data, or work with AI agents without leaving Obsidian.
 
