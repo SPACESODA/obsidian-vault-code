@@ -691,6 +691,13 @@ test('late first-file creation cannot attach its old transcript to a new chat',a
   assert.equal(h.saves.at(-1).file,h.history);assert.equal(h.saves.at(-1).messages[0].content,'Explain this note');
 });
 
+test('CLI discovery fallback does not overwrite an explicit saved model or an in-flight selection',async()=>{
+  const h=chatFixHarness();let settingSaves=0;h.plugin.saveSettings=async()=>{settingSaves++;};
+  await h.view.loadModelsForProvider('antigravity');assert.equal(h.view.selectedModel,'chosen-model');assert.equal(settingSaves,0);
+  h.view.selectedProvider='connection:test';h.view.selectedModel='manual-model';h.view.isGenerating=true;
+  await h.view.loadModelsForProvider('connection:test');assert.equal(h.view.selectedModel,'manual-model');
+});
+
 test('continuing after Stop shares a pending first chat file instead of splitting the history',async()=>{
   let resolve,creating,creates=0;const begun=new Promise(r=>{creating=r;});const created=new Promise(r=>{resolve=r;});
   const h=chatFixHarness({create:async()=>{creates++;creating();return created;}});h.view.currentChatFile=null;

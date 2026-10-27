@@ -212,7 +212,9 @@ export class AIChatView extends ItemView {
 		const models = await this.plugin.aiService.getModelsForProvider(provider);
 		if (provider !== this.selectedProvider) return;
 		this.availableModels = models.filter((m) => m.id !== "auto");
-		if (this.availableModels.length > 0 && !this.availableModels.some((m) => m.id === this.selectedModel)) {
+		if (!this.isGenerating && this.availableModels.length > 0
+			&& !this.availableModels.some((m) => m.id === this.selectedModel)
+			&& (isConnectionProvider(provider) || !this.selectedModel || this.selectedModel === "auto" || this.selectedModel === "default")) {
 			this.selectedModel = this.availableModels.find((m) => m.id === "default")?.id
 				|| this.availableModels[0]?.id || resolveOptimalModel(provider);
 			if (!this.plugin.settings.aiProviderLastModel) this.plugin.settings.aiProviderLastModel = {};
