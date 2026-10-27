@@ -109,6 +109,7 @@ import {
 } from "@codemirror/merge";
 import { PreviewError } from "./preview-errors";
 import { forwardPreviewAppLink } from "./html-preview-links";
+import { HtmlPreviewSearch, PREVIEW_SEARCH_STYLE } from "./html-preview-search";
 import { DATA_PREVIEW_EXTENSIONS, PREVIEW_LIMITS } from "./file-preview-data";
 import { FilePreviewRenderer, formatPreviewError } from "./file-preview";
 import { PreviewSaveGuard, previewLineEnding, previewDocumentBytes, decodePreviewBytes, tableEditModel, type CellChange } from "./file-preview-edit";
@@ -2587,6 +2588,7 @@ export class DotfileView extends TextFileView {
 	public editor: EditorView | null = null;
 	private editorEl: HTMLElement | null = null;
 	private previewEl: HTMLElement | null = null;
+	private previewSearch: HtmlPreviewSearch | null = null;
 	private filePreviewRenderer: FilePreviewRenderer | null = null;
 	private previewGeneration = 0;
 	private previewSave: { file: TFile; guard: PreviewSaveGuard; separator: string; prefix: string } | null = null;
@@ -2766,6 +2768,10 @@ export class DotfileView extends TextFileView {
 	}
 
 	openFind(): void {
+		if (this.isPreviewMode && this.isWebPreview()) {
+			this.previewSearch?.open();
+			return;
+		}
 		if (this.isPreviewMode) {
 			this.toggleViewMode();
 		}
@@ -2804,12 +2810,18 @@ export class DotfileView extends TextFileView {
 	}
 
 	closeFind(): void {
+		this.previewSearch?.close();
 		if (this.editor) {
 			closeSearchPanel(this.editor);
 		}
 	}
 
 	toggleSearch(): void {
+		if (this.isPreviewMode && this.isWebPreview()) {
+			if (this.previewSearch?.isOpen) this.previewSearch.close();
+			else this.previewSearch?.open();
+			return;
+		}
 		if (this.isPreviewMode) {
 			this.toggleViewMode();
 		}
@@ -3266,6 +3278,8 @@ export class DotfileView extends TextFileView {
 			cls: "hidden-files-editor-preview",
 		});
 		this.previewEl.hide();
+		this.previewSearch = new HtmlPreviewSearch(contentEl, this.previewEl);
+		this.register(() => this.previewSearch?.dispose());
 		this.previewEl.addEventListener("keydown", event => {
 			if (!(event.ctrlKey || event.metaKey) || event.altKey || !this.editor || event.isComposing) return;
 			const target = event.target as HTMLElement;
@@ -3817,6 +3831,7 @@ export class DotfileView extends TextFileView {
 	}
 
 	override async onUnloadFile(file: TFile): Promise<void> {
+		this.previewSearch?.reset();
 		this.filePreviewRenderer?.clear();
 		if (this.diffToolbarEl) {
 			this.diffToolbarEl.remove();
@@ -3829,6 +3844,7 @@ export class DotfileView extends TextFileView {
 	}
 
 	async onClose(): Promise<void> {
+		this.previewSearch?.dispose();
 		this.previewGeneration++;
 		this.closeGotoLine();
 		if (this.diffToolbarEl) {
@@ -3884,6 +3900,10 @@ export class DotfileView extends TextFileView {
 		return PREVIEWABLE_EXTENSIONS.has(ext);
 	}
 
+	private isWebPreview(): boolean {
+		return ["html", "htm", "mjml"].includes(this.file?.extension?.toLowerCase() ?? "");
+	}
+
 	public toggleViewMode(): void {
 		if (!this.isPreviewable()) return;
 		this.isPreviewMode = !this.isPreviewMode;
@@ -3926,16 +3946,24 @@ export class DotfileView extends TextFileView {
 
 		if (this.isPreviewMode) {
 			if (this.editorEl) this.editorEl.hide();
-			if (this.searchBtnEl) this.searchBtnEl.hide();
+			if (this.searchBtnEl) {
+				this.searchBtnEl.toggle(this.isWebPreview());
+				this.searchBtnEl.setAttribute("aria-label", t("searchFindAriaLabel"));
+			}
+			if (!this.isWebPreview()) this.previewSearch?.reset();
 			if (this.lineWrapBtnEl) this.lineWrapBtnEl.hide();
 			if (this.previewEl) {
 				this.previewEl.show();
 				void this.renderPreview();
 			}
 		} else {
+			this.previewSearch?.reset();
 			this.filePreviewRenderer?.clear();
 			if (this.previewEl) this.previewEl.hide();
-			if (this.searchBtnEl) this.searchBtnEl.show();
+			if (this.searchBtnEl) {
+				this.searchBtnEl.show();
+				this.searchBtnEl.setAttribute("aria-label", `${t("searchFindAriaLabel")} / ${t("searchReplace")}`);
+			}
 			if (this.lineWrapBtnEl) this.lineWrapBtnEl.show();
 			if (this.editorEl) {
 				this.editorEl.show();
@@ -3949,6 +3977,7 @@ export class DotfileView extends TextFileView {
 	private async renderPreview(): Promise<void> {
 		if (!this.previewEl || !this.file) return;
 		const generation = ++this.previewGeneration;
+		this.previewSearch?.setFrame(null);
 		this.filePreviewRenderer?.clear();
 		this.previewEl.empty();
 
@@ -4376,7 +4405,7 @@ export class DotfileView extends TextFileView {
 			baseTag = `<base href="${localBaseUrl}">`;
 		}
 
-		const injection = `${shimScript}${baseTag}`;
+		const injection = `${shimScript}${baseTag}${PREVIEW_SEARCH_STYLE}`;
 		if (/<head\b[^>]*>/i.test(htmlContent)) {
 			htmlContent = htmlContent.replace(/<head\b[^>]*>/i, `$&${injection}`);
 		} else {
@@ -4420,6 +4449,7 @@ export class DotfileView extends TextFileView {
 			"sandbox",
 			"allow-scripts allow-forms allow-modals allow-same-origin allow-popups",
 		);
+		this.previewSearch?.setFrame(iframe);
 		iframe.addEventListener("load", () => {
 			try {
 				iframe.contentDocument?.addEventListener("click", event => forwardPreviewAppLink(event, openInDefaultBrowser));

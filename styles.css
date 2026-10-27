@@ -1243,6 +1243,7 @@ body .hidden-files-editor-wrapper .cm-searchMatch-selected {
 
 /* HTML iframe container */
 .hidden-files-html-container {
+	position: relative;
 	flex: 1 1 auto;
 	width: 100%;
 	height: 100%;
@@ -4126,3 +4127,57 @@ body.vault-code-ignore-loading .nav-files-container { visibility: hidden; }
 .vault-code-external-folder-target .hidden-files-modal-dest-icon { padding-top: 2px; }
 
 .vault-code-agent-subscription { color: var(--text-accent); }
+
+/* Find rendered HTML/MJML content without leaving Preview. */
+.vault-code-preview-find {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 8px 12px;
+	flex: 0 0 auto;
+	min-width: 0;
+	border-bottom: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+}
+.vault-code-preview-find[hidden] { display: none; }
+.vault-code-preview-find input[type="search"] {
+	flex: 1;
+	min-width: 0;
+	width: 100%;
+	font-size: var(--font-ui-small);
+}
+.vault-code-preview-find-count {
+	flex-shrink: 0;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	white-space: nowrap;
+}
+.vault-code-preview-find button { flex-shrink: 0; }
+.vault-code-preview-find button svg { width: 16px; height: 16px; }
+.vault-code-preview-find-rail {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	right: 0;
+	width: 8px;
+	z-index: 2;
+	pointer-events: none;
+	overflow: hidden;
+}
+.vault-code-preview-find-tick {
+	position: absolute;
+	right: 0;
+	width: 6px;
+	height: 2px;
+	background: #ffe066;
+	transform: translateY(-50%);
+}
+.vault-code-preview-find-tick.is-current {
+	height: 3px;
+	background: #ff9f43;
+	z-index: 1;
+}
+@media (max-width: 420px) {
+	.vault-code-preview-find { gap: 3px; padding: 6px; }
+	.vault-code-preview-find button { padding: 5px; }
+}
