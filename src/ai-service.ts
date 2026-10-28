@@ -469,7 +469,7 @@ export class AIService {
 
 	private execFile(cp: NodeChildProcess, ...args: Parameters<ExecFileFn>): ReturnType<ExecFileFn> {
 		const [file, parameters, options, callback] = args;
-		if (!this.isAvailable()) { callback(new Error(t("aiChatDisabled")), "", ""); return; }
+		if (!this.isAvailable()) { callback(new Error(t("aiChatDisabled", t("askAI"))), "", ""); return; }
 		let child: ReturnType<ExecFileFn> = undefined;
 		let settled = false;
 		const finish: Parameters<ExecFileFn>[3] = (error, stdout, stderr) => {
@@ -480,7 +480,7 @@ export class AIService {
 		};
 		const cancel = () => {
 			try { child?.kill(); } catch { /* Process may already have exited. */ }
-			finish(new Error(t("aiChatDisabled")), "", "");
+			finish(new Error(t("aiChatDisabled", t("askAI"))), "", "");
 		};
 		this.activeExecs.add(cancel);
 		try { child = cp.execFile(file, parameters, options, finish); }
@@ -990,7 +990,7 @@ export class AIService {
 		const activity = this.activityGeneration;
 		const config = AGENT_INSTALL_CONFIGS[provider];
 		const def = ALL_AGENT_DEFS.find((d) => d.id === provider)!;
-		if (!this.isAvailable()) return { success: false, message: t("aiChatDisabled") };
+		if (!this.isAvailable()) return { success: false, message: t("aiChatDisabled", t("askAI")) };
 		const cp = await this.resolveChildProcess();
 		if (!cp) return { success: false, message: "Desktop child_process runtime not available" };
 		const installedPath = update ? await this.detectProviderPath(provider) : null;
@@ -1047,7 +1047,7 @@ export class AIService {
 			if (!executable) return { success: false, message: `${binary} is required. Follow ${config.manualUrl} to finish setup.`, command };
 			args = parts;
 		}
-		if (!this.isAvailable() || activity !== this.activityGeneration) return { success: false, message: t("aiChatDisabled") };
+		if (!this.isAvailable() || activity !== this.activityGeneration) return { success: false, message: t("aiChatDisabled", t("askAI")) };
 		const result = await new Promise<{ success: boolean; message: string; command?: string }>((resolve) => {
 			const child = this.execFile(cp, executable, args, { env, timeout: 600000, maxBuffer: 4 * 1024 * 1024, windowsHide: true, shell: Platform.isWin }, (err, stdout, stderr) => {
 				const output = [stdout, stderr].filter(Boolean).join("\n").trim();
@@ -1314,7 +1314,7 @@ export class AIService {
 		let timedOut = false;
 		const timeout = window.setTimeout(() => { timedOut = true; controller.abort(); }, 120000);
 		void (async () => {
-			if (!this.isAvailable()) throw new Error(t("aiChatDisabled"));
+			if (!this.isAvailable()) throw new Error(t("aiChatDisabled", t("askAI")));
 			const connection = this.getConnection(provider);
 			if (!connection) throw new Error("This connection was removed. Choose another provider.");
 			if (options.scope === "vault") throw new Error("API and local models use attached-note context. Turn off Entire Vault.");

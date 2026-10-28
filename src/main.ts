@@ -5406,7 +5406,7 @@ export default class VaultCodePlugin extends Plugin {
 
 		this.addCommand({
 			id: "open-ai-chat",
-			name: t("aiChatWithAgent"),
+			name: t("askAI"),
 			checkCallback: (checking) => {
 				if (!Platform.isDesktop || !this.settings.enableAIChat) return false;
 				if (!checking) {
@@ -5880,7 +5880,7 @@ export default class VaultCodePlugin extends Plugin {
 
 	public addAIChatRibbon(): void {
 		if (this.aiChatRibbonIconEl || !Platform.isDesktop || !this.settings.enableAIChat) return;
-		this.aiChatRibbonIconEl = this.addRibbonIcon("sparkles", t("aiChatWithAgent"), () => {
+		this.aiChatRibbonIconEl = this.addRibbonIcon("sparkles", t("askAI"), () => {
 			void this.activateAIChatView();
 		});
 	}
@@ -5947,7 +5947,7 @@ export default class VaultCodePlugin extends Plugin {
 	public createAgentSelectionExtension(): Extension {
 		return agentSelectionExtension({
 			enabled: () => Platform.isDesktop && this.settings.enableAIChat && this.settings.enableSendToChatIcon,
-			label: () => t("aiChatQuoteSelection"),
+			label: () => t("askAI"),
 			filePath: (editor) => {
 				let path: string | null = null;
 				this.app.workspace.iterateAllLeaves((leaf) => {
@@ -6556,7 +6556,7 @@ export default class VaultCodePlugin extends Plugin {
 
 		const isCodeEditor = view instanceof DotfileView;
 
-		// Agent chat button in leaf header
+		// Ask AI button in leaf header
 		const existingAiChatBtn = actionsEl.querySelector<HTMLElement>(
 			".vault-code-header-ai-chat-btn",
 		);
@@ -6571,7 +6571,7 @@ export default class VaultCodePlugin extends Plugin {
 				const aiChatBtn = createEl("button", {
 					cls: "clickable-icon view-action vault-code-header-ai-chat-btn",
 					attr: {
-						"aria-label": t("aiChatWithAgent"),
+						"aria-label": t("askAI"),
 					},
 				});
 				setIcon(aiChatBtn, "sparkles");
@@ -6588,7 +6588,7 @@ export default class VaultCodePlugin extends Plugin {
 					actionsEl.appendChild(aiChatBtn);
 				}
 			} else {
-				existingAiChatBtn.setAttribute("aria-label", t("aiChatWithAgent"));
+				existingAiChatBtn.setAttribute("aria-label", t("askAI"));
 				if (actionsEl.firstChild && existingAiChatBtn !== actionsEl.firstChild) {
 					actionsEl.insertBefore(existingAiChatBtn, actionsEl.firstChild);
 				}
@@ -8955,13 +8955,13 @@ class VaultCodeSettingTab extends PluginSettingTab {
 			);
 		}
 
-		// Group: AI Chat (Antigravity CLI)
+		// Group: Ask AI
 		if (Platform.isDesktop) {
-			createSectionHeading(t("settingsGroupAI"), "sparkles");
+			createSectionHeading(t("askAI"), "sparkles");
 
 			new Setting(containerEl)
 				.setClass("vault-code-ai-enable-setting")
-				.setName(t("settingsEnableAIName"))
+				.setName(t("settingsEnableAIName", t("askAI")))
 				.setDesc(t("settingsEnableAIDesc"))
 				.addToggle((toggle) =>
 					toggle
@@ -8977,8 +8977,8 @@ class VaultCodeSettingTab extends PluginSettingTab {
 
 			if (this.plugin.settings.enableAIChat) {
 			new Setting(containerEl)
-				.setName(t("settingsEnableSendToChatIcon", t("aiChatQuoteSelection")))
-				.setDesc(t("settingsSendToChatIconDesc"))
+				.setName(t("settingsEnableSendToChatIcon", t("askAI")))
+				.setDesc(t("settingsSendToChatIconDesc", t("askAI")))
 				.addToggle(toggle => toggle.setValue(this.plugin.settings.enableSendToChatIcon).onChange(async value => {
 					this.plugin.settings.enableSendToChatIcon = value;
 					this.plugin.refreshSendToChatIcons();

@@ -150,7 +150,7 @@ export class WebViewerChat extends Component {
 			const position = selectionActionPosition(rects, pane, { width: host.defaultView!.innerWidth, height: host.defaultView!.innerHeight });
 			if (!position) { this.hide(); return; }
 			this.quote = { path: target.url, text: data.text, source: data.text, from: 0, to: data.text.length, startLine: 0, endLine: 0, web: { url: target.url, title: target.title } };
-			this.button.setAttribute("aria-label", t("aiChatQuoteSelection"));
+			this.button.setAttribute("aria-label", t("askAI"));
 			this.button.setCssProps({ "--selection-agent-left": `${position.left}px`, "--selection-agent-top": `${position.top}px` });
 			this.button.hidden = false;
 		} catch { this.hide(); } finally { this.busy = false; }

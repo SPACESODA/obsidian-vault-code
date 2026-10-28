@@ -28,7 +28,7 @@
 **Git** (Desktop only)
 * **Git feature**: Review diffs, keep or revert changes, and commit individual files.
 
-**Agent chat** (Desktop only)
+**Ask AI** (Desktop only)
 * **Notes and code**: Ask about your notes and code, or request edits in the sidebar.
 * **Flexible connections**: Use coding CLIs, hosted APIs, or local model servers.
 
@@ -85,21 +85,21 @@ When your vault is inside a Git repository:
 * See the current branch and changed-file count in the status bar.
 * Commit an individual file with a message, or discard its changes.
 
-### ✨ Work with an AI agent (Desktop)
+### ✨ Ask AI (Desktop)
 
-Work with an AI agent in Obsidian. Choose a connection in settings:
+Ask AI about notes and code in the sidebar. Choose a connection in settings:
 
 * **CLI**: Use Claude Code, Codex, Copilot, and other coding agents with their workspace tools. Install and update agents from settings.
 * **API**: Bring your own key for OpenAI, Anthropic, Gemini, DeepSeek, Qwen, or another provider. Custom endpoints and model IDs are supported.
 * **Local**: Connect Ollama, Atomic Chat, LM Studio, CC Switch, or another compatible server.
 
-Attach notes or selections, pin context, and guide agent behavior with a customizable `instructions.md` note in your chat folder. Revisit Markdown chat histories anytime.
+Attach notes or selections, pin context, and guide AI responses with a customizable `instructions.md` note in your chat folder. Revisit Markdown chat histories anytime.
 
 ### 🛡️ Control editing and file opening
 
 * Single-clicking unsupported files selects them. Opening them in your system's default app on double-click is optional and disabled by default.
 * Disable auto-save to save manually with <kbd>Cmd</kbd> / <kbd>Ctrl</kbd> + <kbd>S</kbd>. A dot `●` marks unsaved changes, and closing an unsaved tab prompts you. **Quitting Obsidian still saves unsaved edits.**
-* File management and code editing work on desktop, mobile, and tablets. Git, Agent chat, and adding external folders require desktop Obsidian.
+* File management and code editing work on desktop, mobile, and tablets. Git, Ask AI, and adding external folders require desktop Obsidian.
 
 ---
 
@@ -119,7 +119,7 @@ Attach notes or selections, pin context, and guide agent behavior with a customi
 | <kbd>Cmd</kbd> / <kbd>Ctrl</kbd> + <kbd>S</kbd> | Save file | Code editor |
 | <kbd>Esc</kbd> | Close search or dismiss a popup | Relevant editor or dialog |
 
-Assign custom shortcuts to **Vault Code: Chat with Agent** or **Vault Code: Toggle code / preview in code editor** in **Settings → Hotkeys**.
+Assign custom shortcuts to **Vault Code: Ask AI** or **Vault Code: Toggle code / preview in code editor** in **Settings → Hotkeys**.
 
 ---
 
@@ -150,7 +150,7 @@ To test pre-release builds or update directly from GitHub:
 
 Vault Code sends no analytics or telemetry. Network activity depends on what you use:
 
-* **Agent chat**: CLI agents contact their configured services. API and local connections send prompts, chat history, and attached note or selection context to your chosen endpoint. A loopback endpoint runs on your device; its server may also route to cloud providers.
+* **Ask AI**: CLI agents contact their configured services. API and local connections send prompts, chat history, and attached note or selection context to your chosen endpoint. A loopback endpoint runs on your device; its server may also route to cloud providers.
 * **CLI installation & updates**: Contact the agent's installer or package registry.
 * **Live preview**: HTML can run JavaScript and load remote resources. Remote CSS, fonts, images, or scripts may make network requests.
 * **External links**: Settings links open in your default browser.

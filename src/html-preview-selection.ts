@@ -31,7 +31,7 @@ export class HtmlPreviewSelection {
 		if (event.type === "pointercancel" || !event.composedPath().includes(this.button)) { this.pressed = null; this.schedule(); }
 	};
 	constructor(private host: HTMLElement, private options: PreviewSelectionOptions) {
-		this.button = host.doc.body.createEl("button", { cls: "clickable-icon vault-code-selection-agent", attr: { type: "button", "aria-label": t("aiChatQuoteSelection") } });
+		this.button = host.doc.body.createEl("button", { cls: "clickable-icon vault-code-selection-agent", attr: { type: "button", "aria-label": t("askAI") } });
 		this.button.hidden = true; setIcon(this.button, "sparkles");
 		this.button.addEventListener("pointerdown", event => { event.preventDefault(); if (event.button === 0) this.pressed = this.quote; });
 		this.button.addEventListener("click", () => {
@@ -112,7 +112,7 @@ export class HtmlPreviewSelection {
 			if (!position) return;
 			this.quote = captureReadingSelection(source.path, source.text, text);
 			if (!this.quote) return;
-			this.button.setAttribute("aria-label", t("aiChatQuoteSelection"));
+			this.button.setAttribute("aria-label", t("askAI"));
 			this.button.setCssProps({ "--selection-agent-left": `${position.left}px`, "--selection-agent-top": `${position.top}px` });
 			this.button.hidden = false;
 		} catch { this.pressed = null; this.hide(); }

@@ -40,7 +40,7 @@ export class ReadingSelectionChat extends Component {
 		if (!this.leaf || !view) return;
 		const doc = view.containerEl.doc;
 		this.win = view.containerEl.win;
-		const button = this.button = doc.body.createEl("button", { cls: "clickable-icon vault-code-selection-agent", attr: { type: "button", "aria-label": t("aiChatQuoteSelection") } });
+		const button = this.button = doc.body.createEl("button", { cls: "clickable-icon vault-code-selection-agent", attr: { type: "button", "aria-label": t("askAI") } });
 		button.hidden = true; setIcon(button, "sparkles");
 		button.addEventListener("pointerdown", event => { event.preventDefault(); if (event.button === 0) this.pressed = this.quote; });
 		button.addEventListener("click", () => {

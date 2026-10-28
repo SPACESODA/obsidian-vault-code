@@ -223,7 +223,7 @@ export class AIChatView extends ItemView {
 	}
 
 	getDisplayText(): string {
-		return t("aiChatWithAgent");
+		return t("askAI");
 	}
 
 	getIcon(): string {
@@ -347,7 +347,7 @@ export class AIChatView extends ItemView {
 		setIcon(iconEl, "sparkles");
 		this.headerTitleEl = this.titleWrapperEl.createSpan({
 			cls: "vault-code-chat-header-title-text",
-			text: t("aiChatViewTitle"),
+			text: t("askAI"),
 		});
 		this.headerTitleEl.addEventListener("click", () => {
 			this.startEditingChatTitle();
@@ -1230,7 +1230,7 @@ export class AIChatView extends ItemView {
 		this.pinnedWebPage = null;
 		this.contextExcluded = false;
 		this.lastRenderedContextKey = "";
-		this.headerTitleEl?.setText(t("aiChatViewTitle"));
+		this.headerTitleEl?.setText(t("askAI"));
 		this.headerTitleEl?.removeAttribute("title");
 		this.headerTitleEl?.removeClass("is-editable");
 		this.openNoteBtnEl?.hide();
@@ -1349,7 +1349,7 @@ export class AIChatView extends ItemView {
 
 		welcomeEl.createEl("h3", {
 			cls: "vault-code-chat-welcome-title",
-			text: t("aiChatWelcomeTitle"),
+			text: t("askAI"),
 		});
 
 		const subtitleEl = welcomeEl.createEl("p", {
@@ -1393,7 +1393,7 @@ export class AIChatView extends ItemView {
 			roleWrapper.createSpan({ text: t("aiChatYou") });
 		} else {
 			setIcon(roleIcon, "sparkles");
-			roleWrapper.createSpan({ text: "Agent" });
+			roleWrapper.createSpan({ text: t("aiChatAssistant") });
 		}
 
 		// Copy button on both user and assistant messages
@@ -1502,7 +1502,7 @@ export class AIChatView extends ItemView {
 		const roleWrapper = asstHeaderEl.createDiv({ cls: "vault-code-chat-msg-role" });
 		const roleIcon = roleWrapper.createSpan({ cls: "vault-code-chat-msg-role-icon" });
 		setIcon(roleIcon, "sparkles");
-		roleWrapper.createSpan({ text: "Agent" });
+		roleWrapper.createSpan({ text: t("aiChatAssistant") });
 
 		const asstBodyEl = asstBubbleEl.createDiv({ cls: "vault-code-chat-msg-body" });
 		this.currentTypingIndicatorEl = asstBodyEl.createDiv({ cls: "vault-code-typing-indicator" });
