@@ -3,6 +3,11 @@ import { TranslationSchema } from "./en";
 export const ko: TranslationSchema = {
 	// Ribbon & Toolbars
 	ribbonNewFileTooltip: "새 파일 (모든 확장자)",
+	mjmlViewHtml: "HTML",
+	mjmlCompiledHtml: "컴파일된 HTML",
+	mjmlCompiling: "컴파일 중…",
+	mjmlCopyHtml: "HTML 복사",
+	mjmlCopyFailed: "HTML을 복사하지 못했습니다. 코드를 선택해 직접 복사해 주세요.",
 	viewToggleCode: "코드",
 	viewToggleRendered: "미리보기",
 	viewToggleTooltip: "코드 및 미리보기 보기 전환",

@@ -1,3 +1,4 @@
+import { compileMjmlHtml } from "./mjml-compile";
 import {
 	Plugin,
 	PluginSettingTab,
@@ -1622,6 +1623,7 @@ class ModernSearchPanel implements Panel {
 			},
 		});
 		setIcon(this.replaceToggleBtn, "chevron-right");
+		if (view.state.readOnly) this.replaceToggleBtn.hide();
 		this.replaceToggleBtn.addEventListener("click", () => {
 			this.setReplaceOpen(!this.isReplaceOpen);
 			if (this.isReplaceOpen) {
@@ -1926,6 +1928,7 @@ class ModernSearchPanel implements Panel {
 	}
 
 	setReplaceOpen(open: boolean): void {
+		if (this.view.state.readOnly) open = false;
 		this.isReplaceOpen = open;
 		if (open) {
 			this.replaceRowEl.show();
@@ -2607,6 +2610,14 @@ export class DotfileView extends TextFileView {
 	private saveBtnEl: HTMLButtonElement | null = null;
 	private saveIconEl: HTMLElement | null = null;
 	private saveTextEl: HTMLElement | null = null;
+	private compileBtnEl: HTMLButtonElement | null = null;
+	private compiledEditor: EditorView | null = null;
+	private compiledEl: HTMLElement | null = null;
+	private copyHtmlBtnEl: HTMLButtonElement | null = null;
+	private compiledHtml = "";
+	private compileGeneration = 0;
+	private isCompiledMode = false;
+	private compiledWrap = new Compartment();
 	private viewToggleBtnEl: HTMLButtonElement | null = null;
 	private viewToggleIconEl: HTMLElement | null = null;
 	private viewToggleTextEl: HTMLElement | null = null;
@@ -2776,6 +2787,7 @@ export class DotfileView extends TextFileView {
 	}
 
 	openFind(): void {
+		if (this.isCompiledMode) { if (this.compiledEditor) openSearchPanel(this.compiledEditor); return; }
 		if (this.isPreviewMode && this.isWebPreview()) {
 			this.previewSearch?.open();
 			return;
@@ -2796,6 +2808,7 @@ export class DotfileView extends TextFileView {
 	}
 
 	openReplace(): void {
+		if (this.isCompiledMode) { this.openFind(); return; }
 		if (this.isPreviewMode) {
 			this.toggleViewMode();
 		}
@@ -2819,12 +2832,20 @@ export class DotfileView extends TextFileView {
 
 	closeFind(): void {
 		this.previewSearch?.close();
+		if (this.compiledEditor) closeSearchPanel(this.compiledEditor);
 		if (this.editor) {
 			closeSearchPanel(this.editor);
 		}
 	}
 
 	toggleSearch(): void {
+		if (this.isCompiledMode) {
+			if (this.compiledEditor) {
+				if (searchPanelOpen(this.compiledEditor.state)) closeSearchPanel(this.compiledEditor);
+				else openSearchPanel(this.compiledEditor);
+			}
+			return;
+		}
 		if (this.isPreviewMode && this.isWebPreview()) {
 			if (this.previewSearch?.isOpen) this.previewSearch.close();
 			else this.previewSearch?.open();
@@ -2842,6 +2863,7 @@ export class DotfileView extends TextFileView {
 	}
 
 	openGotoLine(): void {
+		if (this.isCompiledMode) return;
 		if (this.isPreviewMode) {
 			this.toggleViewMode();
 		}
@@ -2981,7 +3003,7 @@ export class DotfileView extends TextFileView {
 	}
 
 	async saveExplicitly(): Promise<void> {
-		if (this.isBinaryOrNonEditable() || !this.file) return;
+		if (this.isCompiledMode || this.isBinaryOrNonEditable() || !this.file) return;
 		if (this.previewSave?.file === this.file) { await this.saveGuardedPreview(); return; }
 		this.data = this.getViewData();
 		this.isModified = false;
@@ -3074,6 +3096,7 @@ export class DotfileView extends TextFileView {
 	}
 
 	private updateDirtyUI(): void {
+		if (this.saveBtnEl) this.saveBtnEl.disabled = this.isCompiledMode;
 		const dirty = this.isDirty();
 
 		if (this.dirtyDotEl) {
@@ -3102,6 +3125,7 @@ export class DotfileView extends TextFileView {
 	}
 
 	setViewData(data: string, clear: boolean): void {
+		if (this.isCompiledMode) this.clearCompiledHtml();
 		const session = this.previewSave;
 		if (!clear && session?.file === this.file && !session.guard.acceptReload(session.prefix + data, previewDocumentBytes(this.getViewData(), session.separator, session.prefix))) {
 			if (session.guard.conflicted && !this.previewConflictNotified) {
@@ -3247,6 +3271,27 @@ export class DotfileView extends TextFileView {
 		});
 		this.gitDiffStatsBtnEl.hide();
 
+		this.compileBtnEl = rightEl.createEl("button", {
+			cls: "hidden-files-editor-view-toggle-btn",
+			text: t("mjmlViewHtml"),
+			attr: { type: "button" },
+		});
+		this.compileBtnEl.addEventListener("click", () => {
+			if (this.file?.extension.toLowerCase() !== "mjml") return;
+			void this.showCompiledHtml();
+		});
+
+		this.copyHtmlBtnEl = rightEl.createEl("button", {
+			cls: "hidden-files-editor-view-toggle-btn", text: t("mjmlCopyHtml"), attr: { type: "button" },
+		});
+		this.copyHtmlBtnEl.hide();
+		this.copyHtmlBtnEl.addEventListener("click", () => {
+			if (!this.compiledHtml) return;
+			void navigator.clipboard.writeText(this.compiledHtml).then(
+				() => new Notice(t("aiChatCopied")), () => new Notice(t("mjmlCopyFailed")),
+			);
+		});
+
 		// Code / Preview toggle for supported visual and data formats
 		this.viewToggleBtnEl = rightEl.createEl("button", {
 			cls: "hidden-files-editor-view-toggle-btn",
@@ -3280,6 +3325,9 @@ export class DotfileView extends TextFileView {
 		this.editorEl = contentEl.createDiv({
 			cls: "hidden-files-editor-wrapper",
 		});
+
+		this.compiledEl = contentEl.createDiv({ cls: "hidden-files-editor-wrapper" });
+		this.compiledEl.hide();
 
 		// Preview container
 		this.previewEl = contentEl.createDiv({
@@ -3859,6 +3907,7 @@ export class DotfileView extends TextFileView {
 	}
 
 	async onClose(): Promise<void> {
+		this.clearCompiledHtml();
 		this.previewSearch?.dispose();
 		this.previewSelection?.dispose();
 		this.previewGeneration++;
@@ -3883,6 +3932,8 @@ export class DotfileView extends TextFileView {
 	applyFontScale(): void {
 		this.editorEl?.setCssProps({ "--vault-code-font-scale": String(normalizeEditorFontScale(this.plugin.settings.editorFontScale) / 100) });
 		// Remeasure glyphs, wrapped lines, gutters, and the selection-to-Agent action.
+		this.compiledEl?.setCssProps({ "--vault-code-font-scale": String(normalizeEditorFontScale(this.plugin.settings.editorFontScale) / 100) });
+		this.compiledEditor?.requestMeasure();
 		this.editor?.requestMeasure();
 	}
 
@@ -3895,6 +3946,7 @@ export class DotfileView extends TextFileView {
 				),
 			});
 		}
+		this.compiledEditor?.dispatch({ effects: this.compiledWrap.reconfigure(this.isLineWrapping ? EditorView.lineWrapping : []) });
 		this.plugin.settings.lineWrapping = this.isLineWrapping;
 		void this.plugin.saveSettings();
 		this.updateLineWrappingUI();
@@ -3920,13 +3972,81 @@ export class DotfileView extends TextFileView {
 		return ["html", "htm", "mjml"].includes(this.file?.extension?.toLowerCase() ?? "");
 	}
 
+	private clearCompiledHtml(): void {
+		this.compileGeneration++;
+		this.compiledEditor?.destroy(); this.compiledEditor = null;
+		this.compiledEl?.empty(); this.compiledEl?.hide();
+		this.compiledHtml = ""; this.isCompiledMode = false;
+	}
+
+	private async showCompiledHtml(): Promise<void> {
+		if (!this.compiledEl || this.file?.extension.toLowerCase() !== "mjml") return;
+		this.clearCompiledHtml();
+		const generation = this.compileGeneration;
+		const source = this.getViewData();
+		const file = this.file;
+		this.isCompiledMode = true; this.isPreviewMode = false;
+		this.previewGeneration++;
+		this.closeGotoLine();
+		this.filePreviewRenderer?.clear();
+		this.updateViewModeUI();
+		const status = this.compiledEl.createDiv({ text: t("mjmlCompiling"), attr: { role: "status" } });
+		try {
+			const html = await compileMjmlHtml(source);
+			const language = await LanguageDescription.matchFilename(languages, "email.html")?.load();
+			if (generation !== this.compileGeneration || !this.isCompiledMode || this.file !== file || this.getViewData() !== source) return;
+			status.remove();
+			this.compiledHtml = html;
+			this.compiledEditor = new EditorView({ parent: this.compiledEl, state: EditorState.create({
+				doc: html, extensions: [
+					vaultCodeTheme, lineNumbers(), highlightActiveLineGutter(), highlightSpecialChars(),
+					drawSelection(), bracketMatching(), highlightSelectionMatches(),
+					foldGutter({ markerDOM: open => { const el = createDiv({ cls: `cm-fold-marker ${open ? "is-open" : "is-closed"}` }); setIcon(el, open ? "chevron-down" : "chevron-right"); return el; } }),
+					syntaxHighlighting(vaultCodeHighlightStyle), syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+					EditorState.readOnly.of(true), EditorView.editable.of(false),
+					EditorState.transactionFilter.of(transaction => transaction.docChanged ? [] : transaction),
+					EditorView.contentAttributes.of({ tabindex: "0", "aria-label": t("mjmlCompiledHtml") }),
+					this.compiledWrap.of(this.isLineWrapping ? EditorView.lineWrapping : []),
+					search({ top: true, createPanel: view => new ModernSearchPanel(view, this.app) }),
+					keymap.of([...searchKeymap, ...foldKeymap, ...defaultKeymap]), ...(language ? [language] : []),
+				],
+			}) });
+			this.applyFontScale(); this.updateViewModeUI();
+			this.compiledEditor.focus();
+		} catch (error: unknown) {
+			if (generation !== this.compileGeneration || !this.isCompiledMode) return;
+			status.setText(t("previewMjmlError")); status.addClass("hidden-files-preview-error");
+			this.compiledEl.createEl("pre", { cls: "vault-code-compiled-error", text: error instanceof Error ? error.message : String(error) });
+		}
+	}
+
 	public toggleViewMode(): void {
+		if (this.isCompiledMode) { this.clearCompiledHtml(); this.isPreviewMode = false; this.updateViewModeUI(); return; }
 		if (!this.isPreviewable()) return;
 		this.isPreviewMode = !this.isPreviewMode;
 		this.updateViewModeUI();
 	}
 
 	private updateViewModeUI(): void {
+		this.compileBtnEl?.toggle(this.file?.extension.toLowerCase() === "mjml" && !this.isCompiledMode);
+		this.copyHtmlBtnEl?.toggle(this.isCompiledMode);
+		if (this.copyHtmlBtnEl) this.copyHtmlBtnEl.disabled = !this.compiledHtml;
+		this.compiledEl?.toggle(this.isCompiledMode);
+		this.diffToolbarEl?.toggle(this.isDiffMode && !this.isCompiledMode);
+		this.gitDiffStatsBtnEl?.toggle(!this.isCompiledMode && this.gitDiffStatsBtnEl.hasClass("has-changes"));
+		this.updateDirtyUI();
+		this.langEl?.setText(this.isCompiledMode ? t("mjmlCompiledHtml") : this.getLanguageLabel());
+		if (this.isCompiledMode) {
+			this.editorEl?.hide(); this.previewEl?.hide();
+			this.previewSearch?.reset(); this.previewSelection?.setFrame(null);
+			this.lineWrapBtnEl?.show(); this.searchBtnEl?.show();
+			this.searchBtnEl?.setAttribute("aria-label", t("searchFindAriaLabel"));
+			this.gitDiffStatsBtnEl?.hide();
+			this.viewToggleTextEl?.setText(t("viewToggleCode"));
+			if (this.viewToggleIconEl) setCodeIcon(this.viewToggleIconEl);
+			this.viewToggleBtnEl?.show();
+			return;
+		}
 		if (!this.isPreviewMode) this.previewGeneration++;
 		const previewable = this.isPreviewable();
 
@@ -4604,7 +4724,7 @@ export class DotfileView extends TextFileView {
 					parts.push(`+${stats.additions}`);
 				}
 				this.gitDiffStatsBtnEl.setText(parts.join(" "));
-				this.gitDiffStatsBtnEl.show();
+				this.gitDiffStatsBtnEl.toggle(!this.isCompiledMode);
 				this.gitDiffStatsBtnEl.addClass("has-changes");
 			} else {
 				this.gitDiffStatsBtnEl.hide();
@@ -4624,6 +4744,7 @@ export class DotfileView extends TextFileView {
 	}
 
 	public async toggleDiffMode(): Promise<void> {
+		if (this.isCompiledMode) return;
 		await this.setDiffMode(!this.isDiffMode);
 	}
 

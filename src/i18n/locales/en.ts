@@ -1,6 +1,11 @@
 export const en = {
 	// Ribbon & Toolbars
 	ribbonNewFileTooltip: "New file (any extension)",
+	mjmlViewHtml: "HTML",
+	mjmlCompiledHtml: "Compiled HTML",
+	mjmlCompiling: "Compiling...",
+	mjmlCopyHtml: "Copy HTML",
+	mjmlCopyFailed: "Could not copy HTML. Select the code and copy it manually.",
 	viewToggleCode: "Code",
 	viewToggleRendered: "Preview",
 	viewToggleTooltip: "Switch between code and preview",

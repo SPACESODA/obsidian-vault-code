@@ -3,6 +3,11 @@ import { TranslationSchema } from "./en";
 export const ru: TranslationSchema = {
 	// Ribbon & Toolbars
 	ribbonNewFileTooltip: "Новый файл (любое расширение)",
+	mjmlViewHtml: "HTML",
+	mjmlCompiledHtml: "Скомпилированный HTML",
+	mjmlCompiling: "Компиляция…",
+	mjmlCopyHtml: "Копировать HTML",
+	mjmlCopyFailed: "Не удалось скопировать HTML. Выделите код и скопируйте его вручную.",
 	viewToggleCode: "Код",
 	viewToggleRendered: "Просмотр",
 	viewToggleTooltip: "Переключение между режимами кода и просмотра",

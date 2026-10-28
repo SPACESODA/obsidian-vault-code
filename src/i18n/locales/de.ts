@@ -3,6 +3,11 @@ import { TranslationSchema } from "./en";
 export const de: TranslationSchema = {
 	// Ribbon & Toolbars
 	ribbonNewFileTooltip: "Neue Datei (beliebige Dateiendung)",
+	mjmlViewHtml: "HTML",
+	mjmlCompiledHtml: "Kompiliertes HTML",
+	mjmlCompiling: "Wird kompiliert…",
+	mjmlCopyHtml: "HTML kopieren",
+	mjmlCopyFailed: "HTML konnte nicht kopiert werden. Wähle den Code aus und kopiere ihn manuell.",
 	viewToggleCode: "Code",
 	viewToggleRendered: "Vorschau",
 	viewToggleTooltip: "Zwischen Code- und Vorschauansicht wechseln",

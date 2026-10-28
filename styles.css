@@ -4285,3 +4285,9 @@ body.vault-code-ignore-loading .nav-files-container { visibility: hidden; }
 	font-size: var(--font-ui-small);
 	line-height: 1.5;
 }
+
+.vault-code-compiled-error {
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	padding: 12px;
+}

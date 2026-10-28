@@ -3,6 +3,11 @@ import { TranslationSchema } from "./en";
 export const ja: TranslationSchema = {
 	// Ribbon & Toolbars
 	ribbonNewFileTooltip: "新規ファイル（任意の拡張子）",
+	mjmlViewHtml: "HTML",
+	mjmlCompiledHtml: "コンパイル済み HTML",
+	mjmlCompiling: "コンパイル中…",
+	mjmlCopyHtml: "HTML をコピー",
+	mjmlCopyFailed: "HTML をコピーできませんでした。コードを選択して手動でコピーしてください。",
 	viewToggleCode: "コード",
 	viewToggleRendered: "プレビュー",
 	viewToggleTooltip: "コードとプレビューの切り替え",

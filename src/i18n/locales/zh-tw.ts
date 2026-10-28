@@ -3,6 +3,11 @@ import { TranslationSchema } from "./en";
 export const zhTw: TranslationSchema = {
 	// Ribbon & Toolbars
 	ribbonNewFileTooltip: "新增檔案（任何副檔名）",
+	mjmlViewHtml: "HTML",
+	mjmlCompiledHtml: "編譯後的 HTML",
+	mjmlCompiling: "編譯中…",
+	mjmlCopyHtml: "複製 HTML",
+	mjmlCopyFailed: "無法複製 HTML，請選取程式碼後手動複製。",
 	viewToggleCode: "原始碼",
 	viewToggleRendered: "預覽",
 	viewToggleTooltip: "切換原始碼與預覽檢視",
