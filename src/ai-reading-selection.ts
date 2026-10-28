@@ -32,7 +32,7 @@ export class ReadingSelectionChat extends Component {
 	}
 	private bind(): void {
 		const leaf = this.app.workspace.getActiveViewOfType(View)?.leaf ?? null;
-		const view = leaf?.view as ReadingView | undefined;
+		const view: ReadingView | undefined = leaf?.view;
 		const eligible = this.enabled() && view?.getViewType() === "markdown" && view.getMode?.() === "preview" && !!view.file;
 		if (eligible && this.leaf === leaf) return;
 		this.pressed = null; this.hide(); this.unbind(); this.unbind = () => {}; this.button?.remove(); this.button = null; this.quote = null; this.pointers.clear();
@@ -64,7 +64,7 @@ export class ReadingSelectionChat extends Component {
 		this.timer = this.win.setTimeout(() => { this.timer = undefined; void this.measure(revision); }, 300);
 	}
 	private async measure(revision: number): Promise<void> {
-		const view = this.leaf?.view as ReadingView | undefined;
+		const view: ReadingView | undefined = this.leaf?.view;
 		if (!view?.file || !this.enabled() || view.getMode?.() !== "preview" || revision !== this.revision || this.pointers.size) return;
 		const root = view.containerEl.querySelector<HTMLElement>(".markdown-preview-view");
 		const selection = view.containerEl.doc.getSelection();

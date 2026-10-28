@@ -479,6 +479,22 @@ export const es: TranslationSchema = {
 	folderNameRequired: "El nombre de la carpeta no puede estar vacío.",
 	folderPathInvalid: "La ruta de la carpeta no puede contener '.' ni '..'.",
 	editorPlainText: "Texto sin formato",
+	// Web Viewer HTML export
+	webSaveDom: "Guardar página como HTML (DOM)",
+	webSaveSource: "Guardar código fuente de la página como HTML",
+	webSaveToVault: "Guardar en la bóveda",
+	webSaveDomDesc: "Guarda el contenido y la estructura actuales de la página como HTML.",
+	webSaveSourceDesc: "Guarda el HTML original recibido al cargar la página.",
+	webSaveFolder: "Elegir carpeta",
+	webSaveFilename: "Nombre del archivo",
+	webSaveSaving: "Guardando...",
+	webSaveUnavailable: "No se puede guardar esta página en este momento.",
+	webSaveSourceUnavailable: "El código fuente original no está disponible. Prueba a guardar el DOM.",
+	webSaveChanged: "La página ha cambiado. Intenta guardarla de nuevo.",
+	webSaveTooLarge: "La página es demasiado grande para guardarla.",
+	webSaveFailed: "No se pudo guardar la página.",
+	webSaveInvalidName: "Introduce un nombre de archivo válido, sin separadores de ruta ni caracteres reservados.",
+
 	settingsFooterAuthor: "Creado por {0}",
 	settingsFooterStar: "Dale una estrella en {0}",
 };

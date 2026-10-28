@@ -479,6 +479,22 @@ export const it: TranslationSchema = {
 	folderNameRequired: "Il nome della cartella non può essere vuoto.",
 	folderPathInvalid: "Il percorso della cartella non può contenere '.' o '..'.",
 	editorPlainText: "Testo semplice",
+	// Web Viewer HTML export
+	webSaveDom: "Salva pagina come HTML (DOM)",
+	webSaveSource: "Salva il sorgente della pagina come HTML",
+	webSaveToVault: "Salva nel vault",
+	webSaveDomDesc: "Salva il contenuto e la struttura attuali della pagina come HTML.",
+	webSaveSourceDesc: "Salva il codice HTML originale ricevuto al caricamento della pagina.",
+	webSaveFolder: "Scegli una cartella",
+	webSaveFilename: "Nome del file",
+	webSaveSaving: "Salvataggio...",
+	webSaveUnavailable: "Al momento non è possibile salvare questa pagina.",
+	webSaveSourceUnavailable: "Il sorgente originale non è disponibile. Prova a salvare il DOM.",
+	webSaveChanged: "La pagina è cambiata. Prova a salvarla di nuovo.",
+	webSaveTooLarge: "La pagina è troppo grande per essere salvata.",
+	webSaveFailed: "Impossibile salvare la pagina.",
+	webSaveInvalidName: "Inserisci un nome di file valido, senza separatori di percorso o caratteri riservati.",
+
 	settingsFooterAuthor: "Creato da {0}",
 	settingsFooterStar: "Lascia una stella su {0}",
 };

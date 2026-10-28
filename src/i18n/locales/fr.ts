@@ -479,6 +479,22 @@ export const fr: TranslationSchema = {
 	folderNameRequired: "Le nom du dossier ne peut pas être vide.",
 	folderPathInvalid: "Le chemin du dossier ne peut pas contenir '.' ou '..'.",
 	editorPlainText: "Texte brut",
+	// Web Viewer HTML export
+	webSaveDom: "Enregistrer la page en HTML (DOM)",
+	webSaveSource: "Enregistrer le code source de la page en HTML",
+	webSaveToVault: "Enregistrer dans le coffre",
+	webSaveDomDesc: "Enregistre le contenu et la structure actuels de la page en HTML.",
+	webSaveSourceDesc: "Enregistre le HTML original reçu au chargement de la page.",
+	webSaveFolder: "Choisir un dossier",
+	webSaveFilename: "Nom du fichier",
+	webSaveSaving: "Enregistrement...",
+	webSaveUnavailable: "Cette page ne peut pas être enregistrée pour le moment.",
+	webSaveSourceUnavailable: "Le code source original est indisponible. Essayez d’enregistrer le DOM.",
+	webSaveChanged: "La page a changé. Essayez de l’enregistrer à nouveau.",
+	webSaveTooLarge: "Cette page est trop volumineuse pour être enregistrée.",
+	webSaveFailed: "Impossible d’enregistrer la page.",
+	webSaveInvalidName: "Saisissez un nom de fichier valide, sans séparateurs de chemin ni caractères réservés.",
+
 	settingsFooterAuthor: "Créé par {0}",
 	settingsFooterStar: "Ajouter une étoile sur {0}",
 };

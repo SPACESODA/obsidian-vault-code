@@ -479,6 +479,22 @@ export const de: TranslationSchema = {
 	folderNameRequired: "Der Ordnername darf nicht leer sein.",
 	folderPathInvalid: "Der Ordnerpfad darf weder '.' noch '..' enthalten.",
 	editorPlainText: "Nur Text",
+	// Web Viewer HTML export
+	webSaveDom: "Seite als HTML (DOM) speichern",
+	webSaveSource: "Seitenquelltext als HTML speichern",
+	webSaveToVault: "Im Vault speichern",
+	webSaveDomDesc: "Speichert den aktuellen Inhalt und die Struktur der Seite als HTML.",
+	webSaveSourceDesc: "Speichert den beim Laden der Seite empfangenen ursprünglichen HTML-Quelltext.",
+	webSaveFolder: "Ordner auswählen",
+	webSaveFilename: "Dateiname",
+	webSaveSaving: "Wird gespeichert...",
+	webSaveUnavailable: "Diese Seite kann derzeit nicht gespeichert werden.",
+	webSaveSourceUnavailable: "Der ursprüngliche Seitenquelltext ist nicht verfügbar. Versuche stattdessen, das DOM zu speichern.",
+	webSaveChanged: "Die Seite hat sich geändert. Versuche erneut, sie zu speichern.",
+	webSaveTooLarge: "Diese Seite ist zu groß zum Speichern.",
+	webSaveFailed: "Die Seite konnte nicht gespeichert werden.",
+	webSaveInvalidName: "Gib einen gültigen Dateinamen ohne Pfadtrennzeichen oder reservierte Zeichen ein.",
+
 	settingsFooterAuthor: "Entwickelt von {0}",
 	settingsFooterStar: "Stern auf {0} vergeben",
 };

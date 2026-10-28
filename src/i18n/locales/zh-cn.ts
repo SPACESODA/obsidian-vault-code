@@ -479,6 +479,22 @@ export const zhCn: TranslationSchema = {
 	folderNameRequired: "文件夹名称不能为空。",
 	folderPathInvalid: "文件夹路径不能包含 '.' 或 '..'。",
 	editorPlainText: "纯文本",
+	// Web Viewer HTML export
+	webSaveDom: "将网页另存为 HTML (DOM)",
+	webSaveSource: "将网页源代码另存为 HTML",
+	webSaveToVault: "保存到仓库",
+	webSaveDomDesc: "将网页当前的内容与结构保存为 HTML。",
+	webSaveSourceDesc: "保存加载网页时收到的原始 HTML。",
+	webSaveFolder: "选择文件夹",
+	webSaveFilename: "文件名",
+	webSaveSaving: "正在保存...",
+	webSaveUnavailable: "目前无法保存此网页。",
+	webSaveSourceUnavailable: "无法获取网页源代码，请改为保存 DOM。",
+	webSaveChanged: "网页已更改，请重新保存。",
+	webSaveTooLarge: "网页过大，无法保存。",
+	webSaveFailed: "无法保存网页。",
+	webSaveInvalidName: "请输入有效的文件名，不可包含路径分隔符或保留字符。",
+
 	settingsFooterAuthor: "由 {0} 制作",
 	settingsFooterStar: "在 {0} 点星支持",
 };

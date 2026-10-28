@@ -479,6 +479,22 @@ export const zhTw: TranslationSchema = {
 	folderNameRequired: "資料夾名稱不能為空。",
 	folderPathInvalid: "資料夾路徑不能包含 '.' 或 '..'。",
 	editorPlainText: "純文字",
+	// Web Viewer HTML export
+	webSaveDom: "將網頁另存為 HTML (DOM)",
+	webSaveSource: "將網頁原始碼另存為 HTML",
+	webSaveToVault: "儲存至保管庫",
+	webSaveDomDesc: "將網頁目前的內容與結構儲存為 HTML。",
+	webSaveSourceDesc: "儲存載入網頁時收到的原始 HTML。",
+	webSaveFolder: "選擇資料夾",
+	webSaveFilename: "檔案名稱",
+	webSaveSaving: "儲存中...",
+	webSaveUnavailable: "目前無法儲存此網頁。",
+	webSaveSourceUnavailable: "無法取得網頁原始碼，請改為儲存 DOM。",
+	webSaveChanged: "網頁已變更，請重新儲存。",
+	webSaveTooLarge: "網頁太大，無法儲存。",
+	webSaveFailed: "無法儲存網頁。",
+	webSaveInvalidName: "請輸入有效的檔案名稱，不可包含路徑分隔符號或保留字元。",
+
 	settingsFooterAuthor: "由 {0} 製作",
 	settingsFooterStar: "在 {0} 給星支持",
 };

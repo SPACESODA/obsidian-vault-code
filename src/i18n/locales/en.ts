@@ -477,6 +477,22 @@ export const en = {
 	folderNameRequired: "Folder name cannot be empty.",
 	folderPathInvalid: "Folder path cannot contain '.' or '..'.",
 	editorPlainText: "Plain text",
+	// Web Viewer HTML export
+	webSaveDom: "Save page as HTML (DOM)",
+	webSaveSource: "Save page source as HTML",
+	webSaveToVault: "Save to vault",
+	webSaveDomDesc: "Save the page’s current content and structure as HTML.",
+	webSaveSourceDesc: "Save the original HTML received when the page loaded.",
+	webSaveFolder: "Choose a folder",
+	webSaveFilename: "File name",
+	webSaveSaving: "Saving...",
+	webSaveUnavailable: "This page cannot be saved right now.",
+	webSaveSourceUnavailable: "The original page source is unavailable. Try saving the DOM instead.",
+	webSaveChanged: "The page changed. Try saving it again.",
+	webSaveTooLarge: "This page is too large to save.",
+	webSaveFailed: "Could not save the page.",
+	webSaveInvalidName: "Enter a valid file name without path separators or reserved characters.",
+
 	settingsFooterAuthor: "Brought to you by {0}",
 	settingsFooterStar: "Star on {0}",
 };

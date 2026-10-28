@@ -479,6 +479,22 @@ export const ru: TranslationSchema = {
 	folderNameRequired: "Название папки не может быть пустым.",
 	folderPathInvalid: "Путь к папке не может содержать '.' или '..'.",
 	editorPlainText: "Обычный текст",
+	// Web Viewer HTML export
+	webSaveDom: "Сохранить страницу как HTML (DOM)",
+	webSaveSource: "Сохранить исходный код страницы как HTML",
+	webSaveToVault: "Сохранить в хранилище",
+	webSaveDomDesc: "Сохраняет текущее содержимое и структуру страницы в HTML.",
+	webSaveSourceDesc: "Сохраняет исходный HTML, полученный при загрузке страницы.",
+	webSaveFolder: "Выбрать папку",
+	webSaveFilename: "Имя файла",
+	webSaveSaving: "Сохранение...",
+	webSaveUnavailable: "Сейчас эту страницу нельзя сохранить.",
+	webSaveSourceUnavailable: "Исходный код страницы недоступен. Попробуйте сохранить DOM.",
+	webSaveChanged: "Страница изменилась. Попробуйте сохранить её ещё раз.",
+	webSaveTooLarge: "Страница слишком большая для сохранения.",
+	webSaveFailed: "Не удалось сохранить страницу.",
+	webSaveInvalidName: "Введите допустимое имя файла без разделителей пути и зарезервированных символов.",
+
 	settingsFooterAuthor: "Разработано {0}",
 	settingsFooterStar: "Поставить звезду на {0}",
 };

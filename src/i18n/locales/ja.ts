@@ -479,6 +479,22 @@ export const ja: TranslationSchema = {
 	folderNameRequired: "フォルダー名を入力してください。",
 	folderPathInvalid: "フォルダーのパスに '.' や '..' は使用できません。",
 	editorPlainText: "プレーンテキスト",
+	// Web Viewer HTML export
+	webSaveDom: "ページを HTML (DOM) として保存",
+	webSaveSource: "ページのソースを HTML として保存",
+	webSaveToVault: "保管庫に保存",
+	webSaveDomDesc: "ページの現在の内容と構造を HTML として保存します。",
+	webSaveSourceDesc: "ページの読み込み時に受信した元の HTML を保存します。",
+	webSaveFolder: "フォルダーを選択",
+	webSaveFilename: "ファイル名",
+	webSaveSaving: "保存中...",
+	webSaveUnavailable: "現在、このページは保存できません。",
+	webSaveSourceUnavailable: "元のページソースを取得できません。DOM の保存をお試しください。",
+	webSaveChanged: "ページが変更されました。もう一度保存してください。",
+	webSaveTooLarge: "ページが大きすぎるため保存できません。",
+	webSaveFailed: "ページを保存できませんでした。",
+	webSaveInvalidName: "パス区切り文字や予約文字を含まない、有効なファイル名を入力してください。",
+
 	settingsFooterAuthor: "{0} が制作",
 	settingsFooterStar: "{0} でスターを付ける",
 };

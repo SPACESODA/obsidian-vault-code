@@ -126,6 +126,7 @@ import {
 	AGENT_INSTALL_CONFIGS,
 } from "./ai-service";
 import { AIChatView, VIEW_TYPE_AI_CHAT } from "./ai-chat-view";
+import { WebPageSave } from "./web-page-save";
 import { ChatLeafManager } from "./ai-chat-leaf";
 import { AIStorage } from "./ai-storage";
 import { type AIConnection, connectionProvider, normalizeConnections } from "./ai-connections";
@@ -5074,6 +5075,7 @@ export default class VaultCodePlugin extends Plugin {
 		// Its settings and ignore policy must already be ready before onOpen runs.
 		await this.initializeIgnoreFiltering();
 		this.syncAIChatFeatures();
+		if (Platform.isDesktop) this.addChild(new WebPageSave(this.app));
 		if (Platform.isDesktop) {
 			this.externalFolders = new ExternalFolderFeature(this.app, path => this.isPathIgnored(path, true), () => this.applyFileExplorerFiltering());
 			this.register(this.externalFolders.guardDeletion());

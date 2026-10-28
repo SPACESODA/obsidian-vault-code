@@ -479,6 +479,22 @@ export const ko: TranslationSchema = {
 	folderNameRequired: "폴더 이름을 입력하세요.",
 	folderPathInvalid: "폴더 경로에는 '.' 또는 '..'를 사용할 수 없습니다.",
 	editorPlainText: "일반 텍스트",
+	// Web Viewer HTML export
+	webSaveDom: "페이지를 HTML (DOM)로 저장",
+	webSaveSource: "페이지 소스를 HTML로 저장",
+	webSaveToVault: "보관함에 저장",
+	webSaveDomDesc: "페이지의 현재 내용과 구조를 HTML로 저장합니다.",
+	webSaveSourceDesc: "페이지를 불러올 때 받은 원본 HTML을 저장합니다.",
+	webSaveFolder: "폴더 선택",
+	webSaveFilename: "파일 이름",
+	webSaveSaving: "저장 중...",
+	webSaveUnavailable: "지금은 이 페이지를 저장할 수 없습니다.",
+	webSaveSourceUnavailable: "원본 페이지 소스를 가져올 수 없습니다. 대신 DOM으로 저장해 보세요.",
+	webSaveChanged: "페이지가 변경되었습니다. 다시 저장해 주세요.",
+	webSaveTooLarge: "페이지가 너무 커서 저장할 수 없습니다.",
+	webSaveFailed: "페이지를 저장하지 못했습니다.",
+	webSaveInvalidName: "경로 구분자나 예약 문자가 없는 올바른 파일 이름을 입력하세요.",
+
 	settingsFooterAuthor: "제작: {0}",
 	settingsFooterStar: "{0}에서 별표로 응원하기",
 };

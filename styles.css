@@ -4222,10 +4222,27 @@ body.vault-code-ignore-loading .nav-files-container { visibility: hidden; }
 	width: 1px;
 	height: 1px;
 	overflow: hidden;
-	clip-path: inset(50%);
+	opacity: 0;
 	white-space: nowrap;
 }
 
 .vault-code-model-picker .prompt-input {
 	padding-right: 80px;
+}
+
+.hidden-files-form-modal .vault-code-web-save-folder {
+	width: 100%;
+	height: auto;
+	padding: 0;
+	background: transparent;
+	box-shadow: none;
+	text-align: left;
+	justify-content: flex-start;
+}
+
+.vault-code-web-save-desc {
+	margin: 0 0 16px;
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+	line-height: 1.5;
 }
