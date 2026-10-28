@@ -164,7 +164,7 @@ test('the native note action is disabled when Web Viewer does not expose its sav
  assert.doesNotThrow(()=>{void h.feature.saveNote(h.view);});
 });
 test('HTML dialogs have concise descriptions and titles without ellipses',()=>{
- for(const [kind,description]of [['dom','Save the page’s current content and structure as HTML.'],['source','Save the original HTML received when the page loaded.']]){
+ for(const [kind,description]of [['dom','Save the page’s current content and structure as HTML.'],['source','Save the page’s original source code.']]){
   const h=formHarness({kind});assert.equal(h.elements.find(e=>e.tag==='p').text,description);assert.ok(!h.elements.find(e=>e.tag==='h3').text.endsWith('...'));h.modal.close();
  }
 });

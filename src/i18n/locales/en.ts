@@ -482,7 +482,7 @@ export const en = {
 	webSaveSource: "Save page source as HTML",
 	webSaveToVault: "Save to vault",
 	webSaveDomDesc: "Save the page’s current content and structure as HTML.",
-	webSaveSourceDesc: "Save the original HTML received when the page loaded.",
+	webSaveSourceDesc: "Save the page’s original source code.",
 	webSaveFolder: "Choose a folder",
 	webSaveFilename: "File name",
 	webSaveSaving: "Saving...",

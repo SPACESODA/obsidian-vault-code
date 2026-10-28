@@ -484,7 +484,7 @@ export const ru: TranslationSchema = {
 	webSaveSource: "Сохранить исходный код страницы как HTML",
 	webSaveToVault: "Сохранить в хранилище",
 	webSaveDomDesc: "Сохраняет текущее содержимое и структуру страницы в HTML.",
-	webSaveSourceDesc: "Сохраняет исходный HTML, полученный при загрузке страницы.",
+	webSaveSourceDesc: "Сохраняет исходный код страницы.",
 	webSaveFolder: "Выбрать папку",
 	webSaveFilename: "Имя файла",
 	webSaveSaving: "Сохранение...",

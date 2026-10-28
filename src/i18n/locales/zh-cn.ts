@@ -484,7 +484,7 @@ export const zhCn: TranslationSchema = {
 	webSaveSource: "将网页源代码另存为 HTML",
 	webSaveToVault: "保存到仓库",
 	webSaveDomDesc: "将网页当前的内容与结构保存为 HTML。",
-	webSaveSourceDesc: "保存加载网页时收到的原始 HTML。",
+	webSaveSourceDesc: "保存网页的源代码。",
 	webSaveFolder: "选择文件夹",
 	webSaveFilename: "文件名",
 	webSaveSaving: "正在保存...",

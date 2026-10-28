@@ -484,7 +484,7 @@ export const it: TranslationSchema = {
 	webSaveSource: "Salva il sorgente della pagina come HTML",
 	webSaveToVault: "Salva nel vault",
 	webSaveDomDesc: "Salva il contenuto e la struttura attuali della pagina come HTML.",
-	webSaveSourceDesc: "Salva il codice HTML originale ricevuto al caricamento della pagina.",
+	webSaveSourceDesc: "Salva il codice sorgente originale della pagina.",
 	webSaveFolder: "Scegli una cartella",
 	webSaveFilename: "Nome del file",
 	webSaveSaving: "Salvataggio...",

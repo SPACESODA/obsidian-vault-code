@@ -484,7 +484,7 @@ export const ko: TranslationSchema = {
 	webSaveSource: "페이지 소스를 HTML로 저장",
 	webSaveToVault: "보관함에 저장",
 	webSaveDomDesc: "페이지의 현재 내용과 구조를 HTML로 저장합니다.",
-	webSaveSourceDesc: "페이지를 불러올 때 받은 원본 HTML을 저장합니다.",
+	webSaveSourceDesc: "페이지의 원본 소스 코드를 저장합니다.",
 	webSaveFolder: "폴더 선택",
 	webSaveFilename: "파일 이름",
 	webSaveSaving: "저장 중...",

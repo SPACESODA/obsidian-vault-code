@@ -484,7 +484,7 @@ export const zhTw: TranslationSchema = {
 	webSaveSource: "將網頁原始碼另存為 HTML",
 	webSaveToVault: "儲存至保管庫",
 	webSaveDomDesc: "將網頁目前的內容與結構儲存為 HTML。",
-	webSaveSourceDesc: "儲存載入網頁時收到的原始 HTML。",
+	webSaveSourceDesc: "儲存網頁的原始碼。",
 	webSaveFolder: "選擇資料夾",
 	webSaveFilename: "檔案名稱",
 	webSaveSaving: "儲存中...",

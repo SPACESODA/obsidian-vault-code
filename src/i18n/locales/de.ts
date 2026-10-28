@@ -484,7 +484,7 @@ export const de: TranslationSchema = {
 	webSaveSource: "Seitenquelltext als HTML speichern",
 	webSaveToVault: "Im Vault speichern",
 	webSaveDomDesc: "Speichert den aktuellen Inhalt und die Struktur der Seite als HTML.",
-	webSaveSourceDesc: "Speichert den beim Laden der Seite empfangenen ursprünglichen HTML-Quelltext.",
+	webSaveSourceDesc: "Speichert den ursprünglichen Quelltext der Seite.",
 	webSaveFolder: "Ordner auswählen",
 	webSaveFilename: "Dateiname",
 	webSaveSaving: "Wird gespeichert...",

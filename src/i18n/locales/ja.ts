@@ -484,7 +484,7 @@ export const ja: TranslationSchema = {
 	webSaveSource: "ページのソースを HTML として保存",
 	webSaveToVault: "保管庫に保存",
 	webSaveDomDesc: "ページの現在の内容と構造を HTML として保存します。",
-	webSaveSourceDesc: "ページの読み込み時に受信した元の HTML を保存します。",
+	webSaveSourceDesc: "ページの元のソースコードを保存します。",
 	webSaveFolder: "フォルダーを選択",
 	webSaveFilename: "ファイル名",
 	webSaveSaving: "保存中...",
