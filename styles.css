@@ -876,6 +876,49 @@ body .hidden-files-editor-wrapper .cm-searchMatch-selected {
 	.hidden-files-extensions-textarea { min-width: 0; }
 }
 
+/* Keep the mobile slider on one row, like Obsidian's Appearance settings. */
+.is-mobile .hidden-files-settings .vault-code-font-size-setting .setting-item-control {
+	display: flex;
+	flex-wrap: nowrap;
+	align-items: center;
+	gap: 12px;
+	width: 100%;
+}
+.is-mobile .hidden-files-settings .vault-code-font-size-setting .setting-item-control > :not(input) {
+	flex: 0 0 auto;
+}
+.is-mobile .hidden-files-settings .vault-code-font-size-setting input[type="range"] {
+	flex: 1 1 0;
+	width: 0;
+	min-width: 0;
+	margin: 0;
+}
+
+/* Keep the ignore toggle beside its label; put the secondary action below. */
+.is-mobile .hidden-files-settings .setting-item.vault-code-setting-with-actions {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: start;
+	gap: 12px;
+}
+.is-mobile .hidden-files-settings .vault-code-setting-with-actions .setting-item-info {
+	grid-column: 1;
+	grid-row: 1;
+	margin: 0;
+}
+.is-mobile .hidden-files-settings .vault-code-setting-with-actions .setting-item-control {
+	display: contents;
+}
+.is-mobile .hidden-files-settings .vault-code-setting-with-actions .checkbox-container {
+	grid-column: 2;
+	grid-row: 1;
+}
+.is-mobile .hidden-files-settings .vault-code-setting-with-actions .vault-code-ignore-btn {
+	grid-column: 1 / -1;
+	grid-row: 2;
+	width: 100%;
+}
+
 /* Settings tab grouping & headings */
 .hidden-files-settings .setting-item-heading {
 	border: none;
@@ -3377,7 +3420,7 @@ textarea.vault-code-chat-input:active {
 	margin-top: 6px;
 }
 
-@media (max-width: 600px) {
+@container (max-width: 500px) {
 	.vault-code-agent-grid {
 		grid-template-columns: 1fr;
 	}
@@ -3625,10 +3668,6 @@ svg.vault-code-spin {
 .vault-code-agent-card {
 	min-width: 0;
 	max-width: 100%;
-}
-
-.vault-code-agent-grid {
-	grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
 }
 
 .vault-code-agent-card {

@@ -8896,7 +8896,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 				}),
 		);
 
-		const fontSetting = new Setting(containerEl).setName(t("settingsEditorFontSize")).setDesc(t("settingsEditorFontSizeDesc"));
+		const fontSetting = new Setting(containerEl).setClass("vault-code-font-size-setting").setName(t("settingsEditorFontSize")).setDesc(t("settingsEditorFontSizeDesc"));
 		let fallbackFontValue: HTMLElement | undefined;
 		let resetFontScale = () => {};
 		const applyFontScale = (value: number) => {
