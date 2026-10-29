@@ -1,3 +1,4 @@
+import { FileViewMemory, newFileViewPosition, type FileViewPosition } from "./file-view-memory";
 import { compileMjmlHtml } from "./mjml-compile";
 import {
 	Plugin,
@@ -2602,6 +2603,10 @@ export class DotfileView extends TextFileView {
 	private previewSelection: HtmlPreviewSelection | null = null;
 	private filePreviewRenderer: FilePreviewRenderer | null = null;
 	private previewGeneration = 0;
+	private viewPosition: FileViewPosition = newFileViewPosition();
+	private positionFile: TFile | null = null;
+	private viewWasActive = false;
+	private scrollRestoreFrame: number | null = null;
 	private previewSave: { file: TFile; guard: PreviewSaveGuard; separator: string; prefix: string } | null = null;
 	private previewConflictNotified = false;
 	private langEl: HTMLElement | null = null;
@@ -2749,6 +2754,11 @@ export class DotfileView extends TextFileView {
 	}
 
 	override async onLoadFile(file: TFile): Promise<void> {
+		if (this.positionFile !== file) {
+			this.viewPosition = this.plugin.fileViewMemory.get(file.path);
+			this.positionFile = file;
+			this.isPreviewMode = this.viewPosition.preview && PREVIEWABLE_EXTENSIONS.has(file.extension.toLowerCase());
+		}
 		this.filePath = file.path;
 		this.plugin.updateLeafHeaderActions(this.leaf, this);
 		await super.onLoadFile(file);
@@ -3353,12 +3363,25 @@ export class DotfileView extends TextFileView {
 			}
 		});
 
+		this.viewWasActive = this.app.workspace.getActiveViewOfType(DotfileView) === this;
+		this.registerEvent(this.app.workspace.on("active-leaf-change", leaf => {
+			if (leaf === this.leaf) this.restoreFileScroll();
+			else if (this.viewWasActive) this.rememberFileView();
+			this.viewWasActive = leaf === this.leaf;
+		}));
+
 		// Initialize CodeMirror 6 with language compartment
 		this.editor = new EditorView({
 			state: this.createEditorState(this.data ?? ""),
 			parent: this.editorEl,
 		});
 
+		this.registerDomEvent(this.editor.scrollDOM, "scroll", () => {
+			if (!this.isPreviewMode && !this.isCompiledMode) this.rememberFileView();
+		});
+		this.registerDomEvent(this.previewEl, "scroll", () => {
+			if (this.isPreviewMode) this.rememberFileView();
+		}, true);
 		this.applyFontScale();
 		this.applyLanguage();
 		this.updateViewModeUI();
@@ -3893,6 +3916,11 @@ export class DotfileView extends TextFileView {
 	}
 
 	override async onUnloadFile(file: TFile): Promise<void> {
+		this.rememberFileView();
+		this.cancelScrollRestore();
+		this.previewGeneration++;
+		this.previewEl?.empty();
+		this.clearCompiledHtml();
 		this.previewSearch?.reset();
 		this.previewSelection?.setFrame(null);
 		this.filePreviewRenderer?.clear();
@@ -3907,6 +3935,8 @@ export class DotfileView extends TextFileView {
 	}
 
 	async onClose(): Promise<void> {
+		this.rememberFileView();
+		this.cancelScrollRestore();
 		this.clearCompiledHtml();
 		this.previewSearch?.dispose();
 		this.previewSelection?.dispose();
@@ -3972,6 +4002,51 @@ export class DotfileView extends TextFileView {
 		return ["html", "htm", "mjml"].includes(this.file?.extension?.toLowerCase() ?? "");
 	}
 
+	private cancelScrollRestore(): void {
+		if (this.scrollRestoreFrame !== null) this.contentEl.win.cancelAnimationFrame(this.scrollRestoreFrame);
+		this.scrollRestoreFrame = null;
+	}
+
+	private capturePreviewScroll(): void {
+		if (!this.previewEl || !this.previewEl.isConnected || !this.previewEl.clientHeight || !this.isPreviewMode || this.isCompiledMode) return;
+		this.viewPosition.page = { top: this.previewEl.scrollTop, left: this.previewEl.scrollLeft };
+		const table = this.previewEl.querySelector<HTMLElement>(".vault-code-preview-table-scroll");
+		if (table) this.viewPosition.table = { top: table.scrollTop, left: table.scrollLeft };
+		try {
+			const iframe = this.previewEl.querySelector("iframe");
+			const frame = iframe?.contentWindow;
+			if (frame && iframe?.dataset.positionReady) this.viewPosition.frame = { top: frame.scrollY, left: frame.scrollX };
+		} catch { /* A preview may have navigated to another origin. */ }
+	}
+
+	private rememberFileView(): void {
+		if (!this.positionFile || this.positionFile !== this.file || this.scrollRestoreFrame !== null) return;
+		if (!this.isCompiledMode) {
+			this.viewPosition.preview = this.isPreviewMode;
+			if (this.isPreviewMode) this.capturePreviewScroll();
+			else if (this.editor?.dom.isConnected && this.editor.scrollDOM.clientHeight) this.viewPosition.code = { top: this.editor.scrollDOM.scrollTop, left: this.editor.scrollDOM.scrollLeft };
+		}
+		if ((this.viewWasActive || this.app.workspace.getActiveViewOfType(DotfileView) === this) && this.app.vault.getAbstractFileByPath(this.file.path) === this.file) this.plugin.fileViewMemory.set(this.file.path, this.viewPosition);
+	}
+
+	private restoreFileScroll(): void {
+		this.cancelScrollRestore();
+		if (this.isCompiledMode || !this.positionFile || this.positionFile !== this.file) return;
+		const file = this.positionFile;
+		const preview = this.isPreviewMode;
+		this.scrollRestoreFrame = this.contentEl.win.requestAnimationFrame(() => {
+			this.scrollRestoreFrame = null;
+			if (this.file !== file || this.isPreviewMode !== preview || this.isCompiledMode) return;
+			if (!preview && this.editor) {
+				this.editor.scrollDOM.scrollTo({ top: this.viewPosition.code.top, left: this.viewPosition.code.left, behavior: "instant" });
+			} else if (this.previewEl) {
+				this.previewEl.scrollTo({ top: this.viewPosition.page.top, left: this.viewPosition.page.left, behavior: "instant" });
+				this.previewEl.querySelector<HTMLElement>(".vault-code-preview-table-scroll")?.scrollTo({ top: this.viewPosition.table.top, left: this.viewPosition.table.left, behavior: "instant" });
+				try { this.previewEl.querySelector("iframe")?.contentWindow?.scrollTo({ top: this.viewPosition.frame.top, left: this.viewPosition.frame.left, behavior: "instant" }); } catch { /* Cross-origin navigation. */ }
+			}
+		});
+	}
+
 	private clearCompiledHtml(): void {
 		this.compileGeneration++;
 		this.compiledEditor?.destroy(); this.compiledEditor = null;
@@ -3981,6 +4056,7 @@ export class DotfileView extends TextFileView {
 
 	private async showCompiledHtml(): Promise<void> {
 		if (!this.compiledEl || this.file?.extension.toLowerCase() !== "mjml") return;
+		this.rememberFileView();
 		this.clearCompiledHtml();
 		const generation = this.compileGeneration;
 		const source = this.getViewData();
@@ -4023,7 +4099,10 @@ export class DotfileView extends TextFileView {
 	public toggleViewMode(): void {
 		if (this.isCompiledMode) { this.clearCompiledHtml(); this.isPreviewMode = false; this.updateViewModeUI(); return; }
 		if (!this.isPreviewable()) return;
+		this.rememberFileView();
 		this.isPreviewMode = !this.isPreviewMode;
+		this.viewPosition.preview = this.isPreviewMode;
+		if (this.file) this.plugin.fileViewMemory.set(this.file.path, this.viewPosition);
 		this.updateViewModeUI();
 	}
 
@@ -4058,6 +4137,7 @@ export class DotfileView extends TextFileView {
 			if (this.editorEl) this.editorEl.show();
 			if (this.searchBtnEl) this.searchBtnEl.show();
 			if (this.lineWrapBtnEl) this.lineWrapBtnEl.show();
+			this.restoreFileScroll();
 			return;
 		}
 
@@ -4109,10 +4189,12 @@ export class DotfileView extends TextFileView {
 				}
 			}
 		}
+		if (!this.isPreviewMode) this.restoreFileScroll();
 	}
 
 	private async renderPreview(): Promise<void> {
 		if (!this.previewEl || !this.file) return;
+		if (this.previewEl.childElementCount) this.capturePreviewScroll();
 		const generation = ++this.previewGeneration;
 		this.previewSearch?.setFrame(null);
 		this.previewSelection?.setFrame(null);
@@ -4138,6 +4220,7 @@ export class DotfileView extends TextFileView {
 		} else if (ext === "mjml") {
 			await this.renderMjmlPreview(rawContent, generation);
 		}
+		if (generation === this.previewGeneration) this.restoreFileScroll();
 	}
 
 	private renderSvgPreview(content: string): void {
@@ -4590,7 +4673,16 @@ export class DotfileView extends TextFileView {
 		);
 		this.previewSearch?.setFrame(iframe);
 		this.previewSelection?.setFrame(iframe);
+		const positionFile = this.positionFile;
 		iframe.addEventListener("load", () => {
+			if (!iframe.isConnected || positionFile !== this.positionFile || !this.isPreviewMode || !iframe.hasAttribute("srcdoc")) return;
+			iframe.dataset.positionReady = "true";
+			this.restoreFileScroll();
+			try {
+				iframe.contentWindow?.addEventListener("scroll", () => {
+					if (iframe.isConnected && positionFile === this.positionFile && this.isPreviewMode) this.rememberFileView();
+				}, { passive: true });
+			} catch { /* Cross-origin navigation cannot provide scroll coordinates. */ }
 			try {
 				iframe.contentDocument?.addEventListener("click", event => forwardPreviewAppLink(event, openInDefaultBrowser));
 			} catch {
@@ -4698,7 +4790,8 @@ export class DotfileView extends TextFileView {
 			return;
 		}
 
-		if (!this.plugin.isFileSupportedForGitDiff(this.file)) {
+		const file = this.file;
+		if (!this.plugin.isFileSupportedForGitDiff(file)) {
 			if (this.gitDiffStatsBtnEl) this.gitDiffStatsBtnEl.hide();
 			if (this.isDiffMode) {
 				void this.setDiffMode(false);
@@ -4707,12 +4800,14 @@ export class DotfileView extends TextFileView {
 		}
 
 		const isRepo = await this.plugin.gitService.isGitRepo();
+		if (this.file !== file) return;
 		if (!isRepo) {
 			if (this.gitDiffStatsBtnEl) this.gitDiffStatsBtnEl.hide();
 			return;
 		}
 
-		const stats = await this.plugin.gitService.getFileDiffStats(this.file.path);
+		const stats = await this.plugin.gitService.getFileDiffStats(file.path);
+		if (this.file !== file) return;
 		if (this.gitDiffStatsBtnEl) {
 			this.gitDiffStatsBtnEl.empty();
 			if (stats && stats.isModified) {
@@ -5118,6 +5213,7 @@ export class DotfileView extends TextFileView {
 /* ── Plugin ────────────────────────────────────────────────── */
 
 export default class VaultCodePlugin extends Plugin {
+	public readonly fileViewMemory = new FileViewMemory();
 	settings!: VaultCodeSettings;
 	public gitService = new GitService(this.app);
 	public cachedModifiedFiles: Set<string> = new Set();
@@ -5262,6 +5358,7 @@ export default class VaultCodePlugin extends Plugin {
 		);
 		this.registerEvent(
 			this.app.vault.on("delete", (file) => {
+				this.fileViewMemory.forget(file.path);
 				this.externalFolders?.invalidate(file.path);
 				void this.handleIgnoreFileEvent(file.path);
 				this.debouncedUpdateGitStatus();
@@ -5269,6 +5366,7 @@ export default class VaultCodePlugin extends Plugin {
 		);
 		this.registerEvent(
 			this.app.vault.on("rename", (file, oldPath) => {
+				this.fileViewMemory.rename(oldPath, file.path);
 				this.externalFolders?.invalidate(file.path);
 				void this.handleIgnoreFileEvent(file.path);
 				this.externalFolders?.invalidate(oldPath);
