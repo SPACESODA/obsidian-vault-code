@@ -19,8 +19,8 @@ npm-debug.log
 # Obsidian
 .obsidian/plugins/
 .obsidian/workspace.json
+.obsidian/bookmarks.json
 data.json
-.hotreload
 
 # Folders and Files
 agent-chats/
@@ -29,3 +29,4 @@ docs/*
 docs/assets/*
 !docs/assets/vc-code-editing.webp
 !docs/assets/vc-code-editing-gh.jpg
+.hotreload
