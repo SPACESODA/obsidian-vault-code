@@ -1,7 +1,7 @@
 {
 	"id": "vault-code",
 	"name": "Vault Code",
-	"version": "2.2.8",
+	"version": "2.2.9",
 	"minAppVersion": "1.6.6",
 	"description": "Turn your vault into a workspace for notes, code, and files. View hidden files, edit code, preview HTML, SVG and data, review Git diffs, or chat with AI agents, all in one place.",
 	"author": "SPACESODA",
