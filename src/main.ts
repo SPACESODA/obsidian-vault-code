@@ -678,6 +678,7 @@ interface VaultCodeSettings {
 export const DEFAULT_OBSIDIANIGNORE_CONTENT = `# Obsidian & Git
 .obsidian/
 .git/
+.gitattributes
 .trash/
 
 # macOS

@@ -1,6 +1,7 @@
 # Obsidian & Git
 .obsidian/
 .git/
+.gitattributes
 .trash/
 
 # macOS
