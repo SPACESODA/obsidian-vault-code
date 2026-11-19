@@ -497,6 +497,29 @@ export const en = {
 
 	settingsFooterAuthor: "Brought to you by {0}",
 	settingsFooterStar: "Star on {0}",
+
+	// Unlinked Media
+	commandShowUnlinkedMedia: "Show unlinked media",
+	contextShowUnlinkedMedia: "Show unlinked media",
+	unlinkedMediaTitle: "Unlinked media",
+	unlinkedMediaScopeVault: "Entire vault",
+	unlinkedMediaSearchPlaceholder: "Filter by filename or path...",
+	unlinkedMediaFilterAll: "All",
+	unlinkedMediaFilterImages: "Images",
+	unlinkedMediaFilterAudio: "Audio",
+	unlinkedMediaFilterVideo: "Video",
+	unlinkedMediaSelectAll: "Select all",
+	unlinkedMediaDeleteSelected: "Move selected to trash",
+	unlinkedMediaDeleteConfirmTitle: "Delete unlinked media",
+	unlinkedMediaDeleteConfirmMsg: "Are you sure you want to move {0} unlinked file(s) ({1}) to the trash?",
+	unlinkedMediaDeleteSingleConfirm: "Move \"{0}\" to the trash?",
+	unlinkedMediaEmpty: "No unlinked media found",
+	unlinkedMediaEmptyDesc: "All media files in this scope are linked in notes or canvas files.",
+	unlinkedMediaOpen: "Open file",
+	unlinkedMediaReveal: "Reveal in file explorer",
+	unlinkedMediaDelete: "Move to trash",
+	unlinkedMediaDeletedNotice: "Moved {0} file(s) to trash.",
+	unlinkedMediaStats: "{0} item(s) · {1}",
 };
 
 export type TranslationSchema = typeof en;

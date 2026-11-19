@@ -499,4 +499,27 @@ export const de: TranslationSchema = {
 
 	settingsFooterAuthor: "Entwickelt von {0}",
 	settingsFooterStar: "Stern auf {0} vergeben",
+
+	// Unlinked Media
+	commandShowUnlinkedMedia: "Nicht verknüpfte Medien anzeigen",
+	contextShowUnlinkedMedia: "Nicht verknüpfte Medien anzeigen",
+	unlinkedMediaTitle: "Nicht verknüpfte Medien",
+	unlinkedMediaScopeVault: "Gesamter Vault",
+	unlinkedMediaSearchPlaceholder: "Nach Dateiname oder Pfad filtern...",
+	unlinkedMediaFilterAll: "Alle",
+	unlinkedMediaFilterImages: "Bilder",
+	unlinkedMediaFilterAudio: "Audio",
+	unlinkedMediaFilterVideo: "Video",
+	unlinkedMediaSelectAll: "Alle auswählen",
+	unlinkedMediaDeleteSelected: "Ausgewählte in den Papierkorb verschieben",
+	unlinkedMediaDeleteConfirmTitle: "Nicht verknüpfte Medien löschen",
+	unlinkedMediaDeleteConfirmMsg: "Möchten Sie {0} nicht verknüpfte Datei(en) ({1}) wirklich in den Papierkorb verschieben?",
+	unlinkedMediaDeleteSingleConfirm: "\"{0}\" in den Papierkorb verschieben?",
+	unlinkedMediaEmpty: "Keine nicht verknüpften Medien gefunden",
+	unlinkedMediaEmptyDesc: "Alle Mediendateien in diesem Bereich sind in Notizen oder Canvas-Dateien verknüpft.",
+	unlinkedMediaOpen: "Datei öffnen",
+	unlinkedMediaReveal: "Im Datei-Explorer anzeigen",
+	unlinkedMediaDelete: "In den Papierkorb",
+	unlinkedMediaDeletedNotice: "{0} Datei(en) in den Papierkorb verschoben.",
+	unlinkedMediaStats: "{0} Element(e) · {1}",
 };

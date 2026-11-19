@@ -499,4 +499,27 @@ export const fr: TranslationSchema = {
 
 	settingsFooterAuthor: "Créé par {0}",
 	settingsFooterStar: "Ajouter une étoile sur {0}",
+
+	// Unlinked Media
+	commandShowUnlinkedMedia: "Afficher les médias non liés",
+	contextShowUnlinkedMedia: "Afficher les médias non liés",
+	unlinkedMediaTitle: "Médias non liés",
+	unlinkedMediaScopeVault: "Tout le coffre",
+	unlinkedMediaSearchPlaceholder: "Filtrer par nom de fichier ou chemin...",
+	unlinkedMediaFilterAll: "Tous",
+	unlinkedMediaFilterImages: "Images",
+	unlinkedMediaFilterAudio: "Audio",
+	unlinkedMediaFilterVideo: "Vidéo",
+	unlinkedMediaSelectAll: "Tout sélectionner",
+	unlinkedMediaDeleteSelected: "Déplacer la sélection vers la corbeille",
+	unlinkedMediaDeleteConfirmTitle: "Supprimer les médias non liés",
+	unlinkedMediaDeleteConfirmMsg: "Voulez-vous vraiment déplacer {0} fichier(s) non lié(s) ({1}) vers la corbeille ?",
+	unlinkedMediaDeleteSingleConfirm: "Déplacer « {0} » vers la corbeille ?",
+	unlinkedMediaEmpty: "Aucun média non lié trouvé",
+	unlinkedMediaEmptyDesc: "Tous les fichiers multimédias de cette portée sont liés dans des notes ou des canevas.",
+	unlinkedMediaOpen: "Ouvrir le fichier",
+	unlinkedMediaReveal: "Afficher dans l'explorateur de fichiers",
+	unlinkedMediaDelete: "Déplacer vers la corbeille",
+	unlinkedMediaDeletedNotice: "{0} fichier(s) déplacé(s) vers la corbeille.",
+	unlinkedMediaStats: "{0} élément(s) · {1}",
 };

@@ -499,4 +499,27 @@ export const ru: TranslationSchema = {
 
 	settingsFooterAuthor: "Разработано {0}",
 	settingsFooterStar: "Поставить звезду на {0}",
+
+	// Unlinked Media
+	commandShowUnlinkedMedia: "Показать несвязанные медиафайлы",
+	contextShowUnlinkedMedia: "Показать несвязанные медиафайлы",
+	unlinkedMediaTitle: "Несвязанные медиафайлы",
+	unlinkedMediaScopeVault: "Всё хранилище",
+	unlinkedMediaSearchPlaceholder: "Фильтр по имени файла или пути...",
+	unlinkedMediaFilterAll: "Все",
+	unlinkedMediaFilterImages: "Изображения",
+	unlinkedMediaFilterAudio: "Аудио",
+	unlinkedMediaFilterVideo: "Видео",
+	unlinkedMediaSelectAll: "Выбрать все",
+	unlinkedMediaDeleteSelected: "Переместить выбранные в корзину",
+	unlinkedMediaDeleteConfirmTitle: "Удалить несвязанные медиафайлы",
+	unlinkedMediaDeleteConfirmMsg: "Вы действительно хотите переместить {0} несвязанных файла(ов) ({1}) в корзину?",
+	unlinkedMediaDeleteSingleConfirm: "Переместить «{0}» в корзину?",
+	unlinkedMediaEmpty: "Несвязанных медиафайлов не найдено",
+	unlinkedMediaEmptyDesc: "Все медиафайлы в этой области связаны в заметках или холстах.",
+	unlinkedMediaOpen: "Открыть файл",
+	unlinkedMediaReveal: "Показать в проводнике",
+	unlinkedMediaDelete: "Переместить в корзину",
+	unlinkedMediaDeletedNotice: "Перемещено файлов в корзину: {0}.",
+	unlinkedMediaStats: "Элементов: {0} · {1}",
 };

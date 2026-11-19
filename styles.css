@@ -4291,3 +4291,391 @@ body.vault-code-ignore-loading .nav-files-container { visibility: hidden; }
 	overflow-wrap: anywhere;
 	padding: 12px;
 }
+
+/* Unlinked Media Modal */
+.modal.vault-code-unlinked-window {
+	width: 720px;
+	max-width: 92vw;
+	height: 640px;
+	max-height: 85vh;
+	padding: 20px 24px;
+	display: flex;
+	flex-direction: column;
+	box-sizing: border-box;
+}
+
+.modal.vault-code-unlinked-window .modal-content.vault-code-unlinked-modal {
+	padding: 0;
+	margin: 0;
+	width: 100%;
+	max-width: 100%;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	overflow: hidden;
+}
+
+.vault-code-unlinked-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding-right: 0;
+	flex-shrink: 0;
+}
+
+.vault-code-unlinked-title-wrapper {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+	flex: 1 1 auto;
+}
+
+.vault-code-unlinked-title {
+	margin: 0;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	font-size: var(--font-ui-medium, 16px);
+	font-weight: 600;
+	color: var(--text-normal);
+	white-space: nowrap;
+}
+
+.vault-code-unlinked-title-icon {
+	display: flex;
+	align-items: center;
+	color: var(--text-accent);
+}
+
+.vault-code-unlinked-title-icon svg {
+	width: 18px;
+	height: 18px;
+}
+
+.vault-code-unlinked-scope-badge {
+	font-size: var(--font-ui-smaller, 11px);
+	padding: 2px 8px;
+	border-radius: 12px;
+	background-color: var(--background-modifier-active-hover);
+	color: var(--text-muted);
+	max-width: 240px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	line-height: 1.4;
+}
+
+.vault-code-unlinked-stats {
+	font-size: var(--font-ui-smaller, 12px);
+	color: var(--text-muted);
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+
+.vault-code-unlinked-toolbar {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	flex-shrink: 0;
+}
+
+.vault-code-unlinked-search-wrapper {
+	position: relative;
+	width: 100%;
+}
+
+.vault-code-unlinked-search-input {
+	width: 100%;
+	padding: 8px 12px;
+	border-radius: var(--radius-m, 6px);
+	background-color: var(--background-modifier-form-field);
+	border: none !important;
+	font-size: var(--font-ui-small, 13px);
+	color: var(--text-normal);
+	outline: none !important;
+	box-shadow: none !important;
+	box-sizing: border-box;
+}
+
+.vault-code-unlinked-search-input:focus,
+.vault-code-unlinked-search-input:focus-visible {
+	outline: none !important;
+	border: none !important;
+	box-shadow: none !important;
+}
+
+.vault-code-unlinked-filter-pills {
+	display: flex;
+	gap: 6px;
+	overflow-x: auto;
+}
+
+.vault-code-unlinked-filter-pills.is-hidden {
+	display: none;
+}
+
+.vault-code-unlinked-pill {
+	padding: 3px 10px;
+	border-radius: 12px;
+	font-size: var(--font-ui-smaller, 11px);
+	background-color: var(--background-secondary);
+	color: var(--text-muted);
+	border: 1px solid var(--background-modifier-border);
+	cursor: pointer;
+	transition: all 0.15s ease;
+	white-space: nowrap;
+}
+
+.vault-code-unlinked-pill:hover {
+	color: var(--text-normal);
+	background-color: var(--background-modifier-hover);
+}
+
+.vault-code-unlinked-pill.is-active {
+	background-color: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border-color: var(--interactive-accent);
+	font-weight: 500;
+}
+
+.vault-code-unlinked-batch-bar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0;
+	font-size: var(--font-ui-smaller, 12px);
+	gap: 12px;
+	flex-shrink: 0;
+	min-height: 28px;
+}
+
+.vault-code-unlinked-select-all {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding-left: 10px;
+	cursor: pointer;
+	color: var(--text-muted);
+	user-select: none;
+	white-space: nowrap;
+}
+
+.vault-code-unlinked-checkbox {
+	margin: 0;
+	cursor: pointer;
+}
+
+.vault-code-unlinked-batch-right {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-left: auto;
+}
+
+.vault-code-unlinked-selected-count {
+	color: var(--text-accent);
+	font-weight: 500;
+	white-space: nowrap;
+}
+
+.vault-code-unlinked-delete-btn {
+	padding: 4px 12px;
+	font-size: var(--font-ui-smaller, 11px);
+	white-space: nowrap;
+	flex-shrink: 0;
+	cursor: pointer;
+	margin-right: 0;
+}
+
+.vault-code-unlinked-delete-btn.is-hidden {
+	display: none;
+}
+
+button.vault-code-unlinked-delete-btn:disabled,
+button.vault-code-unlinked-delete-btn.mod-warning:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+	pointer-events: none;
+	background-color: var(--background-modifier-form-field) !important;
+	color: var(--text-muted) !important;
+	border: 1px solid var(--background-modifier-border) !important;
+	box-shadow: none !important;
+}
+
+.vault-code-unlinked-list {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	overflow-y: auto;
+	flex: 1 1 auto;
+	min-height: 120px;
+	padding-right: 0;
+}
+
+.vault-code-unlinked-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 48px 16px;
+	color: var(--text-muted);
+	gap: 8px;
+	text-align: center;
+	flex: 1 1 auto;
+}
+
+.vault-code-unlinked-empty-icon svg {
+	width: 36px;
+	height: 36px;
+	opacity: 0.6;
+	color: var(--text-accent);
+}
+
+.vault-code-unlinked-empty-title {
+	font-size: var(--font-ui-medium, 15px);
+	font-weight: 600;
+	color: var(--text-normal);
+}
+
+.vault-code-unlinked-empty-desc {
+	font-size: var(--font-ui-small, 13px);
+	max-width: 340px;
+}
+
+.vault-code-unlinked-item {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 6px 10px;
+	border-radius: var(--radius-m, 6px);
+	background-color: var(--background-secondary);
+	transition: background-color 0.15s ease;
+	flex-shrink: 0;
+}
+
+.vault-code-unlinked-item:hover {
+	background-color: var(--background-modifier-hover);
+}
+
+.vault-code-unlinked-thumb {
+	width: 38px;
+	height: 38px;
+	border-radius: var(--radius-s, 4px);
+	background-color: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
+	flex-shrink: 0;
+}
+
+.vault-code-unlinked-thumb-img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.vault-code-unlinked-thumb svg {
+	width: 18px;
+	height: 18px;
+	color: var(--text-muted);
+}
+
+.vault-code-unlinked-item-text {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.vault-code-unlinked-item-title {
+	font-size: var(--font-ui-small, 13px);
+	font-weight: 500;
+	color: var(--text-normal);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	line-height: 1.3;
+}
+
+.vault-code-unlinked-item-meta {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: var(--font-ui-smaller, 11px);
+	color: var(--text-muted);
+	line-height: 1.2;
+}
+
+.vault-code-unlinked-meta-path {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 220px;
+}
+
+.vault-code-unlinked-meta-dot {
+	opacity: 0.5;
+}
+
+.vault-code-unlinked-item-actions {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	opacity: 0;
+	transition: opacity 0.15s ease;
+	flex-shrink: 0;
+}
+
+.vault-code-unlinked-item:hover .vault-code-unlinked-item-actions,
+.vault-code-unlinked-item:focus-within .vault-code-unlinked-item-actions {
+	opacity: 1;
+}
+
+@media (hover: none) {
+	.vault-code-unlinked-item-actions {
+		opacity: 1;
+	}
+}
+
+.vault-code-unlinked-action-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	border-radius: var(--radius-s, 4px);
+	color: var(--text-muted);
+	background: transparent;
+	border: none;
+	cursor: pointer;
+	transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.vault-code-unlinked-action-btn:hover {
+	color: var(--text-normal);
+	background-color: var(--background-modifier-hover);
+}
+
+.vault-code-unlinked-action-btn.vault-code-unlinked-delete-icon-btn:hover {
+	background-color: var(--text-error, #ef4444);
+	color: #ffffff;
+}
+
+.vault-code-unlinked-action-btn svg {
+	width: 16px;
+	height: 16px;
+	stroke: currentColor;
+	fill: none;
+}
+
+.vault-code-unlinked-action-btn.vault-code-unlinked-delete-icon-btn:hover svg {
+	color: #ffffff;
+	stroke: #ffffff;
+}

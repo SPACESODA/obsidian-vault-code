@@ -499,4 +499,27 @@ export const zhCn: TranslationSchema = {
 
 	settingsFooterAuthor: "由 {0} 制作",
 	settingsFooterStar: "在 {0} 点星支持",
+
+	// Unlinked Media
+	commandShowUnlinkedMedia: "显示未链接的媒体",
+	contextShowUnlinkedMedia: "显示未链接的媒体",
+	unlinkedMediaTitle: "未链接的媒体",
+	unlinkedMediaScopeVault: "整个仓库",
+	unlinkedMediaSearchPlaceholder: "按文件名或路径筛选...",
+	unlinkedMediaFilterAll: "全部",
+	unlinkedMediaFilterImages: "图片",
+	unlinkedMediaFilterAudio: "音频",
+	unlinkedMediaFilterVideo: "视频",
+	unlinkedMediaSelectAll: "全选",
+	unlinkedMediaDeleteSelected: "将所选移至回收站",
+	unlinkedMediaDeleteConfirmTitle: "删除未链接的媒体",
+	unlinkedMediaDeleteConfirmMsg: "您确定要将 {0} 个未链接的文件 ({1}) 移至回收站吗？",
+	unlinkedMediaDeleteSingleConfirm: "将“{0}”移至回收站？",
+	unlinkedMediaEmpty: "未找到未链接的媒体",
+	unlinkedMediaEmptyDesc: "此范围内的所有媒体文件均已在笔记或画布文件中链接。",
+	unlinkedMediaOpen: "打开文件",
+	unlinkedMediaReveal: "在文件列表中显示",
+	unlinkedMediaDelete: "移至回收站",
+	unlinkedMediaDeletedNotice: "已将 {0} 个文件移至回收站。",
+	unlinkedMediaStats: "{0} 个项目 · {1}",
 };

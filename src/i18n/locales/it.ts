@@ -499,4 +499,27 @@ export const it: TranslationSchema = {
 
 	settingsFooterAuthor: "Creato da {0}",
 	settingsFooterStar: "Lascia una stella su {0}",
+
+	// Unlinked Media
+	commandShowUnlinkedMedia: "Mostra contenuti multimediali non collegati",
+	contextShowUnlinkedMedia: "Mostra contenuti multimediali non collegati",
+	unlinkedMediaTitle: "Contenuti multimediali non collegati",
+	unlinkedMediaScopeVault: "Intero vault",
+	unlinkedMediaSearchPlaceholder: "Filtra per nome file o percorso...",
+	unlinkedMediaFilterAll: "Tutti",
+	unlinkedMediaFilterImages: "Immagini",
+	unlinkedMediaFilterAudio: "Audio",
+	unlinkedMediaFilterVideo: "Video",
+	unlinkedMediaSelectAll: "Seleziona tutto",
+	unlinkedMediaDeleteSelected: "Sposta selezionati nel cestino",
+	unlinkedMediaDeleteConfirmTitle: "Elimina contenuti multimediali non collegati",
+	unlinkedMediaDeleteConfirmMsg: "Vuoi davvero spostare {0} file non collegato/i ({1}) nel cestino?",
+	unlinkedMediaDeleteSingleConfirm: "Spostare \"{0}\" nel cestino?",
+	unlinkedMediaEmpty: "Nessun contenuto multimediale non collegato trovato",
+	unlinkedMediaEmptyDesc: "Tutti i file multimediali in questo ambito sono collegati in note o file canvas.",
+	unlinkedMediaOpen: "Apri file",
+	unlinkedMediaReveal: "Mostra in esplora file",
+	unlinkedMediaDelete: "Sposta nel cestino",
+	unlinkedMediaDeletedNotice: "Spostati {0} file nel cestino.",
+	unlinkedMediaStats: "{0} elemento/i · {1}",
 };

@@ -499,4 +499,27 @@ export const zhTw: TranslationSchema = {
 
 	settingsFooterAuthor: "由 {0} 製作",
 	settingsFooterStar: "在 {0} 給星支持",
+
+	// Unlinked Media
+	commandShowUnlinkedMedia: "顯示未連結的媒體",
+	contextShowUnlinkedMedia: "顯示未連結的媒體",
+	unlinkedMediaTitle: "未連結的媒體",
+	unlinkedMediaScopeVault: "整個保管庫",
+	unlinkedMediaSearchPlaceholder: "依檔案名稱或路徑篩選...",
+	unlinkedMediaFilterAll: "全部",
+	unlinkedMediaFilterImages: "圖片",
+	unlinkedMediaFilterAudio: "音訊",
+	unlinkedMediaFilterVideo: "影片",
+	unlinkedMediaSelectAll: "全選",
+	unlinkedMediaDeleteSelected: "將所選移至垃圾桶",
+	unlinkedMediaDeleteConfirmTitle: "刪除未連結的媒體",
+	unlinkedMediaDeleteConfirmMsg: "您確定要將 {0} 個未連結的檔案 ({1}) 移至垃圾桶嗎？",
+	unlinkedMediaDeleteSingleConfirm: "將「{0}」移至垃圾桶？",
+	unlinkedMediaEmpty: "找不到未連結的媒體",
+	unlinkedMediaEmptyDesc: "此範圍內的所有媒體檔案均已在筆記或畫布檔案中連結。",
+	unlinkedMediaOpen: "開啟檔案",
+	unlinkedMediaReveal: "在檔案清單中顯示",
+	unlinkedMediaDelete: "移至垃圾桶",
+	unlinkedMediaDeletedNotice: "已將 {0} 個檔案移至垃圾桶。",
+	unlinkedMediaStats: "{0} 個項目 · {1}",
 };

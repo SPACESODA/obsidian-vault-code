@@ -144,6 +144,7 @@ import { createCustomMenu } from "./custom-menu";
 import { observeExplorerIgnore, filterExplorerRows } from "./explorer-ignore";
 import { IgnoreMatcher, parseGitignore, type IgnoreRule, EMPTY_IGNORE_RULES } from "./ignore-rules";
 import { guardIgnoredTraversal, CoalescedScan, scanFolderTree } from "./vault-scan";
+import { UnlinkedMediaModal } from "./unlinked-media-modal";
 
 /* ── View type constants ───────────────────────────────────── */
 
@@ -5474,6 +5475,15 @@ export default class VaultCodePlugin extends Plugin {
 									new CreateFileModal(this.app, this, file).open();
 								});
 						});
+						menu.addItem((item) => {
+							item
+								.setTitle(t("contextShowUnlinkedMedia"))
+								.setIcon("file-search")
+								.setSection("action")
+								.onClick(() => {
+									new UnlinkedMediaModal(this.app, this, file).open();
+								});
+						});
 					} else if (file instanceof TFile) {
 						const targetFolder =
 							file.parent ?? this.app.vault.getRoot();
@@ -5604,6 +5614,14 @@ export default class VaultCodePlugin extends Plugin {
 							new CreateFileModal(this.app, this, root).open();
 						});
 				});
+				menu.addItem((item) => {
+					item
+						.setTitle(t("contextShowUnlinkedMedia"))
+						.setIcon("file-search")
+						.onClick(() => {
+							new UnlinkedMediaModal(this.app, this, root).open();
+						});
+				});
 			}),
 		);
 
@@ -5637,6 +5655,14 @@ export default class VaultCodePlugin extends Plugin {
 		});
 
 		this.addSettingTab(new VaultCodeSettingTab(this.app, this));
+
+		this.addCommand({
+			id: "show-unlinked-media",
+			name: t("commandShowUnlinkedMedia"),
+			callback: () => {
+				new UnlinkedMediaModal(this.app, this).open();
+			},
+		});
 
 		this.addCommand({
 			id: "create-new-file",

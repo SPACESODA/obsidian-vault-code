@@ -499,4 +499,27 @@ export const ko: TranslationSchema = {
 
 	settingsFooterAuthor: "제작: {0}",
 	settingsFooterStar: "{0}에서 별표로 응원하기",
+
+	// Unlinked Media
+	commandShowUnlinkedMedia: "연결되지 않은 미디어 표시",
+	contextShowUnlinkedMedia: "연결되지 않은 미디어 표시",
+	unlinkedMediaTitle: "연결되지 않은 미디어",
+	unlinkedMediaScopeVault: "보관함 전체",
+	unlinkedMediaSearchPlaceholder: "파일 이름 또는 경로로 필터링...",
+	unlinkedMediaFilterAll: "전체",
+	unlinkedMediaFilterImages: "이미지",
+	unlinkedMediaFilterAudio: "오디오",
+	unlinkedMediaFilterVideo: "동영상",
+	unlinkedMediaSelectAll: "모두 선택",
+	unlinkedMediaDeleteSelected: "선택 항목 휴지통으로 이동",
+	unlinkedMediaDeleteConfirmTitle: "연결되지 않은 미디어 삭제",
+	unlinkedMediaDeleteConfirmMsg: "연결되지 않은 파일 {0}개({1})를 휴지통으로 이동하시겠습니까?",
+	unlinkedMediaDeleteSingleConfirm: "\"{0}\"을(를) 휴지통으로 이동하시겠습니까?",
+	unlinkedMediaEmpty: "연결되지 않은 미디어를 찾을 수 없습니다",
+	unlinkedMediaEmptyDesc: "이 범위 내의 모든 미디어 파일은 노트 또는 캔버스 파일에 연결되어 있습니다.",
+	unlinkedMediaOpen: "파일 열기",
+	unlinkedMediaReveal: "파일 탐색기에서 보기",
+	unlinkedMediaDelete: "휴지통으로 이동",
+	unlinkedMediaDeletedNotice: "{0}개 파일을 휴지통으로 이동했습니다.",
+	unlinkedMediaStats: "{0}개 항목 · {1}",
 };

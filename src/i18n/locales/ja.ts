@@ -499,4 +499,27 @@ export const ja: TranslationSchema = {
 
 	settingsFooterAuthor: "{0} が制作",
 	settingsFooterStar: "{0} でスターを付ける",
+
+	// Unlinked Media
+	commandShowUnlinkedMedia: "リンクされていないメディアを表示",
+	contextShowUnlinkedMedia: "リンクされていないメディアを表示",
+	unlinkedMediaTitle: "リンクされていないメディア",
+	unlinkedMediaScopeVault: "保管庫全体",
+	unlinkedMediaSearchPlaceholder: "ファイル名やパスで絞り込み...",
+	unlinkedMediaFilterAll: "すべて",
+	unlinkedMediaFilterImages: "画像",
+	unlinkedMediaFilterAudio: "音声",
+	unlinkedMediaFilterVideo: "動画",
+	unlinkedMediaSelectAll: "すべて選択",
+	unlinkedMediaDeleteSelected: "選択項目をごみ箱に移動",
+	unlinkedMediaDeleteConfirmTitle: "リンクされていないメディアを削除",
+	unlinkedMediaDeleteConfirmMsg: "{0} 個のリンクされていないファイル（{1}）をごみ箱に移動してもよろしいですか？",
+	unlinkedMediaDeleteSingleConfirm: "「{0}」をごみ箱に移動しますか？",
+	unlinkedMediaEmpty: "リンクされていないメディアは見つかりませんでした",
+	unlinkedMediaEmptyDesc: "この範囲内のすべてのメディアファイルはノートまたはキャンバスからリンクされています。",
+	unlinkedMediaOpen: "ファイルを開く",
+	unlinkedMediaReveal: "ファイル一覧で表示",
+	unlinkedMediaDelete: "ごみ箱に移動",
+	unlinkedMediaDeletedNotice: "{0} 個のファイルをごみ箱に移動しました。",
+	unlinkedMediaStats: "{0} 個の項目 · {1}",
 };

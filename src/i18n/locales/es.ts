@@ -499,4 +499,27 @@ export const es: TranslationSchema = {
 
 	settingsFooterAuthor: "Creado por {0}",
 	settingsFooterStar: "Dale una estrella en {0}",
+
+	// Unlinked Media
+	commandShowUnlinkedMedia: "Mostrar medios no enlazados",
+	contextShowUnlinkedMedia: "Mostrar medios no enlazados",
+	unlinkedMediaTitle: "Medios no enlazados",
+	unlinkedMediaScopeVault: "Toda la bóveda",
+	unlinkedMediaSearchPlaceholder: "Filtrar por nombre de archivo o ruta...",
+	unlinkedMediaFilterAll: "Todos",
+	unlinkedMediaFilterImages: "Imágenes",
+	unlinkedMediaFilterAudio: "Audio",
+	unlinkedMediaFilterVideo: "Vídeo",
+	unlinkedMediaSelectAll: "Seleccionar todo",
+	unlinkedMediaDeleteSelected: "Mover seleccionados a la papelera",
+	unlinkedMediaDeleteConfirmTitle: "Eliminar medios no enlazados",
+	unlinkedMediaDeleteConfirmMsg: "¿Seguro que deseas mover {0} archivo(s) no enlazado(s) ({1}) a la papelera?",
+	unlinkedMediaDeleteSingleConfirm: "¿Mover \"{0}\" a la papelera?",
+	unlinkedMediaEmpty: "No se encontraron medios no enlazados",
+	unlinkedMediaEmptyDesc: "Todos los archivos multimedia de este ámbito están vinculados en notas o lienzos.",
+	unlinkedMediaOpen: "Abrir archivo",
+	unlinkedMediaReveal: "Mostrar en el explorador de archivos",
+	unlinkedMediaDelete: "Mover a la papelera",
+	unlinkedMediaDeletedNotice: "Se movieron {0} archivo(s) a la papelera.",
+	unlinkedMediaStats: "{0} elemento(s) · {1}",
 };
