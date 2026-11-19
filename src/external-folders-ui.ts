@@ -222,6 +222,58 @@ export class ExternalFolderFeature {
 		const guardedDelete: typeof vault.delete = async (file, force) => { if (!await remove(file)) await originalDelete.call(vault, file, force); };
 		const guardedTrash: typeof vault.trash = async (file, system) => { if (!await remove(file)) await originalTrash.call(vault, file, system); };
 		vault.delete = guardedDelete; vault.trash = guardedTrash;
+
+		const fileManager = this.app.fileManager as unknown as {
+			promptForDeletion?: (file: TAbstractFile) => Promise<boolean>;
+		} | undefined;
+		const originalPrompt = fileManager?.promptForDeletion;
+		let guardedPrompt: ((file: TAbstractFile) => Promise<boolean>) | undefined;
+
+		if (fileManager && typeof originalPrompt === "function") {
+			const isShortcutFolder = async (file: TAbstractFile): Promise<boolean> => {
+				if (!this.active || !(file instanceof TFolder)) return false;
+				if (this.indexed(file.path)) return true;
+				try {
+					const core = await this.core();
+					return await core.isShortcut(file.path);
+				} catch {
+					return false;
+				}
+			};
+
+			guardedPrompt = async function (this: typeof fileManager, file: TAbstractFile): Promise<boolean> {
+				if (file instanceof TFolder && await isShortcutFolder(file)) {
+					const desc = Object.getOwnPropertyDescriptor(file, "children");
+					const realChildren = file.children;
+					let restored = false;
+					const restore = () => {
+						if (!restored) {
+							restored = true;
+							if (desc) {
+								Object.defineProperty(file, "children", desc);
+							} else {
+								delete (file as unknown as Record<string, unknown>).children;
+								file.children = realChildren;
+							}
+						}
+					};
+					Object.defineProperty(file, "children", {
+						get: () => [],
+						configurable: true,
+					});
+					queueMicrotask(restore);
+					try {
+						return await originalPrompt.call(this, file);
+					} finally {
+						restore();
+					}
+				}
+				return await originalPrompt.call(this, file);
+			};
+
+			fileManager.promptForDeletion = guardedPrompt;
+		}
+
 		return () => {
 			this.active = false;
 			if (this.decorationTimer !== null) window.clearTimeout(this.decorationTimer);
@@ -229,6 +281,9 @@ export class ExternalFolderFeature {
 			if (adapter.listRecursive === guardedScan) adapter.listRecursive = originalScan;
 			if (vault.delete === guardedDelete) vault.delete = originalDelete;
 			if (vault.trash === guardedTrash) vault.trash = originalTrash;
+			if (fileManager && originalPrompt && fileManager.promptForDeletion === guardedPrompt) {
+				fileManager.promptForDeletion = originalPrompt;
+			}
 		};
 	}
 

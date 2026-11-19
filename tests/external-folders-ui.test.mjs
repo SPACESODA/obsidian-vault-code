@@ -7,7 +7,7 @@ const compiled=await build({entryPoints:['src/external-folders-ui.ts'],bundle:tr
 export const Platform=globalThis.__externalPlatform;
 export class App {} export class FileSystemAdapter {} export class Modal {} export class Setting {}
 globalThis.ExternalTestAdapter=FileSystemAdapter;
-export class TFolder { constructor(path){this.path=path;} }
+export class TFolder { constructor(path){this.path=path;this.children=[];} }
 globalThis.ExternalTestFolder=TFolder;
 export class TFile { constructor(path,parent){this.path=path;this.parent=parent;} }
 globalThis.ExternalTestFile=TFile;
@@ -45,6 +45,39 @@ test('a shortcut replaced by an ordinary folder never falls through to native re
   const restore=feature.guardDeletion();
   await assert.rejects(vault.delete(new globalThis.ExternalTestFolder('External')),error=>error.code==='shortcut');
   assert.equal(native,false);restore();
+});
+test('promptForDeletion on shortcut folder temporarily reports empty children to hide non-empty warnings, then restores',async()=>{
+  const seenChildrenLengths=[];
+  const fileManager={
+    promptForDeletion:async(folder)=>{
+      seenChildrenLengths.push(folder.children.length);
+      return true;
+    },
+  };
+  const vault={adapter:new globalThis.ExternalTestAdapter(),delete:async()=>{},trash:async()=>{}};
+  const feature=new ExternalFolderFeature({vault,fileManager},()=>false,()=>{});
+  feature.service=Promise.resolve({isShortcut:async(path)=>path==='External'});
+
+  const shortcutFolder=new globalThis.ExternalTestFolder('External');
+  shortcutFolder.children=[new globalThis.ExternalTestFile('External/a.txt',shortcutFolder)];
+  const normalFolder=new globalThis.ExternalTestFolder('Normal');
+  normalFolder.children=[new globalThis.ExternalTestFile('Normal/b.txt',normalFolder)];
+
+  const originalPrompt=fileManager.promptForDeletion;
+  const restore=feature.guardDeletion();
+
+  assert.notEqual(fileManager.promptForDeletion,originalPrompt);
+
+  await fileManager.promptForDeletion(shortcutFolder);
+  assert.equal(seenChildrenLengths[0],0,'Shortcut folder should report 0 children during prompt');
+  assert.equal(shortcutFolder.children.length,1,'Shortcut folder children must be restored after prompt');
+
+  await fileManager.promptForDeletion(normalFolder);
+  assert.equal(seenChildrenLengths[1],1,'Normal folder should keep its children during prompt');
+  assert.equal(normalFolder.children.length,1);
+
+  restore();
+  assert.equal(fileManager.promptForDeletion,originalPrompt);
 });
 test('indexing guards map external real paths to vault ignore rules and restore safely',async()=>{
   const scanned=[];const adapter={listRecursive:async path=>scanned.push(path)};
