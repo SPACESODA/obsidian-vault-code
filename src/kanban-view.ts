@@ -532,12 +532,11 @@ export class KanbanView extends ItemView {
 		const grip = this.iconButton(actions, "grip-vertical", t("kanbanCardActions"));
 		grip.addClass("vault-code-kanban-grip");
 		grip.onclick = event => this.cardMenu(event, file, editTitle, editDescription);
-		this.bindDrag(grip, card, { kind: "card", file });
 		const open = this.iconButton(actions, "external-link", t("kanbanOpenNote"));
 		open.addClass("vault-code-kanban-open-note");
 		open.onclick = () => this.openCardNote(file);
-		// Mouse users can also drag the title. Touch users retain swipe-to-scroll there.
-		this.bindDrag(title, card, { kind: "card", file }, true);
+		// Mouse users drag from anywhere on the card; touch users drag from the grip or long-press the card.
+		this.bindDrag(card, card, { kind: "card", file });
 		this.cardElements.set(file, card);
 		return card;
 	}
@@ -901,102 +900,233 @@ export class KanbanView extends ItemView {
 		this.renamed = [];
 	}
 
-	private bindDrag(handle: HTMLElement, source: HTMLElement, drag: Drag, mouseOnly = false): void {
+	/**
+	 * Trello-style pointer dragging: the pressed element stays in the layout as a
+	 * placeholder that moves live between siblings (with FLIP animations), while a
+	 * tilted clone follows the pointer. The DOM order at release is committed
+	 * optimistically, so the board never snaps back while files are renamed.
+	 * Mouse drags start after a small movement; touch drags start from the grip or
+	 * column header immediately, or from anywhere on a card after a long press.
+	 */
+	private bindDrag(handle: HTMLElement, source: HTMLElement, drag: Drag): void {
+		handle.addEventListener("dragstart", event => event.preventDefault());
 		handle.addEventListener("pointerdown", event => {
-			if (this.busy || this.stopDrag || event.button !== 0 || !event.isPrimary || (mouseOnly && event.pointerType !== "mouse") || this.isEditing()) return;
-			const targetElement = event.target as Element | null;
-			if (drag.kind === "column" && targetElement?.closest(".vault-code-kanban-column-title")) return;
+			if (this.busy || this.stopDrag || event.button !== 0 || !event.isPrimary || this.isEditing()) return;
+			const pressed = event.target as Element | null;
+			if (drag.kind === "column" && pressed?.closest(".vault-code-kanban-column-title")) return;
+			if (pressed?.closest("input, textarea, select, [contenteditable='true']")) return;
 			const win = handle.win;
-			let x = event.clientX, y = event.clientY;
+			const doc = handle.doc;
+			const touch = event.pointerType !== "mouse";
+			const immediate = !touch || drag.kind === "column" || !!pressed?.closest(".vault-code-kanban-grip");
+			const reduce = win.matchMedia("(prefers-reduced-motion: reduce)").matches;
+			const startX = event.clientX, startY = event.clientY;
+			let x = startX, y = startY;
 			let active = false;
 			let frame = 0;
-			let marked: Element | undefined;
-			let target: Column | Drop | undefined;
+			let timer = 0;
+			let ghost: HTMLElement | undefined;
+			let origin = { x: 0, y: 0 };
+			let grab = { x: 0, y: 0 };
+			// The lifted clone leans into horizontal motion and eases back to a slight lean on the last heading.
+			let lift: HTMLElement | undefined;
+			let tilt = 0, lean = 1, lastX = startX;
+			const maxTilt = drag.kind === "card" ? 7 : 3;
+			const home = { parent: source.parentElement, next: source.nextElementSibling };
+			const animations = new Map<Element, Animation>();
 			const controller = new AbortController();
 			const options = { signal: controller.signal };
-			const clearMarker = () => marked?.classList.remove("is-drop-before", "is-drop-after", "is-drop-column");
+			const blocking = { signal: controller.signal, passive: false, capture: true };
+
+			const place = () => ghost?.setCssProps({
+				"--kanban-ghost-x": `${x - grab.x - origin.x}px`,
+				"--kanban-ghost-y": `${y - grab.y - origin.y}px`,
+			});
+			const recount = (list: Element | null) => {
+				const count = list?.closest(".vault-code-kanban-column")?.querySelector(".vault-code-kanban-count");
+				if (list && count) count.textContent = String(list.querySelectorAll(":scope > .vault-code-kanban-card").length);
+			};
+			// FLIP: measure siblings, move the placeholder, then animate siblings from their old spot.
+			const shift = (containers: Array<Element | null>, mutate: () => void) => {
+				const items = [...new Set(containers)].flatMap(container => container ? Array.from(container.children) : []).filter(item => item !== source);
+				const first = reduce ? [] : items.map(item => item.getBoundingClientRect());
+				for (const item of items) animations.get(item)?.cancel();
+				mutate();
+				if (reduce) return;
+				items.forEach((item, index) => {
+					const from = first[index];
+					if (!from) return;
+					const last = item.getBoundingClientRect();
+					const dx = from.left - last.left, dy = from.top - last.top;
+					if (!dx && !dy) return;
+					animations.set(item, item.animate(
+						[{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }],
+						{ duration: 200, easing: "cubic-bezier(0.2, 0, 0, 1)" },
+					));
+				});
+			};
+			const edge = (position: number, start: number, end: number, zone: number, max: number) => {
+				if (position < start + zone) return -Math.ceil(max * Math.min(1, (start + zone - position) / zone));
+				if (position > end - zone) return Math.ceil(max * Math.min(1, (position - end + zone) / zone));
+				return 0;
+			};
+			const autoscroll = (rail: HTMLElement) => {
+				const bounds = rail.getBoundingClientRect();
+				rail.scrollLeft += edge(x, bounds.left, bounds.right, Math.min(90, bounds.width / 4), 22);
+				const list = drag.kind === "card" ? source.parentElement : null;
+				const area = list?.getBoundingClientRect();
+				if (list && area && x >= area.left && x <= area.right) list.scrollTop += edge(y, area.top, area.bottom, Math.min(70, area.height / 4), 16);
+			};
+			const moveCard = () => {
+				let section: Element | undefined;
+				let distance = Infinity;
+				for (const { section: candidate } of this.columnElements.values()) {
+					if (!candidate.isConnected) continue;
+					const rect = candidate.getBoundingClientRect();
+					const gap = x < rect.left ? rect.left - x : x > rect.right ? x - rect.right : 0;
+					if (gap < distance) { section = candidate; distance = gap; }
+				}
+				const list = section?.querySelector<HTMLElement>(":scope > .vault-code-kanban-list");
+				if (!list) return;
+				// Layout positions (offsetTop) ignore running FLIP transforms, which keeps targeting stable.
+				const top = list.getBoundingClientRect().top + list.clientTop - list.scrollTop;
+				let before: Element | null = null;
+				for (const card of Array.from(list.children)) {
+					if (card === source || !card.instanceOf(HTMLElement) || !card.hasClass("vault-code-kanban-card")) continue;
+					if (top + card.offsetTop + card.offsetHeight / 2 > y) { before = card; break; }
+				}
+				if (source.parentElement === list && source.nextElementSibling === before) return;
+				const previous = source.parentElement;
+				shift([previous, list], () => list.insertBefore(source, before));
+				recount(previous);
+				recount(list);
+			};
+			const moveColumn = (rail: HTMLElement) => {
+				const left = rail.getBoundingClientRect().left + rail.clientLeft - rail.scrollLeft;
+				const candidates = Array.from(rail.children).filter((item): item is HTMLElement => item !== source && item.instanceOf(HTMLElement)
+					&& item.hasClass("vault-code-kanban-column") && this.columnTargets.get(item)?.folder !== this.board);
+				if (!candidates.length) return;
+				const before = candidates.find(item => left + item.offsetLeft + item.offsetWidth / 2 > x) ?? candidates[candidates.length - 1]?.nextElementSibling ?? null;
+				if (before === source || source.nextElementSibling === before) return;
+				shift([rail], () => rail.insertBefore(source, before));
+			};
+			const steer = () => {
+				const velocity = x - lastX;
+				lastX = x;
+				if (Math.abs(velocity) > 0.5) lean = Math.sign(velocity);
+				const goal = Math.max(-maxTilt, Math.min(maxTilt, velocity * 0.45 + lean * maxTilt * 0.3));
+				tilt += (goal - tilt) * 0.18;
+				lift?.setCssProps({ "--kanban-ghost-tilt": `${tilt.toFixed(2)}deg` });
+			};
 			const track = () => {
 				const rail = this.rail;
-				if (!rail || !active) return;
-				const hit = handle.doc.elementFromPoint(x, y);
-				const section = hit?.closest(".vault-code-kanban-column");
-				const column = section ? this.columnTargets.get(section) : undefined;
-				const bounds = rail.getBoundingClientRect();
-				if (y >= bounds.top && y <= bounds.bottom) {
-					if (x < bounds.left + 35) rail.scrollLeft -= 12;
-					else if (x > bounds.right - 35) rail.scrollLeft += 12;
-				}
-				clearMarker();
-				target = undefined;
-				if (section && column && drag.kind === "card") {
-					const card = hit?.closest(".vault-code-kanban-card");
-					const match = card ? this.cardTargets.get(card) : undefined;
-					const rect = card?.getBoundingClientRect();
-					const after = rect !== undefined && y > (rect.top + rect.bottom) / 2;
-					target = { column, before: match?.before && after ? column.cards[column.cards.indexOf(match.before) + 1] : match?.before };
-					marked = card ?? section;
-					marked.classList.add(card ? (after ? "is-drop-after" : "is-drop-before") : "is-drop-column");
-					const list = section.querySelector(".vault-code-kanban-list");
-					const area = list?.getBoundingClientRect();
-					if (list && area && y >= area.top && y <= area.bottom) {
-						if (y < area.top + 28) list.scrollTop -= 9;
-						else if (y > area.bottom - 28) list.scrollTop += 9;
-					}
-				} else if (section && column && column.folder !== this.board && drag.kind === "column") {
-					const rect = section.getBoundingClientRect();
-					const after = x > (rect.left + rect.right) / 2;
-					const next = this.columns[this.columns.indexOf(column) + 1];
-					target = after ? (next?.folder === this.board ? undefined : next) : column;
-					marked = section;
-					marked.classList.add(after ? "is-drop-after" : "is-drop-before");
-				} else if (drag.kind === "column" && hit?.closest(".vault-code-kanban-add-column")) {
-					marked = hit.closest(".vault-code-kanban-add-column") ?? undefined;
-					marked?.classList.add("is-drop-before");
-				}
+				if (!active || !rail) return;
+				place();
+				if (!reduce) steer();
+				autoscroll(rail);
+				if (drag.kind === "card") moveCard();
+				else moveColumn(rail);
 				frame = win.requestAnimationFrame(track);
 			};
-			const cleanup = () => {
-				controller.abort();
-				win.cancelAnimationFrame(frame);
-				clearMarker();
-				source.removeClass("is-dragging");
-				this.stopDrag = undefined;
+			const activate = () => {
+				if (active) return;
+				if (!source.isConnected || !this.rail || this.busy || this.isEditing()) { finish(false); return; }
+				active = true;
+				const rect = source.getBoundingClientRect();
+				grab = { x: startX - rect.left, y: startY - rect.top };
+				ghost = this.contentEl.createDiv({ cls: "vault-code-kanban-drag-ghost", attr: { "aria-hidden": "true", inert: "" } });
+				ghost.setCssProps({ "--kanban-ghost-width": `${rect.width}px`, "--kanban-ghost-height": `${rect.height}px` });
+				lift = ghost.appendChild(source.cloneNode(true) as HTMLElement);
+				// Fixed positioning can be offset by a transformed ancestor; measure and compensate.
+				const at = ghost.getBoundingClientRect();
+				origin = { x: at.left, y: at.top };
+				source.addClass("is-drag-placeholder");
+				this.contentEl.addClass("is-kanban-dragging");
+				win.getSelection()?.removeAllRanges();
+				if (touch) win.navigator.vibrate?.(8);
+				track();
 			};
-			this.stopDrag = cleanup;
+			const settle = () => {
+				const flying = ghost;
+				ghost = undefined;
+				let done = false;
+				const end = () => {
+					if (done) return;
+					done = true;
+					flying?.remove();
+					source.removeClass("is-drag-placeholder");
+				};
+				if (!flying || reduce || !source.isConnected) { end(); return; }
+				const rect = source.getBoundingClientRect();
+				flying.addClass("is-settling");
+				flying.setCssProps({ "--kanban-ghost-x": `${rect.left - origin.x}px`, "--kanban-ghost-y": `${rect.top - origin.y}px` });
+				flying.addEventListener("transitionend", transition => { if (transition.target === flying) end(); });
+				win.setTimeout(end, 260);
+			};
+			const finish = (commit: boolean) => {
+				if (controller.signal.aborted) return;
+				controller.abort();
+				win.clearTimeout(timer);
+				win.cancelAnimationFrame(frame);
+				this.stopDrag = undefined;
+				this.contentEl.removeClass("is-kanban-dragging");
+				if (!active) return;
+				const moved = source.parentElement !== home.parent || source.nextElementSibling !== home.next;
+				if (moved && !commit && home.parent?.isConnected) {
+					const previous = source.parentElement;
+					shift([previous, home.parent], () => home.parent?.insertBefore(source, home.next?.parentElement === home.parent ? home.next : null));
+					recount(previous);
+					recount(home.parent);
+				}
+				settle();
+				// Suppress the click synthesized after the drag, while preserving keyboard activation.
+				win.addEventListener("click", click => {
+					if (click.detail) { click.preventDefault(); click.stopImmediatePropagation(); }
+				}, { capture: true, once: true, signal: AbortSignal.timeout(400) });
+				if (commit && moved) this.drop(drag, this.dropTarget(drag, source));
+				else this.scheduleRefresh();
+			};
+
+			this.stopDrag = () => finish(false);
+			if (!immediate) timer = win.setTimeout(activate, 380);
 			win.addEventListener("pointermove", move => {
 				if (move.pointerId !== event.pointerId) return;
 				x = move.clientX;
 				y = move.clientY;
-				if (!active && Math.hypot(x - event.clientX, y - event.clientY) >= 7) {
-					active = true;
-					source.addClass("is-dragging");
-					track();
+				if (!active) {
+					const distance = Math.hypot(x - startX, y - startY);
+					// A long-press candidate that moves first is a scroll, not a drag.
+					if (immediate && distance >= 5) activate();
+					else if (!immediate && distance > 10) finish(false);
 				}
 				if (active) move.preventDefault();
 			}, options);
+			// Touch scrolling must be blocked from the first touchmove once a drag is live.
+			doc.addEventListener("touchmove", move => { if (active && move.cancelable) move.preventDefault(); }, blocking);
+			if (touch) win.addEventListener("contextmenu", menu => { if (active || !immediate) menu.preventDefault(); }, blocking);
 			win.addEventListener("pointerup", up => {
 				if (up.pointerId !== event.pointerId) return;
 				x = up.clientX;
 				y = up.clientY;
-				win.cancelAnimationFrame(frame);
-				track();
-				const accepted = active && (drag.kind === "card" ? target !== undefined : marked?.classList.contains("is-drop-before") || marked?.classList.contains("is-drop-after"));
-				cleanup();
-				if (!active) return;
-				// Suppress the click synthesized after the drag, while preserving keyboard activation.
-				handle.addEventListener("click", click => {
-					if (click.detail) { click.preventDefault(); click.stopImmediatePropagation(); }
-				}, { capture: true, once: true, signal: AbortSignal.timeout(400) });
-				if (accepted) this.drop(drag, target);
-				else this.scheduleRefresh();
+				finish(true);
 			}, options);
-			win.addEventListener("pointercancel", cancel => {
-				if (cancel.pointerId === event.pointerId) { cleanup(); this.scheduleRefresh(); }
-			}, options);
-			win.addEventListener("blur", cleanup, options);
+			win.addEventListener("pointercancel", cancel => { if (cancel.pointerId === event.pointerId) finish(false); }, options);
+			win.addEventListener("blur", () => finish(false), options);
 			win.addEventListener("keydown", key => {
-				if (key.key === "Escape") { cleanup(); this.scheduleRefresh(); }
-			}, options);
+				if (key.key === "Escape" && active) { key.preventDefault(); finish(false); }
+			}, { signal: controller.signal, capture: true });
 		});
+	}
+
+	/** Reads the committed position of a dragged card or column from its live DOM placement. */
+	private dropTarget(drag: Drag, source: HTMLElement): Column | Drop | undefined {
+		const next = source.nextElementSibling;
+		if (drag.kind === "column") {
+			const column = next ? this.columnTargets.get(next) : undefined;
+			return column && column.folder !== this.board ? column : undefined;
+		}
+		const section = source.closest(".vault-code-kanban-column");
+		const column = section ? this.columnTargets.get(section) : undefined;
+		return column ? { column, before: next ? this.cardTargets.get(next)?.before : undefined } : undefined;
 	}
 }

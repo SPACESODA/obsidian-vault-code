@@ -4943,6 +4943,12 @@ button.vault-code-unlinked-delete-btn.mod-warning:disabled {
 	touch-action: none;
 	cursor: grab;
 }
+.vault-code-kanban-card-actions > button:hover,
+.vault-code-kanban-card-actions > button:active {
+	background-color: transparent;
+	box-shadow: none;
+}
+.vault-code-kanban-card-actions > .vault-code-kanban-grip:hover { color: var(--text-normal); }
 .vault-code-kanban button:focus-visible {
 	outline: 2px solid var(--interactive-accent);
 	outline-offset: -2px;
@@ -4966,12 +4972,55 @@ button.vault-code-unlinked-delete-btn.mod-warning:disabled {
 .is-mobile .vault-code-kanban-card-actions > .vault-code-kanban-open-note {
 	color: var(--text-muted);
 }
-.vault-code-kanban .is-dragging { opacity: 0.45; }
-.vault-code-kanban-card.is-drop-before { box-shadow: 0 -3px var(--interactive-accent); }
-.vault-code-kanban-card.is-drop-after { box-shadow: 0 3px var(--interactive-accent); }
-.vault-code-kanban-column.is-drop-before, .vault-code-kanban-add-column.is-drop-before { box-shadow: -3px 0 var(--interactive-accent); }
-.vault-code-kanban-column.is-drop-after { box-shadow: 3px 0 var(--interactive-accent); }
-.vault-code-kanban-column.is-drop-column { outline: 2px solid var(--interactive-accent); }
+/* Drag and drop: the source stays in the layout as a placeholder slot while a lifted clone follows the pointer. */
+.vault-code-kanban-rail, .vault-code-kanban-list { position: relative; }
+.vault-code-kanban-card { cursor: grab; }
+.is-mobile .vault-code-kanban-card { cursor: auto; -webkit-touch-callout: none; user-select: none; }
+.vault-code-kanban.is-kanban-dragging, .vault-code-kanban.is-kanban-dragging * { cursor: grabbing !important; user-select: none; }
+.vault-code-kanban.is-kanban-dragging .vault-code-kanban-rail, .vault-code-kanban.is-kanban-dragging .vault-code-kanban-list { scroll-behavior: auto; }
+.vault-code-kanban.is-kanban-dragging .vault-code-kanban-card:hover { border-color: var(--background-modifier-border); }
+.vault-code-kanban .is-drag-placeholder {
+	background: var(--background-modifier-hover);
+	border-color: transparent;
+	box-shadow: none;
+}
+.vault-code-kanban-column.is-drag-placeholder { background: var(--background-modifier-active-hover, var(--background-modifier-hover)); }
+.vault-code-kanban .is-drag-placeholder > * { visibility: hidden; }
+.vault-code-kanban-drag-ghost {
+	position: fixed;
+	top: 0;
+	left: 0;
+	z-index: var(--layer-dragged-item, 1000);
+	width: var(--kanban-ghost-width);
+	height: var(--kanban-ghost-height);
+	pointer-events: none;
+	transform: translate3d(var(--kanban-ghost-x, 0), var(--kanban-ghost-y, 0), 0);
+	will-change: transform;
+}
+.vault-code-kanban-drag-ghost > * {
+	--kanban-ghost-tilt: 0deg;
+	box-sizing: border-box;
+	width: 100%;
+	height: 100%;
+	max-height: none;
+	margin: 0;
+	box-shadow: var(--shadow-l);
+	transform: rotate(var(--kanban-ghost-tilt)) scale(1.03);
+	animation: vault-code-kanban-lift 160ms cubic-bezier(0.2, 0, 0, 1);
+}
+.vault-code-kanban-drag-ghost > .vault-code-kanban-column { overflow: hidden; }
+.vault-code-kanban-drag-ghost.is-settling { transition: transform 200ms cubic-bezier(0.2, 0, 0, 1); }
+.vault-code-kanban-drag-ghost.is-settling > * {
+	transform: none;
+	box-shadow: var(--shadow-s);
+	transition: transform 200ms cubic-bezier(0.2, 0, 0, 1), box-shadow 200ms ease;
+}
+@keyframes vault-code-kanban-lift {
+	from { transform: none; box-shadow: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+	.vault-code-kanban-drag-ghost > *, .vault-code-kanban-drag-ghost.is-settling > * { transition: none; animation: none; }
+}
 .vault-code-kanban-compose {
 	display: flex;
 	flex-wrap: wrap;
