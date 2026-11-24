@@ -520,6 +520,28 @@ export const en = {
 	unlinkedMediaDelete: "Move to trash",
 	unlinkedMediaDeletedNotice: "Moved {0} file(s) to trash.",
 	unlinkedMediaStats: "{0} item(s) · {1}",
+	// Kanban
+	kanbanInvalidFile: "The {0} file is missing or invalid. Open it as code to check the JSON.",
+	kanbanBoardTitle: "Board title",
+	kanbanEditDescription: "Edit description",
+	kanbanNoteChanged: "The note changed while you were editing. Copy your draft, then reopen the editor.",
+	kanbanTitle: "Kanban",
+	kanbanOpen: "Open as Kanban",
+	kanbanOpenNote: "Open note in tab",
+	kanbanMissing: "Board folder is missing.",
+	kanbanFailed: "Could not complete the board action.",
+	kanbanAddColumn: "Add column",
+	kanbanColumnName: "Column name",
+	kanbanAddCard: "Add card",
+	kanbanCardTitle: "Card title",
+	kanbanCardActions: "Card actions",
+	kanbanUnsorted: "Unsorted",
+	kanbanUnsortedSettings: "Unsorted column settings",
+	kanbanUnsortedLast: "Show last",
+	kanbanUnsortedFirst: "Show first",
+	kanbanUnsortedHide: "Hide column",
+	kanbanInvalidName: "Enter a valid file or folder name.",
+	kanbanNameExists: "That name is already in use.",
 };
 
 export type TranslationSchema = typeof en;

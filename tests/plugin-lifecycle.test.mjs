@@ -9,7 +9,7 @@ const plugin=ast.statements.find(node=>ts.isClassDeclaration(node)&&node.name?.t
 const onload=plugin.members.find(node=>ts.isMethodDeclaration(node)&&node.name.getText(ast)==='onload');
 const statements=[];
 for(const statement of onload.body.statements){if(ts.isIfStatement(statement)&&statement.getText(ast).includes("this.statusBarGitEl"))break;statements.push(statement.getText(ast));}
-const start=new Function('Platform','AIService','AIStorage','VIEW_TYPE_DOTFILE','VIEW_TYPE_AI_CHAT','DotfileView','AIChatView',`return async function(){${statements.join('\n')}};`)({isDesktop:false},class{},class{},'code','chat',class{constructor(_leaf,plugin){assert.equal(plugin.ready,true);}},class{constructor(_leaf,plugin){assert.equal(plugin.ready,true);}});
+const start=new Function('Platform','AIService','AIStorage','VIEW_TYPE_DOTFILE','VIEW_TYPE_AI_CHAT','DotfileView','AIChatView','KANBAN_VIEW','KanbanView',`return async function(){${statements.join('\n')}};`)({isDesktop:false},class{},class{},'code','chat',class{constructor(_leaf,plugin){assert.equal(plugin.ready,true);}},class{constructor(_leaf,plugin){assert.equal(plugin.ready,true);}},'kanban',class{});
 
 test('settings and ignore initialization finish before restored views can open',async()=>{
   let finish;
@@ -18,7 +18,7 @@ test('settings and ignore initialization finish before restored views can open',
   const pending=start.call(owner);
   assert.deepEqual(opened,[]);
   finish();await pending;
-  assert.deepEqual(opened,['code','chat']);
+  assert.deepEqual(opened,['code','chat','kanban']);
 });
 
 test('chat Enter confirms IME composition without sending a message',()=>{

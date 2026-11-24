@@ -33,6 +33,8 @@ export default tseslint.config(
 						"CRLF",
 						"Preview",
 						"MJML",
+						"Kanban",
+						"JSON",
 						"Aa",
 						"Antigravity",
 						"CLI",

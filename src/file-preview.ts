@@ -1,3 +1,4 @@
+import { nameWithoutTooltip } from "./dom-label";
 import { t } from "./i18n";
 import { PreviewError, type PreviewTextKey } from "./preview-errors";
 import { Component, MarkdownRenderer, type App, type Events } from "obsidian";
@@ -10,14 +11,6 @@ export type ApplyCellEdit = (change: CellChange, current: () => boolean) => Prom
 export function formatPreviewError(error: unknown, fallback: PreviewTextKey = "previewUnable"): string {
 	if (error instanceof PreviewError) return t(error.key, ...error.args);
 	return error instanceof Error ? error.message : t(fallback);
-}
-
-let previewLabelId = 0;
-/** Obsidian turns aria-label into a hover tooltip; reference a hidden label instead. */
-function nameWithoutTooltip(parent: HTMLElement, element: HTMLElement, text: string): void {
-	const id = `vault-code-preview-label-${++previewLabelId}`;
-	parent.createSpan({ text, attr: { id, hidden: "" } });
-	element.setAttribute("aria-labelledby", id);
 }
 
 function notice(parent: HTMLElement, text: string, error = false): void {

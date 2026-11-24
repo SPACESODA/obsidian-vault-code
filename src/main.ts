@@ -1,3 +1,5 @@
+import { KANBAN_VIEW, KanbanView, remapKanbanOrders } from "./kanban-view";
+import { KANBAN_FILENAME, relativeKanbanOrder, writeKanbanFile, type KanbanOrders } from "./kanban-file";
 import { FileViewMemory, newFileViewPosition, type FileViewPosition } from "./file-view-memory";
 import { compileMjmlHtml } from "./mjml-compile";
 import {
@@ -644,6 +646,7 @@ interface PrivateAdapter {
 /* ── Settings ──────────────────────────────────────────────── */
 
 interface VaultCodeSettings {
+	kanbanOrders: KanbanOrders;
 	showAllFileTypes: boolean;
 	showHiddenFiles: boolean;
 	allowEditDotfiles: boolean;
@@ -696,6 +699,7 @@ agent-chats/
 `;
 
 const DEFAULT_SETTINGS: VaultCodeSettings = {
+	kanbanOrders: {},
 	showAllFileTypes: true,
 	showHiddenFiles: true,
 	allowEditDotfiles: true,
@@ -3570,7 +3574,7 @@ export class DotfileView extends TextFileView {
 			desc = null;
 		} else {
 			desc =
-				LanguageDescription.matchFilename(languages, filename.toLowerCase()) ||
+				LanguageDescription.matchFilename(languages, ext === "kanban" ? "board.json" : filename.toLowerCase()) ||
 				(name === ".gitignore" ||
 				name === ".gitattributes" ||
 				name === ".dockerignore"
@@ -3700,6 +3704,7 @@ export class DotfileView extends TextFileView {
 	}
 
 	private getLanguageLabel(): string {
+		if (this.file?.extension.toLowerCase() === "kanban") return "JSON";
 		if (!this.file) return t("editorPlainText");
 		const ext = this.file.extension?.toLowerCase() ?? "";
 		const name = this.file.name.toLowerCase();
@@ -5309,6 +5314,8 @@ export default class VaultCodePlugin extends Plugin {
 			(leaf) => new AIChatView(leaf, this),
 		);
 
+		this.registerView(KANBAN_VIEW, leaf => new KanbanView(leaf, view => this.updateLeafHeaderActions(leaf, view)));
+
 		if (Platform.isDesktop) {
 			this.statusBarGitEl = this.addStatusBarItem();
 			this.statusBarGitEl.addClass("vault-code-status-git");
@@ -5360,6 +5367,13 @@ export default class VaultCodePlugin extends Plugin {
 		);
 		this.registerEvent(
 			this.app.vault.on("delete", (file) => {
+				if (Object.keys(this.settings.kanbanOrders).length) {
+					const orders = remapKanbanOrders(this.settings.kanbanOrders, file.path);
+					if (JSON.stringify(orders) !== JSON.stringify(this.settings.kanbanOrders)) {
+						this.settings.kanbanOrders = orders;
+						void this.saveSettings().catch(console.error);
+					}
+				}
 				this.fileViewMemory.forget(file.path);
 				this.externalFolders?.invalidate(file.path);
 				void this.handleIgnoreFileEvent(file.path);
@@ -5368,6 +5382,13 @@ export default class VaultCodePlugin extends Plugin {
 		);
 		this.registerEvent(
 			this.app.vault.on("rename", (file, oldPath) => {
+				if (Object.keys(this.settings.kanbanOrders).length) {
+					const orders = remapKanbanOrders(this.settings.kanbanOrders, oldPath, file.path);
+					if (JSON.stringify(orders) !== JSON.stringify(this.settings.kanbanOrders)) {
+						this.settings.kanbanOrders = orders;
+						void this.saveSettings().catch(console.error);
+					}
+				}
 				this.fileViewMemory.rename(oldPath, file.path);
 				this.externalFolders?.invalidate(file.path);
 				void this.handleIgnoreFileEvent(file.path);
@@ -5466,6 +5487,16 @@ export default class VaultCodePlugin extends Plugin {
 				(menu, file, source, leaf) => {
 					if (file instanceof TFolder) {
 						this.externalFolders?.menu(menu, file);
+						menu.addItem(item => item.setTitle(t("kanbanOpen")).setIcon("columns-3").setSection("action").onClick(async () => {
+							const path = file.isRoot() ? "" : file.path;
+							let marker: TFile;
+							try { marker = await this.ensureKanbanMarker(file); }
+							catch { new Notice(t("kanbanFailed")); return; }
+							const existing = this.app.workspace.getLeavesOfType(KANBAN_VIEW).find(leaf => leaf.view instanceof KanbanView && leaf.view.getState().markerPath === marker.path);
+							const boardLeaf = existing ?? this.app.workspace.getLeaf("tab");
+							if (!existing) await boardLeaf.setViewState({ type: KANBAN_VIEW, state: { path, markerPath: marker.path }, active: true });
+							this.app.workspace.setActiveLeaf(boardLeaf, { focus: true });
+						}));
 						menu.addItem((item) => {
 							item
 								.setTitle(t("contextNewFile"))
@@ -6730,13 +6761,17 @@ export default class VaultCodePlugin extends Plugin {
 	): Promise<void> {
 		if (!leaf || !leaf.view || this.editorViewSwitches.has(leaf)) return;
 		const view = leaf.view;
-		const file = targetFile ?? (view as { file?: TFile }).file;
+		const file = targetFile ?? (view instanceof KanbanView ? view.boardFile : (view as { file?: TFile }).file);
 		if (!file) return;
 
 		if (
 			view instanceof DotfileView &&
 			(!targetFile || targetFile.path === view.file?.path)
 		) {
+			if (file.extension.toLowerCase() === "kanban") {
+				await this.openKanbanMarker(leaf, file, view);
+				return;
+			}
 			await view.saveExplicitly();
 			await this.switchEditorView(leaf, file, "markdown");
 			return;
@@ -6777,7 +6812,10 @@ export default class VaultCodePlugin extends Plugin {
 				container.appendChild(snapshot);
 				container.addClass("vault-code-header-switching");
 			}
-			await leaf.setViewState({ type, state: { file: file.path }, active: true });
+			const state = type === KANBAN_VIEW && file.parent
+				? { path: file.parent.isRoot() ? "" : file.parent.path, markerPath: file.path }
+				: { file: file.path };
+			await leaf.setViewState({ type, state, active: true });
 			this.updateLeafHeaderActions(leaf);
 		} finally {
 			// Reveal the completed header in one step, even if switching failed.
@@ -6793,14 +6831,18 @@ export default class VaultCodePlugin extends Plugin {
 			?.actionsEl;
 		if (!actionsEl || !actionsEl.instanceOf(HTMLElement)) return;
 
-		const file = (view as { file?: TFile }).file;
+		const file = view instanceof KanbanView ? view.boardFile : (view as { file?: TFile }).file;
 		const isMarkdown = Boolean(file && this.isMarkdownFile(file));
+		const isKanban = file?.extension.toLowerCase() === "kanban" && (view instanceof KanbanView || view instanceof DotfileView);
 
 		const existingBtn = actionsEl.querySelector<HTMLElement>(
 			".vault-code-header-toggle-btn",
 		);
 
 		const isCodeEditor = view instanceof DotfileView;
+		const boardToggle = isCodeEditor && isKanban;
+		const toggleLabel = t(boardToggle ? "kanbanOpen" : isCodeEditor ? "viewToggleTooltip" : "contextEditInCodeEditor");
+		const toggleActive = isCodeEditor && !isKanban;
 
 		// Ask AI button in leaf header
 		const existingAiChatBtn = actionsEl.querySelector<HTMLElement>(
@@ -6843,39 +6885,23 @@ export default class VaultCodePlugin extends Plugin {
 			existingAiChatBtn.remove();
 		}
 
-		if (!isMarkdown) {
-			if (existingBtn) {
-				existingBtn.remove();
+		if (isMarkdown || isKanban) {
+			const button = existingBtn ?? actionsEl.createEl("button", {
+				cls: "clickable-icon view-action vault-code-header-toggle-btn",
+				attr: { type: "button" },
+			});
+			button.toggleClass("is-active", toggleActive);
+			if (button.getAttribute("aria-label") !== toggleLabel) {
+				button.setAttribute("aria-label", toggleLabel);
+				if (boardToggle) setIcon(button, "columns-3");
+				else setCodeIcon(button);
 			}
-		} else if (existingBtn) {
-			existingBtn.toggleClass("is-active", isCodeEditor);
-			existingBtn.setAttribute(
-				"aria-label",
-				isCodeEditor
-					? t("viewToggleTooltip")
-					: t("contextEditInCodeEditor"),
-			);
-		} else {
-			const btn = createEl("button", {
-				cls: `clickable-icon view-action vault-code-header-toggle-btn${
-					isCodeEditor ? " is-active" : ""
-				}`,
-				attr: {
-					"aria-label": isCodeEditor
-						? t("viewToggleTooltip")
-						: t("contextEditInCodeEditor"),
-				},
-			});
-			setCodeIcon(btn);
-
-			btn.addEventListener("click", (evt: MouseEvent) => {
-				evt.preventDefault();
-				evt.stopPropagation();
-				void this.toggleCodeEditorForLeaf(leaf);
-			});
-
-			actionsEl.appendChild(btn);
-		}
+			button.onclick = event => {
+				event.preventDefault();
+				event.stopPropagation();
+				void this.toggleCodeEditorForLeaf(leaf).catch(() => new Notice(t("kanbanFailed")));
+			};
+		} else existingBtn?.remove();
 
 		// Show Git diff for supported changed files in native and code editor views.
 		const existingDiffBtn = actionsEl.querySelector<HTMLElement>(
@@ -6966,7 +6992,15 @@ export default class VaultCodePlugin extends Plugin {
 		});
 	}
 
+	updateLanguage(): void {
+		setLanguage(this.settings.language);
+		for (const leaf of this.app.workspace.getLeavesOfType(KANBAN_VIEW)) {
+			if (leaf.view instanceof KanbanView) leaf.view.scheduleRefresh();
+		}
+	}
+
 	isFileEditable(file: TFile): boolean {
+		if (file?.extension.toLowerCase() === "kanban") return true;
 		if (!file || !(file instanceof TFile)) {
 			return false;
 		}
@@ -7172,6 +7206,38 @@ export default class VaultCodePlugin extends Plugin {
 		}
 	}
 
+	private async openKanbanMarker(leaf: WorkspaceLeaf, file: TFile, editor: DotfileView): Promise<void> {
+		try {
+			if (editor.isDirty()) await editor.saveExplicitly();
+			if (editor.isDirty() || leaf.view !== editor || editor.file !== file || !file.parent) return;
+			await this.switchEditorView(leaf, file, KANBAN_VIEW);
+		} catch { new Notice(t("kanbanFailed")); }
+	}
+
+	private async ensureKanbanMarker(folder: TFolder): Promise<TFile> {
+		const root = folder.isRoot();
+		const path = root ? KANBAN_FILENAME : folder.path + "/" + KANBAN_FILENAME;
+		const existing = this.app.vault.getAbstractFileByPath(path);
+		if (existing instanceof TFile) return existing;
+		const markers = folder.children.filter((file): file is TFile => file instanceof TFile && file.extension.toLowerCase() === "kanban");
+		if (markers.length === 1 && markers[0]) return markers[0];
+		const board = root ? "" : folder.path;
+		const legacy = Object.prototype.hasOwnProperty.call(this.settings.kanbanOrders, board) ? this.settings.kanbanOrders[board] : undefined;
+		let marker: TFile;
+		try {
+			marker = await this.app.vault.create(path, writeKanbanFile(relativeKanbanOrder(board, legacy)));
+		} catch (error) {
+			const concurrent = this.app.vault.getAbstractFileByPath(path);
+			if (!(concurrent instanceof TFile)) throw error;
+			return concurrent;
+		}
+		if (legacy) {
+			delete this.settings.kanbanOrders[board];
+			await this.saveSettings();
+		}
+		return marker;
+	}
+
 	/* ── workspace leaf openFile patch ─────────────────────── */
 
 	private patchWorkspaceLeaf() {
@@ -7219,6 +7285,12 @@ export default class VaultCodePlugin extends Plugin {
 				if (plugin.isLeafDirty(this)) {
 					const newLeaf = plugin.app.workspace.getLeaf("tab");
 					return newLeaf.openFile(file, openState);
+				}
+
+				if (file.extension.toLowerCase() === "kanban" && file.parent) {
+					const path = file.parent.isRoot() ? "" : file.parent.path;
+					await this.setViewState({ type: KANBAN_VIEW, state: { path, markerPath: file.path }, active: openState?.active ?? true, group: openState?.group });
+					return;
 				}
 
 				if (file instanceof TFile && plugin.isFileEditable(file)) {
@@ -8781,7 +8853,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.language || "auto")
 					.onChange(async (value) => {
 						this.plugin.settings.language = value;
-						setLanguage(value);
+						this.plugin.updateLanguage();
 						await this.plugin.saveSettings();
 						this.refreshSettings();
 					});
@@ -9749,7 +9821,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 							aiProviderLastModel: { ...DEFAULT_SETTINGS.aiProviderLastModel },
 						aiConnections: [],
 						};
-						setLanguage(this.plugin.settings.language);
+						this.plugin.updateLanguage();
 						await this.plugin.saveSettings();
 						this.plugin.applyShowAllFileTypes();
 						await this.plugin.reloadAllIgnoreRules();
