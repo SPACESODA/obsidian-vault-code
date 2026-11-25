@@ -2,7 +2,7 @@
 
 <h3 align="center" style="color: #3b82f6; margin: 1rem 0; "><strong>Vault Code turns Obsidian into a workspace for notes, code, and files.</strong></h3>
 
-**Vault Code** is a powerful plugin that integrates with Obsidian's file explorer and editor. View hidden files, create and organize files of any kind, and write code in a beautiful code editor. Preview web pages, diagrams, and data, or work with AI agents without leaving Obsidian.
+**Vault Code** is a powerful plugin that integrates with Obsidian's file explorer and editor. View hidden files, create and organize files of any kind, plan work on Kanban boards, and write code in a beautiful code editor. Preview web pages, diagrams, and data, or work with AI agents without leaving Obsidian.
 
 ![Vault Code editor and HTML preview in Obsidian](docs/assets/vc-code-editing-gh.jpg)
 
@@ -17,6 +17,11 @@
 * **File creation & renaming**: Create any file type or nested path; rename files and extensions.
 * **External folders (Desktop)**: Add folders from your disk by symlink.
 * **Ignore rules**: Keep the explorer tidy with `.obsidianignore` and `.gitignore`.
+* **Unlinked media**: Find images, audio, and video no note links to, and move them to trash.
+
+**Kanban**
+* **Folder boards**: Any folder becomes a board: subfolders are columns, notes are cards.
+* **Search & tag filter**: Find cards fast and filter by tags, like labels in Trello.
 
 **Code editor**
 * **Editing tools**: Syntax highlighting, line numbers, folding, and familiar editing shortcuts.
@@ -35,6 +40,15 @@
 ---
 
 ## What you can do
+
+### 🗂️ Plan with Kanban boards
+
+Right-click a folder and choose **Open as Kanban**. Subfolders become columns and notes become cards, so the board is always just your files.
+
+* **Drag and drop**: Move cards and columns smoothly on desktop, tablet, and phone. Moving a card moves its note.
+* **Rich cards**: See a preview of each note with checklists, formatting, code, callouts, and tag pills. Tick tasks right on the card.
+* **Search & filter**: Type to find cards, use `#tag` for exact tag matches, or pick tags from the `#` menu.
+* **Agent-friendly**: Order lives in a small `.kanban` file. Notes added or moved by scripts, AI agents, or sync show up right away.
 
 ### ✏️ Edit code right where you write notes
 
@@ -75,6 +89,7 @@ Right-click a file or folder in the explorer:
 * **New file here (any extension)**: Create any file type, including dotfiles and nested paths such as `src/components/Button.tsx`.
 * **Edit file name and extension...**: Rename files or change their extensions with built-in validation.
 * **Add external folder by symlink (Desktop)**: Choose any folder on your disk and link it into your vault without leaving Obsidian.
+* **Show unlinked media**: Find images, audio, and video that no note or canvas links to, in that folder or the whole vault, and move them to trash in bulk.
 
 ### 🌿 Review changes with Git (Desktop)
 
