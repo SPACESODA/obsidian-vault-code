@@ -907,9 +907,6 @@ body .hidden-files-editor-wrapper .cm-searchMatch-selected {
 	margin: 0;
 }
 .is-mobile .hidden-files-settings .vault-code-setting-with-actions .setting-item-control {
-	display: contents;
-}
-.is-mobile .hidden-files-settings .vault-code-setting-with-actions .checkbox-container {
 	grid-column: 2;
 	grid-row: 1;
 }
@@ -4390,24 +4387,25 @@ body.vault-code-ignore-loading .nav-files-container { visibility: hidden; }
 	width: 100%;
 }
 
-.vault-code-unlinked-search-input {
+/* Scoped to the modal so it outranks Obsidian's input styles on specificity alone. */
+.vault-code-unlinked-modal .vault-code-unlinked-search-wrapper input.vault-code-unlinked-search-input {
 	width: 100%;
 	padding: 8px 12px;
 	border-radius: var(--radius-m, 6px);
 	background-color: var(--background-modifier-form-field);
-	border: none !important;
+	border: none;
 	font-size: var(--font-ui-small, 13px);
 	color: var(--text-normal);
-	outline: none !important;
-	box-shadow: none !important;
+	outline: none;
+	box-shadow: none;
 	box-sizing: border-box;
 }
 
-.vault-code-unlinked-search-input:focus,
-.vault-code-unlinked-search-input:focus-visible {
-	outline: none !important;
-	border: none !important;
-	box-shadow: none !important;
+.vault-code-unlinked-modal .vault-code-unlinked-search-wrapper input.vault-code-unlinked-search-input:focus,
+.vault-code-unlinked-modal .vault-code-unlinked-search-wrapper input.vault-code-unlinked-search-input:focus-visible {
+	outline: none;
+	border: none;
+	box-shadow: none;
 }
 
 .vault-code-unlinked-filter-pills {
@@ -4497,15 +4495,15 @@ body.vault-code-ignore-loading .nav-files-container { visibility: hidden; }
 	display: none;
 }
 
-button.vault-code-unlinked-delete-btn:disabled,
-button.vault-code-unlinked-delete-btn.mod-warning:disabled {
+.vault-code-unlinked-modal button.vault-code-unlinked-delete-btn:disabled,
+.vault-code-unlinked-modal button.vault-code-unlinked-delete-btn.mod-warning:disabled {
 	opacity: 0.45;
 	cursor: not-allowed;
 	pointer-events: none;
-	background-color: var(--background-modifier-form-field) !important;
-	color: var(--text-muted) !important;
-	border: 1px solid var(--background-modifier-border) !important;
-	box-shadow: none !important;
+	background-color: var(--background-modifier-form-field);
+	color: var(--text-muted);
+	border: 1px solid var(--background-modifier-border);
+	box-shadow: none;
 }
 
 .vault-code-unlinked-list {
@@ -4976,10 +4974,9 @@ button.vault-code-unlinked-delete-btn.mod-warning:disabled {
 	pointer-events: auto;
 	cursor: pointer;
 }
-.vault-code-kanban-task:has(> input:checked) > span {
+.vault-code-kanban-task > input:checked ~ span {
 	color: var(--text-faint);
 	text-decoration: line-through;
-	text-decoration-color: var(--text-faint);
 }
 .vault-code-kanban-menu-label {
 	color: var(--text-faint);
@@ -5232,8 +5229,8 @@ body:not(.native-scrollbars) .vault-code-kanban-menu-list::-webkit-scrollbar-thu
 	color: var(--text-faint);
 }
 .vault-code-kanban-header > .vault-code-kanban-add-top:hover { color: var(--text-normal); }
-.vault-code-kanban-column-footer:has(> .vault-code-kanban-compose) > .vault-code-kanban-add,
-.vault-code-kanban-add-column:has(> .vault-code-kanban-compose) > .vault-code-kanban-add { display: none; }
+.vault-code-kanban-column-footer.is-composing > .vault-code-kanban-add,
+.vault-code-kanban-add-column.is-composing > .vault-code-kanban-add { display: none; }
 .vault-code-kanban-column-footer > .vault-code-kanban-compose { margin-top: 2px; }
 .vault-code-kanban-compose.is-top {
 	margin: 0 var(--kanban-card-inset) 8px;
@@ -5245,7 +5242,9 @@ body:not(.native-scrollbars) .vault-code-kanban-menu-list::-webkit-scrollbar-thu
 .vault-code-kanban-rail, .vault-code-kanban-list { position: relative; }
 .vault-code-kanban-card { cursor: grab; }
 .is-mobile .vault-code-kanban-card { cursor: auto; -webkit-touch-callout: none; user-select: none; }
-.vault-code-kanban.is-kanban-dragging, .vault-code-kanban.is-kanban-dragging * { cursor: grabbing !important; user-select: none; }
+/* Scoped to the view so it outranks every control's own cursor on specificity alone. */
+.workspace-leaf-content > .view-content.vault-code-kanban.is-kanban-dragging,
+.workspace-leaf-content > .view-content.vault-code-kanban.is-kanban-dragging * { cursor: grabbing; user-select: none; }
 .vault-code-kanban.is-kanban-dragging .vault-code-kanban-rail, .vault-code-kanban.is-kanban-dragging .vault-code-kanban-list { scroll-behavior: auto; }
 .vault-code-kanban.is-kanban-dragging .vault-code-kanban-card:hover { border-color: var(--background-modifier-border); }
 .vault-code-kanban .is-drag-placeholder {
@@ -5462,7 +5461,7 @@ body:not(.native-scrollbars) .vault-code-kanban-menu-list::-webkit-scrollbar-thu
 }
 .is-mobile .vault-code-kanban .vault-code-kanban-search-input { height: 36px; }
 /* Phone: an open search takes the whole header row, so the title steps aside until it closes. */
-.is-phone .vault-code-kanban-board-heading:has(.vault-code-kanban-search.is-open) > .vault-code-kanban-title { display: none; }
+.is-phone .vault-code-kanban-board-heading.is-search-open > .vault-code-kanban-title { display: none; }
 .is-phone .vault-code-kanban-search.is-open { flex: 1 1 auto; }
 .is-phone .vault-code-kanban .vault-code-kanban-search.is-open > .vault-code-kanban-search-input { width: 100%; }
 .vault-code-kanban .vault-code-kanban-unsorted-settings {

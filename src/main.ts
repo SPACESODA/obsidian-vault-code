@@ -8959,7 +8959,7 @@ class VaultCodeSettingTab extends PluginSettingTab {
 
 		this.updateButtonState = updateButtonState;
 
-		new Setting(containerEl)
+		const obsidianIgnoreSetting = new Setting(containerEl)
 			.setClass("vault-code-setting-with-actions")
 			.setName(
 				createSettingNameWithFilename(
@@ -9042,6 +9042,9 @@ class VaultCodeSettingTab extends PluginSettingTab {
 						}
 					}),
 			);
+		// On mobile the button gets its own row under the label and toggle (see styles.css).
+		const ignoreButtonEl = obsidianIgnoreSetting.controlEl.querySelector("button.vault-code-ignore-btn");
+		if (Platform.isMobile && ignoreButtonEl) obsidianIgnoreSetting.settingEl.appendChild(ignoreButtonEl);
 
 		new Setting(containerEl)
 			.setName(

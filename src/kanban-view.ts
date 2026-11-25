@@ -502,7 +502,10 @@ export class KanbanView extends ItemView {
 			attr: { type: "text", placeholder: t("kanbanSearch"), enterkeyhint: "search", spellcheck: "false" },
 		});
 		nameWithoutTooltip(input, input, t("kanbanSearch"));
-		const open = (value: boolean) => search.toggleClass("is-open", value);
+		const open = (value: boolean) => {
+			search.toggleClass("is-open", value);
+			parent.toggleClass("is-search-open", value);
+		};
 		input.value = this.query;
 		open(this.query !== "");
 		button.onclick = () => { open(true); input.focus(); };
@@ -794,6 +797,7 @@ export class KanbanView extends ItemView {
 		if (this.busy || this.stopDrag || !parent.isConnected || this.isEditing()) return;
 		this.refreshGeneration++;
 		const form = parent.createEl("form", { cls: "vault-code-kanban-compose" });
+		parent.addClass("is-composing");
 		place?.(form);
 		const input = form.createEl("input", { attr: { type: "text", placeholder: label, required: "", enterkeyhint: "done" } });
 		nameWithoutTooltip(form, input, label);
@@ -802,6 +806,7 @@ export class KanbanView extends ItemView {
 		const close = () => {
 			if (this.busy || !form.isConnected) return;
 			form.remove();
+			if (!parent.querySelector(":scope > .vault-code-kanban-compose")) parent.removeClass("is-composing");
 			this.scheduleRefresh();
 		};
 		cancel.onclick = close;
@@ -1109,7 +1114,7 @@ export class KanbanView extends ItemView {
 		}
 		input.oninput = event => {
 			// Names wrap visually. Keep pasted line breaks out of the filename.
-			if (!multiline && !(event as InputEvent).isComposing && input.value.includes("\n")) {
+			if (!multiline && !("isComposing" in event && event.isComposing) && input.value.includes("\n")) {
 				const { selectionStart, selectionEnd } = input;
 				input.value = input.value.replace(/\n/g, " ");
 				input.setSelectionRange(selectionStart, selectionEnd);
