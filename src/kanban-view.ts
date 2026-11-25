@@ -1,8 +1,8 @@
-import { App, Component, ItemView, MarkdownRenderer, Modal, Notice, TFile, TFolder, setIcon, type Menu, type ViewStateResult } from "obsidian";
+import { ItemView, Notice, Platform, Scope, TFile, TFolder, getAllTags, setIcon, type Menu, type ViewStateResult } from "obsidian";
 import { getActiveLanguage, t } from "./i18n";
 import { createCustomMenu } from "./custom-menu";
 import { nameWithoutTooltip } from "./dom-label";
-import { cardCover, cardExcerpt, cardExcerptLines, replaceCardExcerpt, type CardExcerptLine } from "./kanban-excerpt";
+import { cardCover, cardExcerpt, cardExcerptLines, cardInline, replaceCardExcerpt, type CardExcerptLine, type CardInline } from "./kanban-excerpt";
 import { KANBAN_FILENAME, boardRelativePath, readKanbanFile, readKanbanUnsorted, writeKanbanFile, writeKanbanUnsorted, type KanbanOrder, type KanbanOrders, type KanbanUnsorted } from "./kanban-file";
 
 import { IMAGE_EXTENSIONS } from "./unlinked-media-modal";
@@ -12,6 +12,42 @@ export const KANBAN_VIEW = "vault-code-kanban";
 
 function childPath(folder: TFolder, name: string): string {
 	return folder.isRoot() ? name : folder.path + "/" + name;
+}
+
+const INLINE_TAGS = { strong: "strong", em: "em", del: "del", mark: "mark" } as const;
+
+/** Builds inline card text as plain DOM nodes, so note content is never parsed as HTML. */
+function appendInline(parent: HTMLElement, nodes: CardInline[]): void {
+	for (const node of nodes) {
+		if ("children" in node) appendInline(parent.createEl(INLINE_TAGS[node.kind]), node.children);
+		else if (node.kind === "text") parent.appendText(node.text);
+		else if (node.kind === "code") parent.createEl("code", { text: node.text });
+		else parent.createSpan({ cls: `vault-code-kanban-${node.kind}`, text: node.text });
+	}
+}
+
+function inlineText(nodes: CardInline[]): string {
+	return nodes.map(node => "children" in node ? inlineText(node.children) : node.text).join("");
+}
+
+// Obsidian's built-in callout types and aliases, mapped to theme colours (their default callout colours) and icons.
+const CALLOUTS: Record<string, [color: string, icon: string]> = {};
+for (const [color, icon, types] of [
+	["var(--color-blue)", "pencil", "note"],
+	["var(--color-cyan)", "clipboard-list", "abstract summary tldr"],
+	["var(--color-blue)", "info", "info"],
+	["var(--color-blue)", "check-circle-2", "todo"],
+	["var(--color-cyan)", "flame", "tip hint important"],
+	["var(--color-green)", "check", "success check done"],
+	["var(--color-orange)", "help-circle", "question help faq"],
+	["var(--color-orange)", "alert-triangle", "warning caution attention"],
+	["var(--color-red)", "x", "failure fail missing"],
+	["var(--color-red)", "zap", "danger error"],
+	["var(--color-red)", "bug", "bug"],
+	["var(--color-purple)", "list", "example"],
+	["var(--text-muted)", "quote", "quote cite"],
+] as const) {
+	for (const type of types.split(" ")) CALLOUTS[type] = [color, icon];
 }
 
 function ordered<T extends TFile | TFolder>(files: T[], saved: string[], board: TFolder): T[] {
@@ -33,33 +69,6 @@ export function remapKanbanOrders(orders: KanbanOrders, from: string, to?: strin
 		result[board] = { columns: order.columns.map(remap).filter(value => value !== undefined), cards };
 	}
 	return result;
-}
-
-class CardModal extends Modal {
-	private renderer = new Component();
-	private generation = 0;
-	constructor(app: App, private file: TFile) { super(app); }
-
-	onOpen(): void {
-		const generation = ++this.generation;
-		this.renderer.load();
-		this.setTitle(this.file.basename);
-		const button = this.contentEl.createEl("button", { text: t("kanbanOpenNote") });
-		button.onclick = () => {
-			this.close();
-			void this.app.workspace.getLeaf("tab").openFile(this.file);
-		};
-		const body = this.contentEl.createDiv({ cls: "markdown-rendered vault-code-kanban-note" });
-		void this.app.vault.cachedRead(this.file).then(async source => {
-			if (generation === this.generation) await MarkdownRenderer.render(this.app, source, body, this.file.path, this.renderer);
-		}).catch(() => { if (generation === this.generation) body.setText(t("kanbanFailed")); });
-	}
-
-	onClose(): void {
-		this.generation++;
-		this.renderer.unload();
-		this.contentEl.empty();
-	}
 }
 
 type Column = { folder: TFolder; cards: TFile[] };
@@ -86,11 +95,20 @@ export class KanbanView extends ItemView {
 	private previewFiles = new WeakMap<HTMLButtonElement, TFile>();
 	private excerptLoads = new WeakMap<HTMLButtonElement, object>();
 	private dirtyExcerpts = new Set<TFile>();
+	// Quick search filters cards by title and note text; note text is read on demand and dropped on edit.
+	private query = "";
+	private searchText = new Map<TFile, string>();
+	private searchLoad?: object;
+	// Tag filter (lower-case tags with "#"): a card shows when it has any selected tag, like Trello labels.
+	private tagFilter = new Set<string>();
+	private filterEl?: HTMLElement;
 	private columns: Column[] = [];
 	private cardTargets = new WeakMap<Element, Drop>();
 	private columnTargets = new WeakMap<Element, Column>();
 	private refreshFrame?: number;
 	private observer?: IntersectionObserver;
+	// Pinned "Add card" rows sit just under their header, whose height varies with wrapped names.
+	private headerSizes?: ResizeObserver;
 	private stopDrag?: () => void;
 	private busy = false;
 	private inlineEditor?: HTMLTextAreaElement;
@@ -98,7 +116,6 @@ export class KanbanView extends ItemView {
 	private inlineFields = new WeakMap<TFile | TFolder, { title: HTMLButtonElement; excerpt?: HTMLButtonElement }>();
 	private excerpts = new WeakMap<HTMLButtonElement, string>();
 	private closed = false;
-	private modal?: CardModal;
 
 	constructor(leaf: ConstructorParameters<typeof ItemView>[0], private updateHeaderActions: (view: KanbanView) => void) {
 		super(leaf);
@@ -152,7 +169,11 @@ export class KanbanView extends ItemView {
 		this.registerEvent(this.app.vault.on("modify", file => {
 			if (!(file instanceof TFile) || !relevant(file.path)) return;
 			if (this.cardElements.has(file)) this.dirtyExcerpts.add(file);
+			this.searchText.delete(file);
 			this.scheduleRefresh();
+		}));
+		this.registerEvent(this.app.metadataCache.on("changed", file => {
+			if (this.cardElements.has(file) && (this.query || this.tagFilter.size)) this.applySearch();
 		}));
 	}
 
@@ -161,8 +182,8 @@ export class KanbanView extends ItemView {
 		this.inlineEditor?.blur();
 		await this.inlineSave;
 		this.stopDrag?.();
-		this.modal?.close();
 		this.observer?.disconnect();
+		this.headerSizes?.disconnect();
 		if (this.refreshFrame !== undefined) this.contentEl.win.cancelAnimationFrame(this.refreshFrame);
 	}
 
@@ -199,6 +220,7 @@ export class KanbanView extends ItemView {
 		const left = this.rail?.scrollLeft ?? 0;
 		if (!reuse) {
 			this.observer?.disconnect();
+		this.headerSizes?.disconnect();
 			this.rail = undefined;
 			this.addColumn = undefined;
 			this.columnElements.clear();
@@ -228,6 +250,7 @@ export class KanbanView extends ItemView {
 		}));
 		if (!this.rail || !this.addColumn) this.createRail(board);
 		this.updateColumns(board);
+		if (this.query || this.tagFilter.size) this.search(this.query);
 		if (this.rail) this.rail.scrollLeft = left;
 		const dirty = [...this.dirtyExcerpts];
 		this.dirtyExcerpts.clear();
@@ -240,6 +263,11 @@ export class KanbanView extends ItemView {
 	private createRail(board: TFolder): void {
 		const rail = this.contentEl.createDiv({ cls: "vault-code-kanban-rail" });
 		this.rail = rail;
+		this.headerSizes = new ResizeObserver(entries => {
+			for (const { target } of entries) {
+				if (target.instanceOf(HTMLElement)) target.parentElement?.setCssProps({ "--kanban-header-height": `${target.offsetHeight}px` });
+			}
+		});
 		this.observer = new IntersectionObserver(entries => {
 			for (const entry of entries) {
 				const target = entry.target;
@@ -277,7 +305,9 @@ export class KanbanView extends ItemView {
 		const wrapper = preview.parentElement;
 		wrapper?.querySelector(".vault-code-kanban-lists")?.remove();
 		const lines = text ? cardExcerptLines(text, omitted) : [];
-		const hasList = lines.some(line => line.list);
+		// Lists, tasks, code, quotes, headings and inline formatting render as markup; anything else stays plain text.
+		const hasList = lines.some(line => line.list || line.code || line.heading || line.quote
+			|| cardInline(line.text).some(node => node.kind !== "text" || node.text !== line.text));
 		wrapper?.toggleClass("is-list", hasList);
 		if (wrapper && hasList) {
 			this.labelEmptyExcerpt(preview);
@@ -305,10 +335,47 @@ export class KanbanView extends ItemView {
 	): void {
 		const content = parent.createDiv({ cls: "vault-code-kanban-lists" });
 		const stack: Array<{ indent: number; element: HTMLOListElement | HTMLUListElement; item?: HTMLLIElement }> = [];
+		let block: HTMLElement | undefined;
+		let quote: HTMLElement | undefined;
 		for (const line of lines) {
+			if (line.code) {
+				stack.length = 0;
+				quote = undefined;
+				if (line.code === "fence") { block = block ? undefined : content.createEl("pre").createEl("code"); continue; }
+				block ??= content.createEl("pre").createEl("code");
+				block.appendText((block.childNodes.length ? "\n" : "") + line.text);
+				continue;
+			}
+			block = undefined;
+			const inline = cardInline(line.text);
+			if (line.quote) {
+				stack.length = 0;
+				const callout = line.quote.callout;
+				if (callout) {
+					const [color, icon] = CALLOUTS[callout.type] ?? ["var(--color-blue)", "pencil"];
+					quote = content.createDiv({ cls: "vault-code-kanban-callout", attr: { "data-callout": callout.type } });
+					quote.setCssProps({ "--kanban-callout": color });
+					const title = quote.createDiv({ cls: "vault-code-kanban-callout-title" });
+					setIcon(title.createSpan({ cls: "vault-code-kanban-callout-icon" }), icon);
+					appendInline(title.createSpan(), cardInline(callout.title));
+				} else {
+					quote ??= content.createDiv({ cls: "vault-code-kanban-quote" });
+					if (line.text.trim()) appendInline(quote.createDiv(), inline);
+				}
+				continue;
+			}
+			quote = undefined;
+			if (line.heading) {
+				stack.length = 0;
+				appendInline(content.createDiv({ cls: "vault-code-kanban-heading" }), inline);
+				continue;
+			}
 			if (!line.list) {
 				stack.length = 0;
-				content.createDiv({ text: line.text });
+				// A line of only tags becomes a wrapping row of pills, like labels on a card.
+				const tagsOnly = inline.some(node => node.kind === "tag") && inline.every(node => node.kind === "tag" || (node.kind === "text" && !node.text.trim()));
+				if (tagsOnly) appendInline(content.createDiv({ cls: "vault-code-kanban-tag-row" }), inline.filter(node => node.kind === "tag"));
+				else appendInline(content.createDiv(), inline);
 				continue;
 			}
 			const { indent, order, task } = line.list;
@@ -330,10 +397,10 @@ export class KanbanView extends ItemView {
 			if (task) {
 				const checkbox = item.createEl("input", { attr: { type: "checkbox", "data-task-offset": String(task.offset) } });
 				checkbox.checked = task.checked;
-				nameWithoutTooltip(item, checkbox, line.text || t("kanbanEditDescription"));
+				nameWithoutTooltip(item, checkbox, inlineText(inline) || t("kanbanEditDescription"));
 				checkbox.onchange = () => toggle(task.offset, checkbox);
 			}
-			item.createSpan({ text: line.text });
+			appendInline(item.createSpan(), inline);
 		}
 	}
 
@@ -395,6 +462,9 @@ export class KanbanView extends ItemView {
 			attr: { type: "text", value: marker.basename },
 		});
 		nameWithoutTooltip(heading, input, t("kanbanBoardTitle"));
+		this.addSearch(heading);
+		this.filterEl = heading.createDiv({ cls: "vault-code-kanban-filter" });
+		this.renderTagFilter();
 		if (hasBoardSettings) this.addUnsortedSettings(heading);
 		const commit = () => {
 			if (this.busy || this.closed || !input.isConnected || marker !== this.marker || this.isEditing()) return;
@@ -421,6 +491,161 @@ export class KanbanView extends ItemView {
 			input.blur();
 		});
 		input.addEventListener("blur", commit);
+	}
+
+	/** A search icon that opens into a field; typing hides cards whose title and note text don't match. */
+	private addSearch(parent: HTMLElement): void {
+		const search = parent.createDiv({ cls: "vault-code-kanban-search" });
+		const button = this.iconButton(search, "search", t("kanbanSearch"));
+		const input = search.createEl("input", {
+			cls: "vault-code-kanban-search-input",
+			attr: { type: "text", placeholder: t("kanbanSearch"), enterkeyhint: "search", spellcheck: "false" },
+		});
+		nameWithoutTooltip(input, input, t("kanbanSearch"));
+		const open = (value: boolean) => search.toggleClass("is-open", value);
+		input.value = this.query;
+		open(this.query !== "");
+		button.onclick = () => { open(true); input.focus(); };
+		input.addEventListener("input", () => this.search(input.value));
+		const close = () => {
+			input.value = "";
+			this.search("");
+			open(false);
+			input.blur();
+		};
+		// Obsidian's keymap can take Escape before the field sees it, so a scope also handles it while focused.
+		const scope = new Scope(this.app.scope);
+		scope.register([], "Escape", () => { close(); return false; });
+		input.addEventListener("keydown", event => {
+			if (event.isComposing || event.key !== "Escape") return;
+			event.preventDefault();
+			event.stopPropagation();
+			close();
+		});
+		input.addEventListener("focus", () => this.app.keymap.pushScope(scope));
+		input.addEventListener("blur", () => {
+			this.app.keymap.popScope(scope);
+			if (!input.value.trim()) open(false);
+		});
+	}
+
+	private search(value: string): void {
+		this.query = value.trim().toLowerCase();
+		this.applySearch();
+		if (!this.query) return;
+		const missing = [...this.cardElements.keys()].filter(file => !this.searchText.has(file));
+		if (!missing.length) return;
+		const request = {};
+		this.searchLoad = request;
+		void Promise.all(missing.map(async file => {
+			try { this.searchText.set(file, (await this.app.vault.cachedRead(file)).toLowerCase()); } catch { /* Title-only match. */ }
+		})).then(() => { if (this.searchLoad === request) this.applySearch(); });
+	}
+
+	/** A card's tags from its body and properties, lower-cased with "#", as Obsidian matches them. */
+	private cardTags(file: TFile): string[] {
+		const cache = this.app.metadataCache.getFileCache(file);
+		return cache ? [...new Set((getAllTags(cache) ?? []).map(tag => tag.toLowerCase()))] : [];
+	}
+
+	private applySearch(): void {
+		const words = this.query.split(/\s+/).filter(Boolean);
+		this.contentEl.toggleClass("is-searching", words.length > 0 || this.tagFilter.size > 0);
+		// "#tag" matches that tag exactly (and its nested tags, as in Obsidian); other words match title and text.
+		const hasTag = (tags: string[], tag: string) => tags.some(entry => entry === tag || entry.startsWith(tag + "/"));
+		for (const [file, card] of this.cardElements) {
+			const text = file.basename.toLowerCase() + "\n" + (this.searchText.get(file) ?? "");
+			const tags = this.cardTags(file);
+			const matches = words.every(word => word.length > 1 && word.startsWith("#") ? hasTag(tags, word) : text.includes(word))
+				&& (!this.tagFilter.size || [...this.tagFilter].some(tag => hasTag(tags, tag)));
+			card.toggleClass("is-search-hidden", !matches);
+		}
+	}
+
+	/**
+	 * The tag filter: a "#" button that turns into a compact chip while filtering ("p1", or "p1 +2"),
+	 * so any number of long tags stays on one line. The chip keeps one target: it opens the menu, which can clear.
+	 */
+	private renderTagFilter(): void {
+		const parent = this.filterEl;
+		if (!parent) return;
+		parent.empty();
+		const tags = [...this.tagFilter];
+		parent.toggleClass("is-active", tags.length > 0);
+		const button = parent.createEl("button", {
+			cls: "clickable-icon vault-code-kanban-filter-button",
+			attr: { type: "button", "aria-haspopup": "menu" },
+		});
+		setIcon(button.createSpan({ cls: "vault-code-kanban-filter-icon" }), "hash");
+		const [first] = tags;
+		if (first) {
+			button.createSpan({ cls: "vault-code-kanban-filter-label", text: first.slice(1) });
+			if (tags.length > 1) button.createSpan({ cls: "vault-code-kanban-filter-more", text: "+" + String(tags.length - 1) });
+		}
+		nameWithoutTooltip(button, button, tags.length ? t("kanbanFilterTags") + ": " + tags.join(", ") : t("kanbanFilterTags"));
+		button.onclick = event => this.tagMenu(event);
+	}
+
+	private setTagFilter(tag: string | undefined, selected: boolean): void {
+		if (tag === undefined) this.tagFilter.clear();
+		else if (selected) this.tagFilter.add(tag);
+		else this.tagFilter.delete(tag);
+		this.renderTagFilter();
+		this.applySearch();
+	}
+
+	private tagMenu(event: MouseEvent): void {
+		const counts = new Map<string, number>();
+		for (const file of this.cardElements.keys()) {
+			for (const tag of this.cardTags(file)) counts.set(tag, (counts.get(tag) ?? 0) + 1);
+		}
+		const menu = createCustomMenu();
+		const dom = (target: unknown) => (target as { dom?: HTMLElement }).dom;
+		// Header: the title, with a quiet "Clear" on the same line while a filter is on.
+		menu.addItem(item => {
+			item.setTitle(createFragment(fragment => {
+				fragment.createSpan({ cls: "vault-code-kanban-menu-label", text: t("kanbanFilterTags") });
+				if (!this.tagFilter.size) return;
+				const clear = fragment.createEl("button", { cls: "vault-code-kanban-menu-clear", text: t("kanbanClearFilter"), attr: { type: "button" } });
+				clear.addEventListener("click", event => {
+					event.stopPropagation();
+					menu.hide();
+					this.setTagFilter(undefined, false);
+				});
+			})).setIsLabel(true);
+			dom(item)?.addClass("vault-code-kanban-menu-header");
+		});
+		const tags = [...new Set([...counts.keys(), ...this.tagFilter])].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+		if (!tags.length) menu.addItem(item => item.setTitle(t("kanbanNoTags")).setDisabled(true));
+		const rows: HTMLElement[] = [];
+		for (const tag of tags) {
+			const selected = this.tagFilter.has(tag);
+			menu.addItem(item => {
+				item
+					.setTitle(createFragment(fragment => {
+						fragment.createSpan({ cls: "vault-code-kanban-menu-tag", text: tag.slice(1) });
+						fragment.createSpan({ cls: "vault-code-kanban-menu-count", text: String(counts.get(tag) ?? 0) });
+					}))
+					.setChecked(selected)
+					.onClick(() => this.setTagFilter(tag, !selected));
+				const row = dom(item);
+				if (row) rows.push(row);
+			});
+		}
+		const menuEl = dom(menu);
+		menuEl?.addClass("vault-code-kanban-tag-menu");
+		const trigger = event.currentTarget instanceof HTMLElement ? event.currentTarget : undefined;
+		if (!trigger || Platform.isPhone) this.showMenu(menu, event);
+		else {
+			const rect = trigger.getBoundingClientRect();
+			menu.showAtPosition({ x: rect.right, y: rect.bottom + 4, left: true });
+		}
+		// Only the tag rows scroll; the header stays put above them.
+		const first = rows[0];
+		if (!menuEl || !first?.parentElement) return;
+		const list = createDiv({ cls: "vault-code-kanban-menu-list" });
+		first.parentElement.insertBefore(list, first);
+		list.append(...rows);
 	}
 
 	private addButton(parent: HTMLElement, label: string, action: () => void): void {
@@ -470,6 +695,7 @@ export class KanbanView extends ItemView {
 			if (preview) this.observer?.unobserve(preview);
 			card.remove();
 			this.cardElements.delete(file);
+			this.searchText.delete(file);
 		}
 		for (const [folder, { section }] of this.columnElements) {
 			if (folders.has(folder)) continue;
@@ -493,13 +719,20 @@ export class KanbanView extends ItemView {
 		this.inlineFields.set(folder, { title });
 		title.onclick = root ? () => this.editUnsortedName(board) : () => this.editColumnName(folder);
 		const count = header.createSpan({ cls: "vault-code-kanban-count" });
+		const addTop = this.iconButton(header, "plus", t("kanbanAddCard"));
+		addTop.addClass("vault-code-kanban-add-top");
 		if (!root) {
 			header.addClass("is-draggable");
 			this.bindDrag(header, section, { kind: "column", folder });
 		}
 		const list = section.createDiv({ cls: "vault-code-kanban-list" });
 		const footer = section.createDiv({ cls: "vault-code-kanban-column-footer" });
-		this.addButton(footer, t("kanbanAddCard"), () => this.compose(footer, t("kanbanCardTitle"), name => this.create(folder, name, true)));
+		addTop.onclick = () => this.compose(section, t("kanbanCardTitle"), name => this.create(folder, name, true, "first"), form => {
+			form.addClass("is-top");
+			list.before(form);
+		});
+		this.addButton(footer, t("kanbanAddCard"), () => this.compose(footer, t("kanbanCardTitle"), name => this.create(folder, name, true, "last")));
+		this.headerSizes?.observe(header);
 		const elements = { section, title, label, count, list };
 		this.columnElements.set(folder, elements);
 		return elements;
@@ -548,26 +781,51 @@ export class KanbanView extends ItemView {
 		return button;
 	}
 
-	private compose(parent: HTMLElement, label: string, submit: (name: string) => Promise<void>): void {
+	/**
+	 * Inline composer. It stays open after each Enter so several cards can be added in a row,
+	 * reveals what it created, and closes on Escape, Cancel, or when focus leaves it empty.
+	 */
+	private compose(
+		parent: HTMLElement,
+		label: string,
+		submit: (name: string) => Promise<TFile | void>,
+		place?: (form: HTMLFormElement) => void,
+	): void {
 		if (this.busy || this.stopDrag || !parent.isConnected || this.isEditing()) return;
 		this.refreshGeneration++;
 		const form = parent.createEl("form", { cls: "vault-code-kanban-compose" });
-		const input = form.createEl("input", { attr: { type: "text", placeholder: label, required: "" } });
+		place?.(form);
+		const input = form.createEl("input", { attr: { type: "text", placeholder: label, required: "", enterkeyhint: "done" } });
 		nameWithoutTooltip(form, input, label);
 		const cancel = form.createEl("button", { text: t("modalButtonCancel"), attr: { type: "button" } });
 		form.createEl("button", { cls: "mod-cta", text: t("modalButtonCreate"), attr: { type: "submit" } });
-		cancel.onclick = () => {
-			if (this.busy) return;
+		const close = () => {
+			if (this.busy || !form.isConnected) return;
 			form.remove();
 			this.scheduleRefresh();
 		};
-		form.onkeydown = event => { if (event.key === "Escape" && !event.isComposing && !this.busy) cancel.click(); };
+		cancel.onclick = close;
+		form.onkeydown = event => { if (event.key === "Escape" && !event.isComposing) close(); };
+		form.addEventListener("focusout", event => {
+			const next = event.relatedTarget;
+			if (next instanceof Node && form.contains(next)) return;
+			if (!input.value.trim()) close();
+		});
 		form.onsubmit = event => {
 			event.preventDefault();
-			void this.perform(() => submit(input.value), false).then(saved => { if (saved) form.remove(); });
+			let created: TFile | void = undefined;
+			void this.perform(async () => { created = await submit(input.value); }, false).then(saved => {
+				if (!saved || !form.isConnected) return;
+				input.value = "";
+				input.focus();
+				const card = created ? this.cardElements.get(created) : undefined;
+				card?.scrollIntoView({ block: "nearest", inline: "nearest" });
+				form.scrollIntoView({ block: "nearest", inline: "nearest" });
+			});
 		};
 		input.focus();
 		input.select();
+		form.scrollIntoView({ block: "nearest", inline: "nearest" });
 	}
 
 	private name(value: string): string {
@@ -581,12 +839,40 @@ export class KanbanView extends ItemView {
 		if (this.app.vault.getAbstractFileByPath(path)) throw new Error(t("kanbanNameExists"));
 	}
 
-	private async create(folder: TFolder, value: string, note: boolean): Promise<void> {
+	private async create(folder: TFolder, value: string, note: boolean, at: "first" | "last" = "last"): Promise<TFile | void> {
 		const name = this.name(note ? value.trim().replace(/\.md$/i, "") : value);
 		const path = childPath(folder, name + (note ? ".md" : ""));
 		this.assertAvailable(path);
-		if (note) await this.app.vault.create(path, "");
-		else await this.app.vault.createFolder(path);
+		if (!note) {
+			await this.app.vault.createFolder(path);
+			// New columns join the end of the board (Unsorted keeps its own slot) rather than sorting by name.
+			await this.placeColumn(folder, path).catch(() => undefined);
+			return;
+		}
+		const file = await this.app.vault.create(path, "");
+		// The card exists either way; if the order can't be saved it falls back to name order.
+		await this.placeCard(folder, file, at).catch(() => undefined);
+		return file;
+	}
+
+	private async placeColumn(board: TFolder, path: string): Promise<void> {
+		if (board !== this.board) return;
+		const relative = (entry: string) => boardRelativePath(board.path, entry);
+		const columns = this.columns.map(column => column.folder).filter(entry => entry !== board).map(entry => relative(entry.path));
+		await this.saveOrder(board, { ...this.order, columns: [...columns, relative(path)] });
+	}
+
+	/** Saves a card's position in its column: first, last, or right after another card. */
+	private async placeCard(folder: TFolder, file: TFile, at: "first" | "last" | TFile): Promise<void> {
+		const board = this.board;
+		if (!board) return;
+		const relative = (path: string) => boardRelativePath(board.path, path);
+		const column = (this.columns.find(entry => entry.folder === folder)?.cards ?? []).filter(card => card !== file);
+		const after = typeof at === "string" ? -1 : column.indexOf(at);
+		column.splice(at === "first" ? 0 : after >= 0 ? after + 1 : column.length, 0, file);
+		const cards = Object.assign(Object.create(null) as KanbanOrder["cards"], this.order.cards);
+		cards[relative(folder.path)] = column.map(card => relative(card.path));
+		await this.saveOrder(board, { ...this.order, cards });
 	}
 
 	private async perform(action: () => Promise<void>, refreshOnError = true): Promise<boolean> {
@@ -698,13 +984,31 @@ export class KanbanView extends ItemView {
 		const menu = createCustomMenu();
 		menu.addItem(item => item.setTitle(t("modalButtonRename")).setIcon("pencil").onClick(editTitle));
 		menu.addItem(item => item.setTitle(t("kanbanEditDescription")).setIcon("align-left").onClick(editDescription));
-		menu.addItem(item => item.setTitle(t("viewToggleRendered")).setIcon("eye").onClick(() => {
-			this.modal?.close();
-			this.modal = new CardModal(this.app, file);
-			this.modal.open();
-		}));
+		menu.addItem(item => item.setTitle(t("kanbanDuplicateCard")).setIcon("copy").onClick(() => this.duplicateCard(file)));
 		menu.addItem(item => item.setTitle(t("kanbanOpenNote")).setIcon("external-link").onClick(() => this.openCardNote(file)));
+		menu.addSeparator();
+		menu.addItem(item => item.setTitle(t("kanbanDeleteCard")).setIcon("trash-2").setWarning(true).onClick(() => {
+			// Obsidian's own prompt honours the user's deletion confirmation and trash settings.
+			void this.app.fileManager.promptForDeletion(file).catch(() => new Notice(t("kanbanFailed")));
+		}));
 		this.showMenu(menu, event);
+	}
+
+	/** Copies a card next to the original as "Name 1", "Name 2", … and places it right below it. */
+	private duplicateCard(file: TFile): void {
+		if (this.isEditing()) return;
+		void this.perform(async () => {
+			const folder = file.parent;
+			const board = this.board;
+			if (!folder || !board || (folder !== board && folder.parent !== board) || this.app.vault.getAbstractFileByPath(file.path) !== file) throw new Error(t("kanbanFailed"));
+			let path: string;
+			let index = 1;
+			do path = childPath(folder, `${file.basename} ${index++}.${file.extension}`);
+			while (this.app.vault.getAbstractFileByPath(path));
+			// Vault.copy needs Obsidian 1.8.7; reading and creating works on the supported minimum.
+			const copy = await this.app.vault.create(path, await this.app.vault.read(file));
+			await this.placeCard(folder, copy, file);
+		});
 	}
 
 	private openCardNote(file: TFile): void {
@@ -763,12 +1067,20 @@ export class KanbanView extends ItemView {
 		button.before(input);
 		button.hidden = true;
 		this.inlineEditor = input;
+		// Obsidian's keymap claims Mod+Enter (and can claim Escape) before the textarea sees them,
+		// so route both through a scope that lives only while this editor is open.
+		const scope = new Scope(this.app.scope);
+		const done = () => { if (this.inlineEditor === input) input.blur(); return false; };
+		scope.register(["Mod"], "Enter", done);
+		scope.register([], "Escape", done);
+		this.app.keymap.pushScope(scope);
 
 		const resize = () => {
 			input.setCssProps({ "--kanban-editor-height": "0px" });
 			input.setCssProps({ "--kanban-editor-height": `${input.scrollHeight}px` });
 		};
 		const restore = () => {
+			this.app.keymap.popScope(scope);
 			this.inlineEditor = undefined;
 			input.remove();
 			labelEl.remove();
@@ -808,12 +1120,10 @@ export class KanbanView extends ItemView {
 			if (event.isComposing) return;
 			const finish = event.key === "Enter" && (!multiline || event.metaKey || event.ctrlKey);
 			if (event.key !== "Escape" && !finish) return;
+			// Escape finishes like Mod+Enter: leave the editor and keep the changes.
 			event.preventDefault();
 			event.stopPropagation();
-			if (event.key === "Escape") {
-				restore();
-				this.scheduleRefresh();
-			} else input.blur();
+			input.blur();
 		};
 		input.onblur = () => {
 			if (this.inlineEditor !== input || this.inlineSave) return;
@@ -913,7 +1223,7 @@ export class KanbanView extends ItemView {
 		handle.addEventListener("pointerdown", event => {
 			if (this.busy || this.stopDrag || event.button !== 0 || !event.isPrimary || this.isEditing()) return;
 			const pressed = event.target as Element | null;
-			if (drag.kind === "column" && pressed?.closest(".vault-code-kanban-column-title")) return;
+			if (drag.kind === "column" && pressed?.closest(".vault-code-kanban-column-title, .vault-code-kanban-add-top")) return;
 			if (pressed?.closest("input, textarea, select, [contenteditable='true']")) return;
 			const win = handle.win;
 			const doc = handle.doc;
@@ -973,6 +1283,8 @@ export class KanbanView extends ItemView {
 			const autoscroll = (rail: HTMLElement) => {
 				const bounds = rail.getBoundingClientRect();
 				rail.scrollLeft += edge(x, bounds.left, bounds.right, Math.min(90, bounds.width / 4), 22);
+				// Desktop scrolls the whole board vertically; phones scroll the column list below.
+				if (drag.kind === "card") rail.scrollTop += edge(y, bounds.top, bounds.bottom, Math.min(70, bounds.height / 4), 16);
 				const list = drag.kind === "card" ? source.parentElement : null;
 				const area = list?.getBoundingClientRect();
 				if (list && area && x >= area.left && x <= area.right) list.scrollTop += edge(y, area.top, area.bottom, Math.min(70, area.height / 4), 16);
@@ -1034,8 +1346,11 @@ export class KanbanView extends ItemView {
 				active = true;
 				const rect = source.getBoundingClientRect();
 				grab = { x: startX - rect.left, y: startY - rect.top };
+				// Desktop columns are as tall as the tallest one; lift only the painted part, down to its footer.
+				const footer = drag.kind === "column" ? source.querySelector(".vault-code-kanban-column-footer")?.getBoundingClientRect() : undefined;
+				const height = footer ? Math.min(rect.height, footer.bottom - rect.top) : rect.height;
 				ghost = this.contentEl.createDiv({ cls: "vault-code-kanban-drag-ghost", attr: { "aria-hidden": "true", inert: "" } });
-				ghost.setCssProps({ "--kanban-ghost-width": `${rect.width}px`, "--kanban-ghost-height": `${rect.height}px` });
+				ghost.setCssProps({ "--kanban-ghost-width": `${rect.width}px`, "--kanban-ghost-height": `${height}px` });
 				lift = ghost.appendChild(source.cloneNode(true) as HTMLElement);
 				// Fixed positioning can be offset by a transformed ancestor; measure and compensate.
 				const at = ghost.getBoundingClientRect();

@@ -72,8 +72,25 @@ export function cardCover(opening: string, resolve: (link: string) => string | u
 
 export type CardExcerptLine = {
 	text: string;
+	/** "fence" marks an opening or closing ``` line; "line" is a line inside a fenced block. */
+	code?: "fence" | "line";
+	heading?: number;
+	/** A quoted line; the first line of a quote can open a callout such as > [!warning] Title. */
+	quote?: { callout?: { type: string; title: string } };
 	list?: { indent: number; order?: number; task?: { offset: number; checked: boolean } };
 };
+
+function blockLine(content: string, previous?: CardExcerptLine): CardExcerptLine {
+	const heading = /^ {0,3}(#{1,6})[ \t]+(.*?)(?:[ \t]+#+)?[ \t]*$/.exec(content);
+	if (heading) return { text: heading[2] ?? "", heading: heading[1]?.length ?? 1 };
+	const quote = /^ {0,3}(?:>[ \t]?)+/.exec(content);
+	if (!quote) return { text: content };
+	const text = content.slice(quote[0].length);
+	const callout = !previous?.quote && /^\[!([^\]\s]+)\][+-]?(?:[ \t]+(.*))?$/.exec(text);
+	if (!callout) return { text, quote: {} };
+	const type = (callout[1] ?? "note").toLowerCase();
+	return { text: "", quote: { callout: { type, title: callout[2]?.trim() || type.charAt(0).toUpperCase() + type.slice(1) } } };
+}
 
 export function cardExcerptLines(text: string, omitted?: { from: number; to: number }): CardExcerptLine[] {
 	const lines: CardExcerptLine[] = [];
@@ -97,7 +114,9 @@ export function cardExcerptLines(text: string, omitted?: { from: number; to: num
 				},
 			});
 		} else {
-			lines.push({ text: content });
+			lines.push(marker && (!fence || (marker.startsWith(fence) && content.trim() === marker))
+				? { text: content, code: "fence" }
+				: fence ? { text: content, code: "line" } : blockLine(content, lines[lines.length - 1]));
 		}
 		if (marker) {
 			if (!fence) fence = marker;
@@ -106,4 +125,60 @@ export function cardExcerptLines(text: string, omitted?: { from: number; to: num
 		offset += line.length + 1;
 	}
 	return lines;
+}
+
+export type CardInline =
+	| { kind: "text" | "code" | "tag" | "link"; text: string }
+	| { kind: "strong" | "em" | "del" | "mark"; children: CardInline[] };
+
+const word = String.raw`[\p{L}\p{N}_]`;
+// Earliest match wins; at the same position, the earlier rule wins.
+const INLINE_RULES: Array<[RegExp, (match: RegExpExecArray) => CardInline]> = [
+	[/\\([!-/:-@[-`{-~])/gu, match => ({ kind: "text", text: match[1] ?? "" })],
+	[/(?<!`)(`+)(?!`)([\s\S]*?[^`])\1(?!`)/gu, match => {
+		const code = match[2] ?? "";
+		return { kind: "code", text: /^ [\s\S]* $/.test(code) && code.trim() ? code.slice(1, -1) : code };
+	}],
+	[/!?\[\[([^\]\r\n]+?)\]\]/gu, match => {
+		const [target = "", alias] = (match[1] ?? "").split("|", 2);
+		return { kind: "link", text: alias?.trim() || target.replace(/#\^?/g, " > ").trim() };
+	}],
+	[/!?\[([^\]\r\n]*)\]\([ \t]*(?:<([^>\r\n]*)>|([^\s()]*))(?:[ \t]+(?:"[^"\r\n]*"|'[^'\r\n]*'))?[ \t]*\)/gu,
+		match => ({ kind: "link", text: match[1]?.trim() || match[2] || match[3] || "" })],
+	[/(?<![^\s([{])#(?=[\p{L}\p{N}_/-]*[\p{L}_/-])[\p{L}\p{N}_/-]+/gu, match => ({ kind: "tag", text: match[0] })],
+	[/\*\*\*(?=\S)([\s\S]*?\S)\*\*\*/gu, match => ({ kind: "strong", children: [{ kind: "em", children: cardInline(match[1] ?? "") }] })],
+	[/\*\*(?=\S)([\s\S]*?\S)\*\*/gu, match => ({ kind: "strong", children: cardInline(match[1] ?? "") })],
+	[new RegExp(String.raw`(?<!${word})__(?=\S)([\s\S]*?\S)__(?!${word})`, "gu"), match => ({ kind: "strong", children: cardInline(match[1] ?? "") })],
+	[/~~(?=\S)([\s\S]*?\S)~~/gu, match => ({ kind: "del", children: cardInline(match[1] ?? "") })],
+	[/==(?=\S)([\s\S]*?\S)==/gu, match => ({ kind: "mark", children: cardInline(match[1] ?? "") })],
+	[/\*(?=[^\s*])([\s\S]*?[^\s*])\*/gu, match => ({ kind: "em", children: cardInline(match[1] ?? "") })],
+	[new RegExp(String.raw`(?<!${word})_(?=\S)([\s\S]*?\S)_(?!${word})`, "gu"), match => ({ kind: "em", children: cardInline(match[1] ?? "") })],
+];
+
+/** Parses the inline Markdown a card shows: code, links, tags, and emphasis. Everything else is text. */
+export function cardInline(text: string): CardInline[] {
+	const nodes: CardInline[] = [];
+	const pushText = (value: string) => {
+		if (!value) return;
+		const last = nodes[nodes.length - 1];
+		if (last?.kind === "text") last.text += value;
+		else nodes.push({ kind: "text", text: value });
+	};
+	let position = 0;
+	while (position < text.length) {
+		let best: { match: RegExpExecArray; build: (match: RegExpExecArray) => CardInline } | undefined;
+		for (const [rule, build] of INLINE_RULES) {
+			rule.lastIndex = position;
+			const match = rule.exec(text);
+			if (match && (!best || match.index < best.match.index)) best = { match, build };
+		}
+		if (!best) break;
+		pushText(text.slice(position, best.match.index));
+		const node = best.build(best.match);
+		if (node.kind === "text") pushText(node.text);
+		else nodes.push(node);
+		position = best.match.index + best.match[0].length;
+	}
+	pushText(text.slice(position));
+	return nodes;
 }

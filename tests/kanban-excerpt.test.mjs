@@ -11,7 +11,7 @@ const { outputFiles: [output] } = await build({
 });
 const module = { exports: {} };
 new Function("module", "exports", output.text)(module, module.exports);
-const { cardCover, cardExcerpt, cardExcerptLines, replaceCardExcerpt } = module.exports;
+const { cardCover, cardExcerpt, cardExcerptLines, cardInline, replaceCardExcerpt } = module.exports;
 
 test("the card shows every line before the first blank line in a CRLF note", () => {
 	const front = "\uFEFF---\r\ntags: [test]\r\n---\r\n\r\n# Title\r\n \t\r\n";
@@ -103,4 +103,47 @@ test("list syntax inside a fenced block stays as plain text", () => {
 	const lines = cardExcerptLines(source);
 	assert.equal(lines[1].list, undefined);
 	assert.equal(lines[3].list.task.checked, false);
+});
+
+test("fenced code lines are marked so the card can draw a code block", () => {
+	const lines = cardExcerptLines(["Intro", "```html", "<div>test</div>", "- not a list", "```", "After"].join("\n"));
+	assert.deepEqual(lines.map(line => line.code), [undefined, "fence", "line", "line", "fence", undefined]);
+	assert.equal(lines[3].list, undefined);
+});
+
+test("inline Markdown becomes code, links, tags and emphasis nodes", () => {
+	const text = (value) => ({ kind: "text", text: value });
+	assert.deepEqual(cardInline("test `code` display"), [text("test "), { kind: "code", text: "code" }, text(" display")]);
+	assert.deepEqual(cardInline("``a ` b`` end"), [{ kind: "code", text: "a ` b" }, text(" end")]);
+	assert.deepEqual(cardInline("`` `tick` ``"), [{ kind: "code", text: "`tick`" }]);
+	assert.deepEqual(cardInline("no `closing"), [text("no `closing")]);
+	assert.deepEqual(cardInline("\\`not code` and \\*plain\\*"), [text("`not code` and *plain*")]);
+	assert.deepEqual(cardInline("**bold** and *it* ~~old~~ ==hi=="), [
+		{ kind: "strong", children: [text("bold")] }, text(" and "),
+		{ kind: "em", children: [text("it")] }, text(" "),
+		{ kind: "del", children: [text("old")] }, text(" "),
+		{ kind: "mark", children: [text("hi")] },
+	]);
+	assert.deepEqual(cardInline("***both***"), [{ kind: "strong", children: [{ kind: "em", children: [text("both")] }] }]);
+	assert.deepEqual(cardInline("snake_case_name stays"), [text("snake_case_name stays")]);
+	assert.deepEqual(cardInline("2 * 3 * 4"), [text("2 * 3 * 4")]);
+	assert.deepEqual(cardInline("See [[Folder/Note#Part|the note]], [[Plan#Goals]] and [site](https://x.dev)"), [
+		text("See "), { kind: "link", text: "the note" }, text(", "),
+		{ kind: "link", text: "Plan > Goals" }, text(" and "), { kind: "link", text: "site" },
+	]);
+	assert.deepEqual(cardInline("#bug fix, issue #42 and a#b"), [{ kind: "tag", text: "#bug" }, text(" fix, issue #42 and a#b")]);
+	assert.deepEqual(cardInline("`#notatag` **`code`**"), [{ kind: "code", text: "#notatag" }, text(" "), { kind: "strong", children: [{ kind: "code", text: "code" }] }]);
+	assert.deepEqual(cardInline(""), []);
+});
+
+test("headings, quotes and callouts are recognised outside code", () => {
+	const lines = cardExcerptLines(["## Plan ##", "> [!warning]- Watch out", "> body", "", "> plain", "> [!tip] not a callout", "```", "> code", "```"].join("\n"));
+	assert.deepEqual(lines[0], { text: "Plan", heading: 2 });
+	assert.deepEqual(lines[1].quote, { callout: { type: "warning", title: "Watch out" } });
+	assert.deepEqual(lines[2], { text: "body", quote: {} });
+	assert.deepEqual(lines[4], { text: "plain", quote: {} });
+	assert.deepEqual(lines[5], { text: "[!tip] not a callout", quote: {} });
+	assert.equal(lines[7].quote, undefined);
+	assert.deepEqual(cardExcerptLines("> [!NOTE]")[0].quote, { callout: { type: "note", title: "Note" } });
+	assert.deepEqual(cardExcerptLines("#tag line")[0], { text: "#tag line" });
 });

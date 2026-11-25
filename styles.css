@@ -1661,6 +1661,9 @@ body.is-phone .hidden-files-btn-icon svg {
 	display: none;
 }
 
+/* Kanban boards stand out in the file explorer, like the SYMLINK badge: their KANBAN tag uses the accent color. */
+.nav-files-container .nav-file-title[data-path$=".kanban" i] .nav-file-tag { color: var(--text-accent); }
+
 /* Ignored files and folders hidden by user ignore patterns */
 .nav-files-container .nav-file.is-ignored-hidden,
 .nav-files-container .nav-folder.is-ignored-hidden,
@@ -4685,6 +4688,7 @@ button.vault-code-unlinked-delete-btn.mod-warning:disabled {
 	--kanban-column-gap: 12px;
 	--kanban-column-width: min(300px, 100%);
 	--kanban-card-font: var(--font-ui-small);
+	--kanban-card-title-font: calc(var(--kanban-card-font) + 1px);
 	--kanban-action-size: 24px;
 	--kanban-cover-height: 152px;
 	display: flex;
@@ -4693,11 +4697,12 @@ button.vault-code-unlinked-delete-btn.mod-warning:disabled {
 	min-height: 0;
 }
 .vault-code-kanban-rail {
+	--kanban-rail-top: 18px;
 	display: flex;
 	align-items: flex-start;
 	gap: var(--kanban-column-gap);
 	overflow: auto;
-	padding: 12px var(--kanban-inset) var(--kanban-inset);
+	padding: var(--kanban-rail-top) var(--kanban-inset) var(--kanban-inset);
 	flex: 1;
 	min-width: 0;
 	min-height: 0;
@@ -4816,7 +4821,7 @@ button.vault-code-unlinked-delete-btn.mod-warning:disabled {
 .vault-code-kanban button[hidden] { display: none; }
 .vault-code-kanban button.vault-code-kanban-card-title {
 	color: var(--text-normal);
-	font-size: var(--kanban-card-font);
+	font-size: var(--kanban-card-title-font);
 	font-weight: var(--font-semibold);
 }
 .vault-code-kanban button.vault-code-kanban-excerpt {
@@ -4844,18 +4849,137 @@ button.vault-code-unlinked-delete-btn.mod-warning:disabled {
 	white-space: pre-wrap;
 	pointer-events: none;
 }
+.vault-code-kanban-lists {
+	--kanban-list-indent: 1.25em;
+	--kanban-check-size: 0.95em;
+}
+/* Inline formatting follows Obsidian's own colours; links and tags are labels, not buttons, on a card. */
+.vault-code-kanban-lists strong { color: var(--bold-color, inherit); font-weight: var(--bold-weight, var(--font-semibold)); }
+.vault-code-kanban-lists em { color: var(--italic-color, inherit); }
+.vault-code-kanban-lists del { color: var(--text-faint); }
+.vault-code-kanban-lists mark {
+	padding-inline: 0.1em;
+	border-radius: 0.2em;
+	background: var(--highlight-background, var(--text-highlight-bg));
+	color: var(--text-normal);
+}
+.vault-code-kanban-lists .vault-code-kanban-link { color: var(--link-color); }
+/* Tags read as compact labels: inline within a sentence, or a wrapping row when a line holds only tags. */
+.vault-code-kanban-lists .vault-code-kanban-tag {
+	display: inline-block;
+	padding: 0 0.5em;
+	border-radius: var(--tag-radius, 2em);
+	background: var(--tag-background);
+	color: var(--tag-color);
+	font-size: 0.8em;
+	font-weight: var(--font-medium, 500);
+	line-height: 1.6;
+	vertical-align: 0.08em;
+	white-space: nowrap;
+}
+.vault-code-kanban-lists .vault-code-kanban-tag-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin-block: 6px;
+}
+.vault-code-kanban-lists .vault-code-kanban-tag-row > .vault-code-kanban-tag { vertical-align: baseline; }
+.vault-code-kanban-lists .vault-code-kanban-heading {
+	margin-top: 0.25em;
+	color: var(--text-normal);
+	font-weight: var(--font-semibold);
+}
+.vault-code-kanban-lists .vault-code-kanban-heading:first-child { margin-top: 0; }
+.vault-code-kanban-lists .vault-code-kanban-quote {
+	margin-block: 0.2em;
+	padding-inline-start: 0.65em;
+	border-inline-start: 2px solid var(--blockquote-border-color, var(--background-modifier-border));
+}
+.vault-code-kanban-lists .vault-code-kanban-callout {
+	margin-block: 0.3em;
+	padding: 0.35em 0.6em;
+	border-radius: var(--radius-s);
+	background: color-mix(in srgb, var(--kanban-callout) 10%, transparent);
+}
+.vault-code-kanban-callout-title {
+	display: flex;
+	align-items: center;
+	gap: 0.4em;
+	color: var(--kanban-callout);
+	font-weight: var(--font-semibold);
+}
+.vault-code-kanban-callout-icon {
+	display: flex;
+	flex: none;
+}
+.vault-code-kanban-callout-icon > svg {
+	width: 0.95em;
+	height: 0.95em;
+}
+.vault-code-kanban-lists > :first-child { margin-top: 0; }
+.vault-code-kanban-lists > :last-child { margin-bottom: 0; }
+/* Code keeps Obsidian's code colours, scaled to the card text; long blocks scroll inside the card. */
+.vault-code-kanban-lists code {
+	padding: 0.1em 0.3em;
+	border-radius: var(--radius-s);
+	background: var(--code-background);
+	color: var(--code-normal);
+	font-family: var(--font-monospace);
+	font-size: 0.88em;
+}
+.vault-code-kanban-lists pre {
+	margin: 0.3em 0;
+	padding: 0.5em 0.65em;
+	border-radius: var(--radius-s);
+	background: var(--code-background);
+	overflow-x: auto;
+	white-space: pre;
+}
+.vault-code-kanban-lists pre > code {
+	padding: 0;
+	background: none;
+}
 .vault-code-kanban-lists ul,
 .vault-code-kanban-lists ol {
 	margin: 0;
-	padding-inline-start: 1.2em;
+	padding-inline-start: var(--kanban-list-indent);
 }
-.vault-code-kanban-lists .vault-code-kanban-task { list-style: none; }
-.vault-code-kanban-task input[type="checkbox"] {
+.vault-code-kanban-lists li { margin-block: 0.1em; }
+.vault-code-kanban-lists li::marker {
+	color: var(--text-faint);
+	font-variant-numeric: tabular-nums;
+}
+.vault-code-kanban-lists ul > li::marker { font-size: 0.9em; }
+/* Tasks put the checkbox where the bullet would be, so siblings stay aligned and text wraps beside it. */
+.vault-code-kanban-lists .vault-code-kanban-task {
+	display: flex;
+	align-items: flex-start;
+	flex-wrap: wrap;
+	gap: 0 calc(var(--kanban-list-indent) - var(--kanban-check-size));
+	margin-inline-start: calc(-1 * var(--kanban-list-indent));
+	list-style: none;
+}
+.vault-code-kanban-task > span { flex: 1; min-width: 0; }
+.vault-code-kanban-task > ul,
+.vault-code-kanban-task > ol {
+	flex-basis: 100%;
+	margin-inline-start: var(--kanban-list-indent);
+}
+.vault-code-kanban .vault-code-kanban-task > input[type="checkbox"] {
+	--checkbox-size: var(--kanban-check-size);
 	position: relative;
-	margin: 0 0.35em 0 0;
-	vertical-align: -0.1em;
+	flex: none;
+	width: var(--kanban-check-size);
+	height: var(--kanban-check-size);
+	margin: calc((1.45em - var(--kanban-check-size)) / 2) 0 0;
+	border-radius: 0.28em;
 	pointer-events: auto;
 	cursor: pointer;
+}
+.vault-code-kanban-task:has(> input:checked) > span {
+	color: var(--text-faint);
+	text-decoration: line-through;
+	text-decoration-color: var(--text-faint);
 }
 .vault-code-kanban-menu-label {
 	color: var(--text-faint);
@@ -4879,7 +5003,7 @@ button.vault-code-unlinked-delete-btn.mod-warning:disabled {
 	resize: none;
 	color: var(--text-normal);
 	font-family: inherit;
-	font-size: var(--kanban-card-font);
+	font-size: var(--kanban-card-title-font);
 	font-weight: var(--font-semibold);
 	line-height: 1.45;
 	white-space: pre-wrap;
@@ -4967,8 +5091,153 @@ button.vault-code-unlinked-delete-btn.mod-warning:disabled {
 	--kanban-column-width: min(380px, calc(100% - 12px));
 	--kanban-cover-height: 136px;
 }
-.is-phone .vault-code-kanban-rail { padding-top: 10px; }
+.is-phone .vault-code-kanban-rail { --kanban-rail-top: 10px; }
 .is-phone .vault-code-kanban-column { padding: 8px; }
+
+/*
+ * Desktop and tablet scroll the whole board like a page. Every column box runs as tall as the
+ * tallest one so its header can stay pinned, but only the header, cards and footer are painted:
+ * a short column still ends right after its own "Add card", and its label floats on as a tab.
+ */
+body:not(.is-phone) .vault-code-kanban-rail {
+	/* A single grid row is as tall as its tallest column; flex would cap it at the viewport. */
+	display: grid;
+	grid-auto-flow: column;
+	grid-auto-columns: var(--kanban-column-width);
+	justify-content: start;
+	align-content: start;
+	align-items: stretch;
+}
+/* "Add column" stays level with the column labels while the board scrolls. */
+body:not(.is-phone) .vault-code-kanban-add-column {
+	position: sticky;
+	top: 0;
+	z-index: 2;
+	align-self: start;
+}
+body:not(.is-phone) .vault-code-kanban-column {
+	max-height: none;
+	padding-block: 0;
+	background: transparent;
+}
+body:not(.is-phone) .vault-code-kanban-header,
+body:not(.is-phone) .vault-code-kanban-list,
+body:not(.is-phone) .vault-code-kanban-column-footer {
+	margin-inline: -10px;
+	background: var(--background-secondary);
+}
+body:not(.is-phone) .vault-code-kanban-header,
+body:not(.is-phone) .vault-code-kanban-column-footer {
+	position: sticky;
+	z-index: 1;
+}
+/*
+ * The header pins where it rests, below the rail's top padding. A board-coloured plate covers that
+ * gap and the area behind its rounded top corners, so scrolled cards never show above the label.
+ */
+body:not(.is-phone) .vault-code-kanban-header {
+	z-index: 2;
+	top: 0;
+	padding: 10px 20px 2px;
+	background: transparent;
+}
+body:not(.is-phone) .vault-code-kanban-header::before,
+body:not(.is-phone) .vault-code-kanban-header::after {
+	content: "";
+	position: absolute;
+	inset-inline: 0;
+	pointer-events: none;
+}
+body:not(.is-phone) .vault-code-kanban-header::before {
+	z-index: -2;
+	top: calc(-1 * var(--kanban-rail-top));
+	height: calc(var(--kanban-rail-top) + var(--radius-l));
+	background: var(--background-primary);
+}
+body:not(.is-phone) .vault-code-kanban-header::after {
+	z-index: -1;
+	inset-block: 0;
+	border-radius: var(--radius-l) var(--radius-l) 0 0;
+	background: var(--background-secondary);
+}
+.vault-code-kanban-drag-ghost .vault-code-kanban-header::before { display: none; }
+/* The list tucks under the header's rounded bottom so the two read as one block until they part. */
+body:not(.is-phone) .vault-code-kanban-list {
+	overflow: visible;
+	margin-top: calc(-1 * var(--radius-l));
+	padding: calc(6px + var(--radius-l)) calc(10px + var(--kanban-card-inset)) var(--radius-l);
+}
+/*
+ * "Add card" pins to the bottom while its column scrolls past, and to just under the header once
+ * the column's cards have scrolled away, so a short column shrinks to its header and "Add card".
+ * Its top edge fades, and it tucks over the list, so cards slide under it softly.
+ */
+body:not(.is-phone) .vault-code-kanban-column-footer {
+	top: calc(var(--kanban-header-height, 48px) - var(--radius-l));
+	bottom: calc(-1 * var(--kanban-inset));
+	margin-top: calc(-1 * var(--radius-l));
+	padding: var(--radius-l) calc(10px + var(--kanban-card-inset)) 10px;
+	border-radius: 0 0 var(--radius-l) var(--radius-l);
+	background: linear-gradient(transparent, var(--background-secondary) var(--radius-l));
+}
+/* A dragged column's slot is drawn from its painted parts, not its full-height box. */
+body:not(.is-phone) .vault-code-kanban-column.is-drag-placeholder { background: transparent; }
+body:not(.is-phone) .vault-code-kanban-column.is-drag-placeholder > :is(.vault-code-kanban-header, .vault-code-kanban-list, .vault-code-kanban-column-footer) { visibility: visible; }
+body:not(.is-phone) .vault-code-kanban-column.is-drag-placeholder > :is(.vault-code-kanban-list, .vault-code-kanban-column-footer),
+body:not(.is-phone) .vault-code-kanban-column.is-drag-placeholder > .vault-code-kanban-header::after {
+	/* Opaque, so the parts' overlaps don't darken into bands. */
+	background: color-mix(in srgb, var(--interactive-accent) 14%, var(--background-primary));
+}
+body:not(.is-phone) .vault-code-kanban-column.is-drag-placeholder > * > * { visibility: hidden; }
+body:not(.is-phone) .vault-code-kanban-card,
+body:not(.is-phone) .vault-code-kanban-compose { scroll-margin-block: 64px 96px; }
+
+/* Thin, quiet board scrollbars. Users who chose native scrollbars in Obsidian keep those. */
+body:not(.native-scrollbars) .vault-code-kanban-rail::-webkit-scrollbar,
+body:not(.native-scrollbars) .vault-code-kanban-menu-list::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+	background-color: transparent;
+}
+body:not(.native-scrollbars) .vault-code-kanban-rail::-webkit-scrollbar-track,
+body:not(.native-scrollbars) .vault-code-kanban-rail::-webkit-scrollbar-corner,
+body:not(.native-scrollbars) .vault-code-kanban-menu-list::-webkit-scrollbar-track { background-color: transparent; }
+body:not(.native-scrollbars) .vault-code-kanban-rail::-webkit-scrollbar-thumb,
+body:not(.native-scrollbars) .vault-code-kanban-menu-list::-webkit-scrollbar-thumb {
+	border: 2px solid transparent;
+	border-radius: 8px;
+	background-clip: padding-box;
+	background-color: var(--scrollbar-thumb-bg);
+}
+body:not(.native-scrollbars) .vault-code-kanban-rail::-webkit-scrollbar-thumb:hover,
+body:not(.native-scrollbars) .vault-code-kanban-rail::-webkit-scrollbar-thumb:active,
+body:not(.native-scrollbars) .vault-code-kanban-menu-list::-webkit-scrollbar-thumb:hover { background-color: var(--scrollbar-active-thumb-bg); }
+
+/* Phones keep one scrolling column per screen and snap between columns. */
+.is-phone .vault-code-kanban-rail {
+	scroll-snap-type: x mandatory;
+	scroll-padding-inline: var(--kanban-inset);
+}
+.is-phone .vault-code-kanban-column,
+.is-phone .vault-code-kanban-add-column {
+	scroll-snap-align: start;
+	scroll-snap-stop: always;
+}
+.vault-code-kanban.is-kanban-dragging .vault-code-kanban-rail { scroll-snap-type: none; }
+
+/* Header "+" adds a card at the top; it appears on hover, focus, and always on touch devices. */
+.vault-code-kanban-header > .vault-code-kanban-add-top {
+	flex: none;
+	margin-inline: -2px -6px;
+	color: var(--text-faint);
+}
+.vault-code-kanban-header > .vault-code-kanban-add-top:hover { color: var(--text-normal); }
+.vault-code-kanban-column-footer:has(> .vault-code-kanban-compose) > .vault-code-kanban-add,
+.vault-code-kanban-add-column:has(> .vault-code-kanban-compose) > .vault-code-kanban-add { display: none; }
+.vault-code-kanban-column-footer > .vault-code-kanban-compose { margin-top: 2px; }
+.vault-code-kanban-compose.is-top {
+	margin: 0 var(--kanban-card-inset) 8px;
+}
 .is-mobile .vault-code-kanban-card-actions > .vault-code-kanban-open-note {
 	color: var(--text-muted);
 }
@@ -4980,11 +5249,11 @@ button.vault-code-unlinked-delete-btn.mod-warning:disabled {
 .vault-code-kanban.is-kanban-dragging .vault-code-kanban-rail, .vault-code-kanban.is-kanban-dragging .vault-code-kanban-list { scroll-behavior: auto; }
 .vault-code-kanban.is-kanban-dragging .vault-code-kanban-card:hover { border-color: var(--background-modifier-border); }
 .vault-code-kanban .is-drag-placeholder {
-	background: var(--background-modifier-hover);
+	background: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
 	border-color: transparent;
 	box-shadow: none;
 }
-.vault-code-kanban-column.is-drag-placeholder { background: var(--background-modifier-active-hover, var(--background-modifier-hover)); }
+.vault-code-kanban-column.is-drag-placeholder { background: color-mix(in srgb, var(--interactive-accent) 14%, var(--background-primary)); }
 .vault-code-kanban .is-drag-placeholder > * { visibility: hidden; }
 .vault-code-kanban-drag-ghost {
 	position: fixed;
@@ -5036,7 +5305,6 @@ button.vault-code-unlinked-delete-btn.mod-warning:disabled {
 	outline-offset: -2px;
 	box-shadow: none;
 }
-.vault-code-kanban-note { margin-top: 16px; }
 
 .vault-code-kanban-message { padding: 16px; }
 
@@ -5047,6 +5315,156 @@ button.vault-code-unlinked-delete-btn.mod-warning:disabled {
 	gap: 8px;
 	padding: 16px var(--kanban-inset) 0;
 }
+/* Tag filter: a "#" button that becomes a one-line chip ("p1 +2") while filtering. */
+.vault-code-kanban-filter {
+	display: flex;
+	flex: none;
+	align-items: center;
+	gap: 2px;
+	min-width: 0;
+}
+.vault-code-kanban .vault-code-kanban-filter > .clickable-icon {
+	min-width: 28px;
+	min-height: 28px;
+}
+.vault-code-kanban .vault-code-kanban-filter-button { gap: 4px; }
+.vault-code-kanban-filter-icon { display: flex; }
+.vault-code-kanban-filter.is-active { flex: 0 1 auto; }
+.vault-code-kanban .vault-code-kanban-filter.is-active > .vault-code-kanban-filter-button {
+	min-width: 0;
+	max-width: min(200px, 36vw);
+	padding-inline: 6px 8px;
+	background: var(--tag-background);
+	color: var(--tag-color);
+	font-size: var(--font-ui-small);
+	font-weight: var(--font-medium, 500);
+}
+.vault-code-kanban .vault-code-kanban-filter.is-active > .vault-code-kanban-filter-button:hover {
+	background: var(--tag-background-hover, var(--tag-background));
+}
+.vault-code-kanban-filter-label {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.vault-code-kanban-filter-more {
+	flex: none;
+	opacity: 0.75;
+	font-variant-numeric: tabular-nums;
+}
+/* Tag menu: a fixed header (title + Clear), then tag pills in a list that scrolls on its own. */
+.vault-code-kanban-tag-menu { width: min(280px, calc(100vw - 32px)); }
+.vault-code-kanban-tag-menu .menu-item.vault-code-kanban-menu-header {
+	padding-block: 2px 6px;
+	border-bottom: 1px solid var(--background-modifier-border);
+	margin-bottom: 4px;
+	border-radius: 0;
+}
+.vault-code-kanban-menu-header .menu-item-title {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+}
+.vault-code-kanban-menu-label {
+	flex: 1;
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-semibold, 600);
+}
+.vault-code-kanban .vault-code-kanban-menu-clear,
+.menu .vault-code-kanban-menu-clear {
+	height: auto;
+	padding: 2px 6px;
+	border-radius: var(--radius-s);
+	background: transparent;
+	box-shadow: none;
+	color: var(--text-accent);
+	font-size: var(--font-ui-smaller);
+	cursor: var(--cursor);
+	pointer-events: auto;
+}
+.menu .vault-code-kanban-menu-clear:hover { background: var(--background-modifier-hover); }
+.vault-code-kanban-menu-list {
+	max-height: min(360px, 50vh);
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	/* Keep room for the scrollbar so it never covers the counts. */
+	scrollbar-gutter: stable;
+	padding-inline-end: 8px;
+}
+.is-phone .vault-code-kanban-menu-list { max-height: 50vh; }
+.vault-code-kanban-tag-menu .vault-code-kanban-menu-list .menu-item-title {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	min-width: 0;
+}
+.vault-code-kanban-menu-tag {
+	min-width: 0;
+	overflow: hidden;
+	padding: 1px 8px;
+	border-radius: var(--tag-radius, 2em);
+	background: var(--tag-background);
+	color: var(--tag-color);
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-medium, 500);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.vault-code-kanban-menu-tag::before { content: "#"; opacity: 0.6; }
+.vault-code-kanban-menu-count {
+	flex: none;
+	margin-inline-start: auto;
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+	font-variant-numeric: tabular-nums;
+}
+.is-mobile .vault-code-kanban .vault-code-kanban-filter > .clickable-icon {
+	min-width: 36px;
+	min-height: 36px;
+}
+/* Quick search: a quiet icon that opens into a small field beside the board settings. */
+.vault-code-kanban-search {
+	display: flex;
+	flex: none;
+	align-items: center;
+}
+.vault-code-kanban-search > .clickable-icon {
+	min-width: 28px;
+	min-height: 28px;
+}
+.vault-code-kanban-search.is-open > .clickable-icon { display: none; }
+.vault-code-kanban .vault-code-kanban-search-input {
+	display: none;
+	width: min(220px, 40vw);
+	height: 28px;
+	padding: 0 10px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	background: var(--background-secondary);
+	box-shadow: none;
+	font-size: var(--font-ui-small);
+}
+.vault-code-kanban .vault-code-kanban-search-input:hover { border-color: var(--background-modifier-border-hover); }
+.vault-code-kanban .vault-code-kanban-search-input:focus,
+.vault-code-kanban .vault-code-kanban-search-input:focus-visible {
+	border-color: var(--background-modifier-border-focus);
+	box-shadow: none;
+	outline: none;
+}
+.vault-code-kanban-search.is-open > .vault-code-kanban-search-input { display: block; }
+.vault-code-kanban .vault-code-kanban-card.is-search-hidden { display: none; }
+.is-mobile .vault-code-kanban-search > .clickable-icon {
+	min-width: 36px;
+	min-height: 36px;
+}
+.is-mobile .vault-code-kanban .vault-code-kanban-search-input { height: 36px; }
+/* Phone: an open search takes the whole header row, so the title steps aside until it closes. */
+.is-phone .vault-code-kanban-board-heading:has(.vault-code-kanban-search.is-open) > .vault-code-kanban-title { display: none; }
+.is-phone .vault-code-kanban-search.is-open { flex: 1 1 auto; }
+.is-phone .vault-code-kanban .vault-code-kanban-search.is-open > .vault-code-kanban-search-input { width: 100%; }
 .vault-code-kanban .vault-code-kanban-unsorted-settings {
 	flex: none;
 	min-width: 28px;

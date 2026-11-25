@@ -12,25 +12,39 @@ function record(value: unknown): value is Record<string, unknown> {
 	return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-function stringList(value: unknown): value is string[] {
-	return Array.isArray(value) && value.every(entry => typeof entry === "string");
-}
+/**
+ * On disk, each column lists its cards by file name only ("Todo": ["Write.md"]); the column key already says
+ * which folder they're in. In memory, cards keep their board-relative path ("Todo/Write.md") so they compare
+ * directly with note paths. Older files that wrote the full path still read the same way.
+ */
+const cardPath = (column: string, entry: string) => column && !entry.includes("/") ? column + "/" + entry : entry;
+const cardName = (column: string, entry: string) => column && entry.startsWith(column + "/") ? entry.slice(column.length + 1) : entry;
 
+/**
+ * Reads a board's order file. Notes and folders decide what is on the board; this file only orders them,
+ * so it is read leniently: an entry that isn't a string, a duplicate, or a list that isn't a list is skipped
+ * rather than failing the whole board (agents, sync tools and hand edits can leave such things behind).
+ * Names are compared in NFC, as Obsidian normalizes paths, so a sync that rewrites "é" still matches.
+ * Only a file that isn't JSON, or is a different version, is refused, and is then never overwritten.
+ */
 export function readKanbanFile(source: string): ({ version: 1 } & KanbanOrder & Record<string, unknown>) | null {
-	try {
-		const value: unknown = JSON.parse(source.replace(/^\uFEFF/, ""));
-		if (!record(value) || value.version !== 1 || !stringList(value.columns) || !record(value.cards)) return null;
-		const cards: Record<string, string[]> = Object.create(null) as Record<string, string[]>;
-		for (const [key, entries] of Object.entries(value.cards)) {
-			if (!stringList(entries)) return null;
-			cards[key] = entries;
-		}
-		return { ...value, version: 1, columns: value.columns, cards };
-	} catch { return null; }
+	let value: unknown;
+	try { value = JSON.parse(source.replace(/^\uFEFF/, "")); } catch { return null; }
+	if (!record(value) || value.version !== 1) return null;
+	const names = (list: unknown) => Array.isArray(list)
+		? [...new Set(list.filter((entry): entry is string => typeof entry === "string" && entry !== "").map(entry => entry.normalize("NFC")))]
+		: [];
+	const cards: Record<string, string[]> = Object.create(null) as Record<string, string[]>;
+	for (const [key, entries] of Object.entries(record(value.cards) ? value.cards : {})) {
+		const column = key.normalize("NFC");
+		cards[column] = [...new Set([...(cards[column] ?? []), ...names(entries).map(entry => cardPath(column, entry))])];
+	}
+	return { ...value, version: 1, columns: names(value.columns), cards };
 }
 
 export function writeKanbanFile(order: KanbanOrder, previous?: Record<string, unknown>): string {
-	return JSON.stringify({ ...previous, version: 1, columns: order.columns, cards: order.cards }, null, 2) + "\n";
+	const cards = Object.fromEntries(Object.entries(order.cards).map(([column, entries]) => [column, entries.map(entry => cardName(column, entry))]));
+	return JSON.stringify({ ...previous, version: 1, columns: order.columns, cards }, null, 2) + "\n";
 }
 
 export function readKanbanUnsorted(value: unknown): KanbanUnsorted {

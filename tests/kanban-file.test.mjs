@@ -27,7 +27,6 @@ test('legacy order becomes portable and keeps root cards under the empty column 
 test('writes preserve other board fields while rejecting malformed or unsupported files', () => {
   assert.equal(readKanbanFile('{'), null);
   assert.equal(readKanbanFile('{"version":2,"columns":[],"cards":{}}'), null);
-  assert.equal(readKanbanFile('{"version":1,"columns":[],"cards":{"Todo":[5]}}'), null);
   const board = readKanbanFile('{"version":1,"columns":[],"cards":{},"color":"blue"}');
   const saved = readKanbanFile(writeKanbanFile({ columns: ['Done'], cards: {} }, board));
   assert.equal(saved.color, 'blue');
@@ -53,4 +52,25 @@ test('Unsorted defaults to last and preserves board order and metadata through e
   assert.equal(restored.unsorted.extra, true);
   const reordered = readKanbanFile(writeKanbanFile({ columns: ['Later', 'Todo'], cards: restored.cards }, restored));
   assert.deepEqual(reordered.unsorted, restored.unsorted);
+});
+
+test('cards are saved by file name under their column and read back as board paths, old full paths included', () => {
+  const order = { columns: ['Todo', 'Done'], cards: { '': ['Loose.md'], Todo: ['Todo/Write.md', 'Todo/Ship.md'], Done: [] } };
+  const source = writeKanbanFile(order);
+  assert.deepEqual(JSON.parse(source).cards, { '': ['Loose.md'], Todo: ['Write.md', 'Ship.md'], Done: [] });
+  assert.deepEqual({ ...readKanbanFile(source).cards }, order.cards);
+
+  const old = readKanbanFile('{"version":1,"columns":["Todo"],"cards":{"Todo":["Todo/Write.md","Ship.md"],"":["Loose.md"]}}');
+  assert.deepEqual({ ...old.cards }, { Todo: ['Todo/Write.md', 'Todo/Ship.md'], '': ['Loose.md'] });
+  assert.deepEqual(JSON.parse(writeKanbanFile(old, old)).cards, { Todo: ['Write.md', 'Ship.md'], '': ['Loose.md'] });
+});
+
+test('a damaged order file keeps the board working: bad entries are skipped, names compared in NFC', () => {
+  const board = readKanbanFile('{"version":1,"columns":["Todo",5,"Todo",null],"cards":{"Todo":[5,"Write.md","Write.md",{}],"Done":"Ship.md","Caf\u0065\u0301":["Cafe\u0301 note.md"]}}');
+  assert.deepEqual(board.columns, ['Todo']);
+  assert.deepEqual({ ...board.cards }, { Todo: ['Todo/Write.md'], Done: [], 'Caf\u00e9': ['Caf\u00e9/Caf\u00e9 note.md'] });
+  assert.deepEqual(readKanbanFile('{"version":1}').columns, []);
+  assert.deepEqual({ ...readKanbanFile('{"version":1,"columns":"x","cards":[]}').cards }, {});
+  assert.equal(readKanbanFile('not json'), null);
+  assert.equal(readKanbanFile('[]'), null);
 });
