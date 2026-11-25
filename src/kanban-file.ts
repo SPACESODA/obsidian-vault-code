@@ -1,4 +1,4 @@
-export const KANBAN_FILENAME = "obsidian.kanban";
+export const KANBAN_FILENAME = "Board.kanban";
 
 export type KanbanOrder = { columns: string[]; cards: Record<string, string[]> };
 export type KanbanOrders = Record<string, KanbanOrder>;
