@@ -5493,3 +5493,115 @@ body:not(.native-scrollbars) .vault-code-kanban-menu-list::-webkit-scrollbar-thu
 .vault-code-kanban input.vault-code-kanban-title:focus {
 	box-shadow: none;
 }
+
+/* ===== Recent files ===== */
+/* Rows reuse the file tree's own row class for its corner radius, hover and focus, and keep their own one-line layout. */
+.workspace-leaf-content > .view-content.vault-code-recent {
+	padding: 0;
+}
+
+.vault-code-recent-list {
+	padding: 0 var(--size-4-2) var(--size-4-4);
+}
+
+.vault-code-recent-group {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	margin: 0 calc(-1 * var(--size-4-2));
+	padding: var(--size-4-4) var(--size-4-4) var(--size-4-1);
+	background-color: var(--background-secondary);
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-medium);
+	letter-spacing: 0.01em;
+}
+
+.vault-code-recent-group:first-child {
+	padding-top: var(--size-4-3);
+}
+
+.vault-code-recent .vault-code-recent-item.tree-item-self {
+	display: flex;
+	align-items: center;
+	margin: 0 0 4px;
+	padding: 6px var(--size-4-2);
+	color: var(--nav-item-color);
+	font-size: var(--nav-item-size);
+	line-height: 1.4;
+	cursor: var(--cursor);
+}
+
+.vault-code-recent-item:hover {
+	background-color: var(--nav-item-background-hover);
+	color: var(--nav-item-color-hover);
+}
+
+.vault-code-recent-item.is-active {
+	background-color: var(--nav-item-background-active);
+	color: var(--nav-item-color-active);
+	font-weight: var(--nav-item-weight-active);
+}
+
+/* Margins, not gap: the native row class adds an empty pseudo-element that a gap would push the icon away from. */
+.vault-code-recent-icon {
+	display: flex;
+	flex: none;
+	margin-inline-end: var(--size-4-2);
+	color: var(--icon-color);
+	opacity: var(--icon-opacity);
+	--icon-size: var(--icon-xs);
+	--icon-stroke: var(--icon-xs-stroke-width);
+}
+
+.vault-code-recent-name {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.vault-code-recent-time {
+	flex: none;
+	margin-inline-start: var(--size-4-2);
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+	font-variant-numeric: tabular-nums;
+}
+
+.vault-code-recent-item:hover .vault-code-recent-time,
+.vault-code-recent-item.is-active .vault-code-recent-time {
+	color: var(--text-muted);
+}
+
+.vault-code-recent-empty {
+	padding: var(--size-4-8) var(--size-4-2);
+	color: var(--text-faint);
+	font-size: var(--font-ui-small);
+	text-align: center;
+}
+
+.vault-code-recent .vault-code-recent-more {
+	display: block;
+	width: 100%;
+	margin-top: var(--size-4-2);
+	padding: var(--size-4-1) var(--size-4-2);
+	height: auto;
+	border: none;
+	box-shadow: none;
+	background: none;
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	text-align: start;
+	cursor: var(--cursor);
+}
+
+.vault-code-recent .vault-code-recent-more:hover {
+	background-color: var(--nav-item-background-hover);
+	color: var(--text-normal);
+}
+
+.is-mobile .vault-code-recent .vault-code-recent-item.tree-item-self {
+	padding-block: 10px;
+}

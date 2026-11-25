@@ -550,4 +550,16 @@ export const zhCn: TranslationSchema = {
 	kanbanUnsortedHide: "隐藏此列",
 	kanbanInvalidName: "请输入有效的文件或文件夹名称。",
 	kanbanNameExists: "该名称已被使用。",
+	// Recent files
+	recentTitle: "最近文件",
+	recentShow: "显示最近文件",
+	recentEmpty: "暂无最近文件。",
+	recentShowMore: "显示更多",
+	recentModifiedAt: "最后修改于 {0}",
+	recentCreatedAt: "创建于 {0}",
+	recentToday: "今天",
+	recentYesterday: "昨天",
+	recentWeek: "过去 7 天",
+	recentMonth: "过去 30 天",
+	recentEarlier: "更早",
 };

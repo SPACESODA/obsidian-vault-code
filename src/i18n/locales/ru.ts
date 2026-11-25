@@ -550,4 +550,16 @@ export const ru: TranslationSchema = {
 	kanbanUnsortedHide: "Скрыть столбец",
 	kanbanInvalidName: "Введите допустимое имя файла или папки.",
 	kanbanNameExists: "Это имя уже используется.",
+	// Recent files
+	recentTitle: "Недавние файлы",
+	recentShow: "Показать недавние файлы",
+	recentEmpty: "Недавних файлов пока нет.",
+	recentShowMore: "Показать ещё",
+	recentModifiedAt: "Последнее изменение: {0}",
+	recentCreatedAt: "Создан: {0}",
+	recentToday: "Сегодня",
+	recentYesterday: "Вчера",
+	recentWeek: "Последние 7 дней",
+	recentMonth: "Последние 30 дней",
+	recentEarlier: "Ранее",
 };

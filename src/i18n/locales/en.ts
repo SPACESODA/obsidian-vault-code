@@ -548,6 +548,18 @@ export const en = {
 	kanbanUnsortedHide: "Hide column",
 	kanbanInvalidName: "Enter a valid file or folder name.",
 	kanbanNameExists: "That name is already in use.",
+	// Recent files
+	recentTitle: "Recent files",
+	recentShow: "Show recent files",
+	recentEmpty: "No recent files yet.",
+	recentShowMore: "Show more",
+	recentModifiedAt: "Last modified at {0}",
+	recentCreatedAt: "Created at {0}",
+	recentToday: "Today",
+	recentYesterday: "Yesterday",
+	recentWeek: "Previous 7 days",
+	recentMonth: "Previous 30 days",
+	recentEarlier: "Earlier",
 };
 
 export type TranslationSchema = typeof en;

@@ -144,6 +144,7 @@ import { ReadingSelectionChat } from "./ai-reading-selection";
 import { HtmlPreviewSelection } from "./html-preview-selection";
 import { createCustomMenu } from "./custom-menu";
 import { observeExplorerIgnore, filterExplorerRows } from "./explorer-ignore";
+import { RECENT_FILES_VIEW, RecentFilesView } from "./recent-files-view";
 import { IgnoreMatcher, parseGitignore, type IgnoreRule, EMPTY_IGNORE_RULES } from "./ignore-rules";
 import { guardIgnoredTraversal, CoalescedScan, scanFolderTree } from "./vault-scan";
 import { UnlinkedMediaModal } from "./unlinked-media-modal";
@@ -647,6 +648,8 @@ interface PrivateAdapter {
 
 interface VaultCodeSettings {
 	kanbanOrders: KanbanOrders;
+	/** Recent files is added to the left sidebar once; after that the user decides where it lives. */
+	recentFilesPlaced: boolean;
 	showAllFileTypes: boolean;
 	showHiddenFiles: boolean;
 	allowEditDotfiles: boolean;
@@ -700,6 +703,7 @@ agent-chats/
 
 const DEFAULT_SETTINGS: VaultCodeSettings = {
 	kanbanOrders: {},
+	recentFilesPlaced: false,
 	showAllFileTypes: true,
 	showHiddenFiles: true,
 	allowEditDotfiles: true,
@@ -5315,6 +5319,8 @@ export default class VaultCodePlugin extends Plugin {
 		);
 
 		this.registerView(KANBAN_VIEW, leaf => new KanbanView(leaf, view => this.updateLeafHeaderActions(leaf, view)));
+		this.registerView(RECENT_FILES_VIEW, leaf => new RecentFilesView(leaf, file => this.isPathIgnored(file.path, false)));
+		this.registerHoverLinkSource(RECENT_FILES_VIEW, { display: t("recentTitle"), defaultMod: true });
 
 		if (Platform.isDesktop) {
 			this.statusBarGitEl = this.addStatusBarItem();
@@ -5434,6 +5440,12 @@ export default class VaultCodePlugin extends Plugin {
 					this.app.workspace.detachLeavesOfType(VIEW_TYPE_AI_CHAT);
 				}
 			}
+			if (!this.settings.recentFilesPlaced && !this.unloading) {
+				if (!this.app.workspace.getLeavesOfType(RECENT_FILES_VIEW).length) await this.app.workspace.getLeftLeaf(false)?.setViewState({ type: RECENT_FILES_VIEW, active: false });
+				this.settings.recentFilesPlaced = true;
+				await this.saveSettings();
+			}
+			this.loadRecentFilesTabs();
 		});
 
 		this.registerEvent(
@@ -5659,6 +5671,12 @@ export default class VaultCodePlugin extends Plugin {
 		this.addRibbonIcon("file-plus", t("ribbonNewFileTooltip"), () => {
 			const targetFolder = this.getActiveOrSelectedFolder();
 			new CreateFileModal(this.app, this, targetFolder).open();
+		});
+
+		this.addCommand({
+			id: "show-recent-files",
+			name: t("recentShow"),
+			callback: () => void this.showRecentFiles(),
 		});
 
 		this.addCommand({
@@ -7591,6 +7609,29 @@ export default class VaultCodePlugin extends Plugin {
 		for (const leaf of this.app.workspace.getLeavesOfType("file-explorer")) {
 			filterExplorerRows(leaf.view.containerEl, (path, directory) => this.isPathIgnored(path, directory), (row, path, directory) => this.externalFolders?.decorate(row, path, directory));
 		}
+		for (const leaf of this.app.workspace.getLeavesOfType(RECENT_FILES_VIEW)) {
+			if (leaf.view instanceof RecentFilesView) leaf.view.scheduleRefresh();
+		}
+	}
+
+	/** A sidebar tab that was never shown, or was reloaded with the plugin, stays deferred and shows a placeholder icon. Load it so its own icon appears. */
+	private loadRecentFilesTabs(): void {
+		for (const leaf of this.app.workspace.getLeavesOfType(RECENT_FILES_VIEW)) {
+			// Feature-checked: Obsidian before 1.7.2 has no deferred tabs, so there is nothing to load.
+			void (leaf as unknown as { loadIfDeferred?: () => Promise<void> }).loadIfDeferred?.();
+		}
+	}
+
+	private async showRecentFiles(): Promise<void> {
+		const leaf = this.app.workspace.getLeavesOfType(RECENT_FILES_VIEW)[0] ?? this.app.workspace.getLeftLeaf(false);
+		if (!leaf) return;
+		if (!(leaf.view instanceof RecentFilesView)) await leaf.setViewState({ type: RECENT_FILES_VIEW, active: true });
+		// revealLeaf needs Obsidian 1.7.2, so open the sidebar that holds the view and focus it directly.
+		const { leftSplit, rightSplit } = this.app.workspace;
+		const root = leaf.getRoot();
+		if (root === leftSplit) leftSplit.expand();
+		else if (root === rightSplit) rightSplit.expand();
+		this.app.workspace.setActiveLeaf(leaf, { focus: true });
 	}
 
 	private patchAdapter() {

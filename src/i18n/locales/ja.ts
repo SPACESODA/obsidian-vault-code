@@ -550,4 +550,16 @@ export const ja: TranslationSchema = {
 	kanbanUnsortedHide: "列を非表示",
 	kanbanInvalidName: "有効なファイル名またはフォルダー名を入力してください。",
 	kanbanNameExists: "その名前はすでに使われています。",
+	// Recent files
+	recentTitle: "最近のファイル",
+	recentShow: "最近のファイルを表示",
+	recentEmpty: "最近のファイルはまだありません。",
+	recentShowMore: "さらに表示",
+	recentModifiedAt: "最終更新 {0}",
+	recentCreatedAt: "作成 {0}",
+	recentToday: "今日",
+	recentYesterday: "昨日",
+	recentWeek: "過去 7 日間",
+	recentMonth: "過去 30 日間",
+	recentEarlier: "それ以前",
 };

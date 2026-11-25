@@ -550,4 +550,16 @@ export const ko: TranslationSchema = {
 	kanbanUnsortedHide: "열 숨기기",
 	kanbanInvalidName: "유효한 파일 또는 폴더 이름을 입력하세요.",
 	kanbanNameExists: "이미 사용 중인 이름입니다.",
+	// Recent files
+	recentTitle: "최근 파일",
+	recentShow: "최근 파일 표시",
+	recentEmpty: "최근 파일이 아직 없습니다.",
+	recentShowMore: "더 보기",
+	recentModifiedAt: "마지막 수정 {0}",
+	recentCreatedAt: "생성 {0}",
+	recentToday: "오늘",
+	recentYesterday: "어제",
+	recentWeek: "지난 7일",
+	recentMonth: "지난 30일",
+	recentEarlier: "이전",
 };

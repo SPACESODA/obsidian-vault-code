@@ -550,4 +550,16 @@ export const fr: TranslationSchema = {
 	kanbanUnsortedHide: "Masquer la colonne",
 	kanbanInvalidName: "Saisissez un nom de fichier ou de dossier valide.",
 	kanbanNameExists: "Ce nom est déjà utilisé.",
+	// Recent files
+	recentTitle: "Fichiers récents",
+	recentShow: "Afficher les fichiers récents",
+	recentEmpty: "Aucun fichier récent pour l’instant.",
+	recentShowMore: "Afficher plus",
+	recentModifiedAt: "Dernière modification : {0}",
+	recentCreatedAt: "Créé le {0}",
+	recentToday: "Aujourd’hui",
+	recentYesterday: "Hier",
+	recentWeek: "7 derniers jours",
+	recentMonth: "30 derniers jours",
+	recentEarlier: "Plus ancien",
 };

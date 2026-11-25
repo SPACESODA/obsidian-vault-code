@@ -18,6 +18,7 @@
 * **External folders (Desktop)**: Add folders from your disk by symlink.
 * **Ignore rules**: Keep the explorer tidy with `.obsidianignore` and `.gitignore`.
 * **Unlinked media**: Find images, audio, and video no note links to, and move them to trash.
+* **Recent files**: See every file you edited or added lately, newest first, in a sidebar tab.
 
 **Kanban**
 * **Folder boards**: Any folder becomes a board: subfolders are columns, notes are cards.
@@ -90,6 +91,8 @@ Right-click a file or folder in the explorer:
 * **Edit file name and extension...**: Rename files or change their extensions with built-in validation.
 * **Add external folder by symlink (Desktop)**: Choose any folder on your disk and link it into your vault without leaving Obsidian.
 * **Show unlinked media**: Find images, audio, and video that no note or canvas links to, in that folder or the whole vault, and move them to trash in bulk.
+
+The **Recent files** tab in the left sidebar lists files of any type by when they were last edited or added, grouped into Today, Yesterday, and earlier. Changes made outside Obsidian show up too, and anything your ignore rules hide stays hidden.
 
 ### 🌿 Review changes with Git (Desktop)
 
