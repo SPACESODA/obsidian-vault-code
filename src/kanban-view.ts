@@ -5,6 +5,7 @@ import { nameWithoutTooltip } from "./dom-label";
 import { cardCover, cardExcerpt, cardExcerptLines, cardInline, replaceCardExcerpt, type CardExcerptLine, type CardInline } from "./kanban-excerpt";
 import { KANBAN_FILENAME, boardRelativePath, readKanbanFile, readKanbanUnsorted, writeKanbanFile, writeKanbanUnsorted, type KanbanOrder, type KanbanOrders, type KanbanUnsorted } from "./kanban-file";
 
+import { onIconizeLoaded, pathIcon, prependPathIcon, renderIconShortcodes } from "./iconize";
 import { IMAGE_EXTENSIONS } from "./unlinked-media-modal";
 
 export const KANBAN_VIEW = "vault-code-kanban";
@@ -115,6 +116,7 @@ export class KanbanView extends ItemView {
 	private inlineSave?: Promise<void>;
 	private inlineFields = new WeakMap<TFile | TFolder, { title: HTMLButtonElement; excerpt?: HTMLButtonElement }>();
 	private excerpts = new WeakMap<HTMLButtonElement, string>();
+	private titleKeys = new WeakMap<HTMLButtonElement, string>();
 	private closed = false;
 
 	constructor(leaf: ConstructorParameters<typeof ItemView>[0], private updateHeaderActions: (view: KanbanView) => void) {
@@ -175,6 +177,19 @@ export class KanbanView extends ItemView {
 		this.registerEvent(this.app.metadataCache.on("changed", file => {
 			if (this.cardElements.has(file) && (this.query || this.tagFilter.size)) this.applySearch();
 		}));
+		// Iconize loads its icon packs after startup; redraw descriptions so their icon shortcodes resolve.
+		this.register(onIconizeLoaded(this.app, () => {
+			for (const file of this.cardElements.keys()) {
+				const preview = this.inlineFields.get(file)?.excerpt;
+				if (!preview) continue;
+				this.excerpts.delete(preview);
+				this.dirtyExcerpts.add(file);
+			}
+			this.titleKeys = new WeakMap();
+			this.scheduleRefresh();
+		}));
+		// Iconize has no change event, so pick up icons set elsewhere when the board comes back into focus.
+		this.registerEvent(this.app.workspace.on("active-leaf-change", leaf => { if (leaf === this.leaf) this.updateTitleIcons(); }));
 	}
 
 	async onClose(): Promise<void> {
@@ -314,9 +329,12 @@ export class KanbanView extends ItemView {
 			this.renderExcerptLists(wrapper, lines, (offset, checkbox) => {
 				void this.toggleCardTask(file, value, offset, checkbox);
 			});
+			const lists = wrapper.querySelector<HTMLElement>(":scope > .vault-code-kanban-lists");
+			if (lists) renderIconShortcodes(this.app, lists);
 		} else if (text) {
 			preview.removeAttribute("aria-labelledby");
 			preview.setText(text);
+			renderIconShortcodes(this.app, preview);
 		} else {
 			this.labelEmptyExcerpt(preview);
 		}
@@ -651,6 +669,28 @@ export class KanbanView extends ItemView {
 		list.append(...rows);
 	}
 
+	private updateTitleIcons(): void {
+		const board = this.board;
+		for (const [folder, { title, label }] of this.columnElements) {
+			if (folder !== board && this.setTitle(title, folder.name, folder.path, true)) label.setText(folder.name);
+		}
+		for (const file of this.cardElements.keys()) {
+			const title = this.inlineFields.get(file)?.title;
+			if (title) this.setTitle(title, file.basename, file.path);
+		}
+	}
+
+	/** Sets a column or card title, led by the icon Iconize gives that folder or note. Returns whether anything changed. */
+	private setTitle(button: HTMLButtonElement, text: string, path?: string, folder = false): boolean {
+		const icon = path ? pathIcon(this.app, path, folder) : undefined;
+		const key = JSON.stringify([text, icon?.name, icon?.color]);
+		if (this.titleKeys.get(button) === key) return false;
+		this.titleKeys.set(button, key);
+		button.setText(text);
+		if (icon) prependPathIcon(this.app, button, icon);
+		return true;
+	}
+
 	private addButton(parent: HTMLElement, label: string, action: () => void): void {
 		const button = parent.createEl("button", { cls: "vault-code-kanban-add", attr: { type: "button" } });
 		setIcon(button.createSpan(), "plus");
@@ -672,10 +712,7 @@ export class KanbanView extends ItemView {
 			const { section, list } = elements;
 			sections.push(section);
 			this.columnTargets.set(section, column);
-			if (elements.title.textContent !== title) {
-				elements.title.setText(title);
-				elements.label.setText(title);
-			}
+			if (this.setTitle(elements.title, title, folder === board ? undefined : folder.path, true)) elements.label.setText(title);
 			const count = String(column.cards.length);
 			if (elements.count.textContent !== count) elements.count.setText(count);
 			list.dataset.path = folder.path;
@@ -686,7 +723,7 @@ export class KanbanView extends ItemView {
 				const card = this.cardElements.get(file) ?? this.createCard(list, file);
 				this.cardTargets.set(card, { column, before: file });
 				const field = this.inlineFields.get(file)?.title;
-				if (field && field.textContent !== file.basename) field.setText(file.basename);
+				if (field) this.setTitle(field, file.basename, file.path);
 				if (card !== next) list.insertBefore(card, next);
 				next = card.nextElementSibling;
 			}

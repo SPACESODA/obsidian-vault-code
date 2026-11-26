@@ -5016,8 +5016,20 @@ body.vault-code-ignore-loading .nav-files-container { visibility: hidden; }
 .vault-code-kanban textarea.vault-code-kanban-excerpt {
 	margin-top: 3px;
 	color: var(--text-muted);
+	font-size: var(--kanban-card-font);
 	font-weight: var(--font-normal);
 }
+/* Iconize shortcodes (:LiCopy:) drawn as icons, sized to the surrounding text like Iconize does in notes. */
+.vault-code-kanban-icon {
+	display: inline-flex;
+	vertical-align: -0.125em;
+}
+.vault-code-kanban-icon > svg {
+	width: 1em;
+	height: 1em;
+}
+.vault-code-kanban-column-title > .vault-code-kanban-icon,
+.vault-code-kanban-card-title > .vault-code-kanban-icon { margin-inline-end: 0.35em; }
 .vault-code-kanban button.vault-code-kanban-column-title:hover,
 .vault-code-kanban button.vault-code-kanban-card-title:hover { color: var(--text-accent); }
 .vault-code-kanban button.vault-code-kanban-add {
