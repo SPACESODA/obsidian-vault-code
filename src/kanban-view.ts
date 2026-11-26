@@ -3,7 +3,7 @@ import { getActiveLanguage, t } from "./i18n";
 import { createCustomMenu } from "./custom-menu";
 import { nameWithoutTooltip } from "./dom-label";
 import { cardCover, cardExcerpt, cardExcerptLines, cardInline, replaceCardExcerpt, type CardExcerptLine, type CardInline } from "./kanban-excerpt";
-import { KANBAN_FILENAME, boardRelativePath, readKanbanFile, readKanbanUnsorted, writeKanbanFile, writeKanbanUnsorted, type KanbanOrder, type KanbanOrders, type KanbanUnsorted } from "./kanban-file";
+import { KANBAN_FILENAME, boardRelativePath, readKanbanFile, readKanbanCovers, readKanbanUnsorted, writeKanbanCovers, writeKanbanFile, writeKanbanUnsorted, type KanbanOrder, type KanbanOrders, type KanbanUnsorted } from "./kanban-file";
 import { onIconizeLoaded, pathIcon, prependPathIcon, renderIconShortcodes } from "./iconize";
 import { IMAGE_EXTENSIONS } from "./unlinked-media-modal";
 
@@ -86,6 +86,7 @@ export class KanbanView extends ItemView {
 	private renamed: Array<{ from: string; to: string }> = [];
 	private order: KanbanOrder = { columns: [], cards: {} };
 	private unsorted: KanbanUnsorted = { position: "last" };
+	private covers = true;
 	private rail?: HTMLElement;
 	private addColumn?: HTMLElement;
 	private renderedLanguage = "";
@@ -232,6 +233,7 @@ export class KanbanView extends ItemView {
 		this.markerSource = source;
 		this.board = board;
 		this.unsorted = unsorted;
+		this.covers = readKanbanCovers(order?.covers);
 		this.renderedLanguage = language;
 		const left = this.rail?.scrollLeft ?? 0;
 		if (!reuse) {
@@ -250,6 +252,7 @@ export class KanbanView extends ItemView {
 			const title = this.contentEl.querySelector<HTMLInputElement>(".vault-code-kanban-title");
 			if (title && marker && title.value !== marker.basename) title.value = marker.basename;
 		}
+		this.contentEl.toggleClass("hide-covers", !this.covers);
 		this.updateTabTitle();
 		this.updateHeaderActions(this);
 		if (!board) { this.contentEl.createDiv({ text: t("kanbanMissing") }); return; }
@@ -485,7 +488,7 @@ export class KanbanView extends ItemView {
 		this.addSearch(heading);
 		this.filterEl = heading.createDiv({ cls: "vault-code-kanban-filter" });
 		this.renderTagFilter();
-		if (hasBoardSettings) this.addUnsortedSettings(heading);
+		if (hasBoardSettings) this.addBoardSettings(heading);
 		const commit = () => {
 			if (this.busy || this.closed || !input.isConnected || marker !== this.marker || this.isEditing()) return;
 			const title = input.value.trim().replace(/\.kanban$/i, "");
@@ -946,18 +949,24 @@ export class KanbanView extends ItemView {
 		}
 	}
 
-	private addUnsortedSettings(parent: HTMLElement): void {
+	private addBoardSettings(parent: HTMLElement): void {
 		const button = parent.createEl("button", {
 			cls: "clickable-icon vault-code-kanban-unsorted-settings",
 			attr: { type: "button", "aria-haspopup": "menu" },
 		});
 		setIcon(button, "settings");
-		nameWithoutTooltip(button, button, t("kanbanUnsortedSettings"));
+		nameWithoutTooltip(button, button, t("kanbanBoardSettings"));
 		button.onclick = event => {
 			if (this.busy || this.isEditing()) return;
 			const menu = createCustomMenu();
+			menu.addItem(item => item.setTitle(t("kanbanShowCovers")).setChecked(this.covers).onClick(() => {
+				const show = !this.covers;
+				void this.perform(() => this.saveBoardFile(board => writeKanbanCovers(board, show)));
+			}));
+			menu.addSeparator();
+			// A dim group title, so it reads as a heading for the options below rather than an option itself.
 			const heading = createFragment(fragment => {
-				fragment.createSpan({ cls: "vault-code-kanban-menu-label", text: t("kanbanUnsorted") });
+				fragment.createSpan({ cls: "vault-code-kanban-menu-group", text: t("kanbanUnsorted") });
 			});
 			menu.addItem(item => item.setTitle(heading).setIsLabel(true));
 			const positions = [
@@ -980,12 +989,16 @@ export class KanbanView extends ItemView {
 	}
 
 	private async saveUnsorted(change: Partial<KanbanUnsorted>): Promise<void> {
+		await this.saveBoardFile(board => writeKanbanUnsorted(board, change));
+	}
+
+	private async saveBoardFile(write: (board: KanbanOrder & Record<string, unknown>) => string): Promise<void> {
 		const marker = this.marker;
 		if (!marker || marker.parent !== this.board || marker.path !== this.markerPath) throw new Error(t("kanbanFailed"));
 		await this.app.vault.process(marker, source => {
 			const previous = readKanbanFile(source);
 			if (!previous || source !== this.markerSource) throw new Error(t("kanbanFailed"));
-			return writeKanbanUnsorted({ ...previous, columns: this.order.columns, cards: this.order.cards }, change);
+			return write({ ...previous, columns: this.order.columns, cards: this.order.cards });
 		});
 	}
 

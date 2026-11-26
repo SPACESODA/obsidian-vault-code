@@ -48,7 +48,7 @@
 Right-click a folder and choose **Open as Kanban**. Subfolders become columns, notes become cards, and the board is never anything but your files.
 
 * **Drag and drop**: Move cards and columns smoothly on desktop, tablet, and phone. Moving a card moves its note.
-* **Rich cards**: Each card previews its note: checklists, formatting, code, callouts, cover images, and tag pills. Tick tasks or edit titles and descriptions right on the card.
+* **Rich cards**: Each card previews its note: checklists, formatting, code, callouts, cover images, and tag pills. Tick tasks or edit titles and descriptions right on the card. Prefer compact cards? Turn off cover images from the board's gear menu.
 * **Search & filter**: Type to find cards, use `#tag` for exact tag matches, or pick tags from the `#` menu.
 * **Iconize icons**: With the Iconize plugin, folder and note icons and `:IconName:` shortcodes show up on the board too.
 * **Agent-friendly**: Order lives in a small `Board.kanban` file. Notes added or moved by scripts, AI agents, or sync show up right away.

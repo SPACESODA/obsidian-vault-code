@@ -4983,6 +4983,13 @@ body.vault-code-ignore-loading .nav-files-container { visibility: hidden; }
 	font-size: var(--font-ui-small);
 	font-weight: var(--font-normal);
 }
+.vault-code-kanban-menu-group {
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-medium, 500);
+	letter-spacing: 0.02em;
+}
+.vault-code-kanban.hide-covers .vault-code-kanban-cover { display: none; }
 .vault-code-kanban textarea.vault-code-kanban-inline-editor {
 	display: block;
 	box-sizing: border-box;

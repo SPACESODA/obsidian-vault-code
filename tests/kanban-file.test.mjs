@@ -7,7 +7,7 @@ const { outputFiles } = await build({
 });
 const module = { exports: {} };
 new Function('module', 'exports', outputFiles[0].text)(module, module.exports);
-const { boardRelativePath, readKanbanFile, readKanbanUnsorted, relativeKanbanOrder, writeKanbanFile, writeKanbanUnsorted } = module.exports;
+const { boardRelativePath, readKanbanCovers, readKanbanFile, readKanbanUnsorted, relativeKanbanOrder, writeKanbanCovers, writeKanbanFile, writeKanbanUnsorted } = module.exports;
 
 test('legacy order becomes portable and keeps root cards under the empty column key', () => {
   const order = relativeKanbanOrder('Projects/Launch', {
@@ -73,4 +73,17 @@ test('a damaged order file keeps the board working: bad entries are skipped, nam
   assert.deepEqual({ ...readKanbanFile('{"version":1,"columns":"x","cards":[]}').cards }, {});
   assert.equal(readKanbanFile('not json'), null);
   assert.equal(readKanbanFile('[]'), null);
+});
+
+test('cover images default on and only an explicit false turns them off', () => {
+  assert.equal(readKanbanCovers(undefined), true);
+  assert.equal(readKanbanCovers('no'), true);
+  assert.equal(readKanbanCovers(false), false);
+  const board = readKanbanFile(JSON.stringify({ version: 1, columns: ['Todo'], cards: { Todo: ['A.md'] }, unsorted: { position: 'first' } }));
+  const off = readKanbanFile(writeKanbanCovers(board, false));
+  assert.equal(off.covers, false);
+  assert.deepEqual([off.columns, off.cards.Todo, off.unsorted], [['Todo'], ['Todo/A.md'], { position: 'first' }]);
+  const on = writeKanbanCovers(off, true);
+  assert.equal('covers' in JSON.parse(on), false);
+  assert.deepEqual(JSON.parse(on).unsorted, { position: 'first' });
 });

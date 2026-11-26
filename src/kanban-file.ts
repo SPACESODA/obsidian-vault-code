@@ -59,6 +59,16 @@ export function writeKanbanUnsorted(board: KanbanOrder & Record<string, unknown>
 	return writeKanbanFile(board, { ...board, unsorted: { ...unsorted, ...change } });
 }
 
+/** Cover images show unless the board turned them off. */
+export function readKanbanCovers(value: unknown): boolean {
+	return value !== false;
+}
+
+export function writeKanbanCovers(board: KanbanOrder & Record<string, unknown>, show: boolean): string {
+	const { covers: _covers, ...rest } = board;
+	return writeKanbanFile(board, show ? rest : { ...rest, covers: false });
+}
+
 export function relativeKanbanOrder(board: string, order?: KanbanOrder): KanbanOrder {
 	if (!order) return { columns: [], cards: {} };
 	const contains = (path: string) => !board || board === "/" || path === board || path.startsWith(board + "/");
