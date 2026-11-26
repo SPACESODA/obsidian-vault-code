@@ -24,8 +24,11 @@ export function recentGroup(time: number, now: number): RecentGroup {
 	return "earlier";
 }
 
-/** One timeline of the latest files, newest first. Ties keep a stable order by path. */
-export function recentEntries<T extends RecentSource>(files: Iterable<T>, now: number, limit: number): RecentEntry<T>[] {
+/**
+ * One timeline of the latest files, newest first. Ties keep a stable order by path.
+ * `include` runs only on the newest candidates, so a costly filter stays cheap in a large vault.
+ */
+export function recentEntries<T extends RecentSource>(files: Iterable<T>, now: number, limit: number, include?: (file: T) => boolean): RecentEntry<T>[] {
 	const entries: RecentEntry<T>[] = [];
 	for (const file of files) {
 		const { mtime, ctime } = file.stat;
@@ -34,7 +37,28 @@ export function recentEntries<T extends RecentSource>(files: Iterable<T>, now: n
 		entries.push({ file, time, group: "earlier" });
 	}
 	entries.sort((a, b) => b.time - a.time || (a.file.path < b.file.path ? -1 : a.file.path > b.file.path ? 1 : 0));
-	const latest = entries.slice(0, Math.max(0, limit));
-	for (const entry of latest) entry.group = recentGroup(entry.time, now);
+	const latest: RecentEntry<T>[] = [];
+	for (const entry of entries) {
+		if (latest.length >= limit) break;
+		if (include && !include(entry.file)) continue;
+		entry.group = recentGroup(entry.time, now);
+		latest.push(entry);
+	}
 	return latest;
+}
+
+const pad = (value: number) => String(value).padStart(2, "0");
+
+/** The file explorer's fixed, language-neutral stamp in local time: "2026-11-25 20:48". */
+export function fullStamp(time: number): string {
+	const date = new Date(time);
+	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+/** A row's short time: the clock for today and yesterday, the day this year, the full date before that. */
+export function shortStamp(time: number, group: RecentGroup, now: number): string {
+	const date = new Date(time);
+	if (group === "today" || group === "yesterday") return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+	const day = `${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+	return date.getFullYear() === new Date(now).getFullYear() ? day : `${date.getFullYear()}-${day}`;
 }

@@ -2,7 +2,7 @@
 
 <h3 align="center" style="color: #3b82f6; margin: 1rem 0; "><strong>Vault Code turns Obsidian into a workspace for notes, code, and files.</strong></h3>
 
-**Vault Code** is a powerful plugin that integrates with Obsidian's file explorer and editor. View hidden files, create and organize files of any kind, plan work on Kanban boards, and write code in a beautiful code editor. Preview web pages, diagrams, and data, or work with AI agents without leaving Obsidian.
+**Vault Code** plugs straight into Obsidian's file explorer and editor. Reveal hidden files, create any file type, plan on Kanban boards made of plain folders, and write code in a real code editor. Preview web pages, diagrams, and data, or pair up with AI agents, all inside Obsidian.
 
 ![Vault Code editor and HTML preview in Obsidian](docs/assets/vc-code-editing-gh.jpg)
 
@@ -18,11 +18,11 @@
 * **External folders (Desktop)**: Add folders from your disk by symlink.
 * **Ignore rules**: Keep the explorer tidy with `.obsidianignore` and `.gitignore`.
 * **Unlinked media**: Find images, audio, and video no note links to, and move them to trash.
-* **Recent files**: See every file you edited or added lately, newest first, in a sidebar tab.
+* **Recent files**: A sidebar tab of everything you touched lately, newest first.
 
 **Kanban**
 * **Folder boards**: Any folder becomes a board: subfolders are columns, notes are cards.
-* **Search & tag filter**: Find cards fast and filter by tags, like labels in Trello.
+* **Search, tags & icons**: Find cards fast, filter by tags like Trello labels, and see your Iconize icons.
 
 **Code editor**
 * **Editing tools**: Syntax highlighting, line numbers, folding, and familiar editing shortcuts.
@@ -44,21 +44,22 @@
 
 ### 🗂️ Plan with Kanban boards
 
-Right-click a folder and choose **Open as Kanban**. Subfolders become columns and notes become cards, so the board is always just your files.
+Right-click a folder and choose **Open as Kanban**. Subfolders become columns, notes become cards, and the board is never anything but your files.
 
 * **Drag and drop**: Move cards and columns smoothly on desktop, tablet, and phone. Moving a card moves its note.
-* **Rich cards**: See a preview of each note with checklists, formatting, code, callouts, and tag pills. Tick tasks right on the card.
+* **Rich cards**: Each card previews its note: checklists, formatting, code, callouts, cover images, and tag pills. Tick tasks or edit titles and descriptions right on the card.
 * **Search & filter**: Type to find cards, use `#tag` for exact tag matches, or pick tags from the `#` menu.
-* **Agent-friendly**: Order lives in a small `.kanban` file. Notes added or moved by scripts, AI agents, or sync show up right away.
+* **Iconize icons**: With the Iconize plugin, folder and note icons and `:IconName:` shortcodes show up on the board too.
+* **Agent-friendly**: Order lives in a small `Board.kanban` file. Notes added or moved by scripts, AI agents, or sync show up right away.
 
 ### ✏️ Edit code right where you write notes
 
-Open scripts, styles, and configuration files alongside your notes.
+Scripts, styles, and config files open right next to your notes.
 
 * **170+ file extensions supported**: Python, JavaScript, TypeScript, Rust, Go, SQL, HTML, CSS, JSON, YAML, and more.
-* **Markdown source**: Right-click a `.md` file and choose **Edit in code editor**, or click `</>` in the tab header. Useful for frontmatter, tables, and regex edits.
+* **Markdown source**: Right-click a `.md` file and choose **Edit in code editor**, or click `</>` in the tab header. Handy for frontmatter, tables, and regex edits.
 * **Familiar controls**: Line numbers, bracket matching, code folding, line duplication, commenting, and go-to-line.
-* **Native foundation**: Built on Obsidian's editor engine, with your theme, font size, and light or dark mode.
+* **Feels native**: Built on Obsidian's editor engine, so it wears your theme, font size, and light or dark mode.
 
 ### 👁️ See your hidden dotfiles and configs
 
@@ -78,8 +79,7 @@ Switch between code and preview with the **Preview** button or **Toggle code / p
 
 Press <kbd>Cmd</kbd> / <kbd>Ctrl</kbd> + <kbd>F</kbd> to search, or <kbd>Cmd</kbd> / <kbd>Ctrl</kbd> + <kbd>H</kbd> to replace.
 
-* Search across multiple lines and jump between matches with a live count (`1 of 14`).
-* Toggle case matching (`Aa`), whole words (`\b`), or regular expressions (`.*`).
+* Search across lines with a live match count, plus case (`Aa`), whole-word (`\b`), and regex (`.*`) toggles.
 
 ### 📂 Create, rename & organize files
 
@@ -89,10 +89,10 @@ Right-click a file or folder in the explorer:
 * **New folder here**: Name a folder directly in the explorer.
 * **New file here (any extension)**: Create any file type, including dotfiles and nested paths such as `src/components/Button.tsx`.
 * **Edit file name and extension...**: Rename files or change their extensions with built-in validation.
-* **Add external folder by symlink (Desktop)**: Choose any folder on your disk and link it into your vault without leaving Obsidian.
-* **Show unlinked media**: Find images, audio, and video that no note or canvas links to, in that folder or the whole vault, and move them to trash in bulk.
+* **Add external folder by symlink (Desktop)**: Link any folder on your disk into your vault.
+* **Show unlinked media**: Find images, audio, and video no note or canvas links to, and trash them in bulk.
 
-The **Recent files** tab in the left sidebar lists files of any type by when they were last edited or added, grouped into Today, Yesterday, and earlier. Changes made outside Obsidian show up too, and anything your ignore rules hide stays hidden.
+Lost track of what you just worked on? The **Recent files** sidebar tab lists files of any type by last edit or addition, grouped into Today, Yesterday, and earlier. Outside changes show up too; files your ignore rules hide stay hidden.
 
 ### 🌿 Review changes with Git (Desktop)
 
@@ -115,7 +115,7 @@ Attach notes or selections, pin context, and guide AI responses with a customiza
 
 ### 🛡️ Control editing and file opening
 
-* Single-clicking unsupported files selects them. Opening them in your system's default app on double-click is optional and disabled by default.
+* Single-clicking unsupported files selects them; opening them in your default app on double-click is optional and off by default.
 * Disable auto-save to save manually with <kbd>Cmd</kbd> / <kbd>Ctrl</kbd> + <kbd>S</kbd>. A dot `●` marks unsaved changes, and closing an unsaved tab prompts you. **Quitting Obsidian still saves unsaved edits.**
 * File management and code editing work on desktop, mobile, and tablets. Git, Ask AI, and adding external folders require desktop Obsidian.
 

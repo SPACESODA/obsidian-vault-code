@@ -1,6 +1,6 @@
-import { ItemView, Keymap, Menu, TFile, moment, setIcon, type TAbstractFile, type WorkspaceLeaf } from "obsidian";
+import { ItemView, Keymap, Menu, TFile, setIcon, type TAbstractFile, type WorkspaceLeaf } from "obsidian";
 import { t, type TranslationKey } from "./i18n";
-import { recentEntries, type RecentEntry, type RecentGroup } from "./recent-files-list";
+import { fullStamp, recentEntries, shortStamp, type RecentEntry, type RecentGroup } from "./recent-files-list";
 import { IMAGE_EXTENSIONS } from "./unlinked-media-modal";
 
 export const RECENT_FILES_VIEW = "vault-code-recent-files";
@@ -28,9 +28,6 @@ function fileIcon(file: TFile): string {
 	if (AUDIO.has(ext)) return "file-audio";
 	return "file-code";
 }
-
-// The same fixed, language-neutral formats as the file explorer's tooltip ("2026-11-25 20:48").
-const FULL_FORMAT = "YYYY-MM-DD HH:mm";
 
 interface DragManager { dragFile(event: DragEvent, file: TFile): unknown; onDragStart(event: DragEvent, data: unknown): void }
 
@@ -86,8 +83,10 @@ export class RecentFilesView extends ItemView {
 		const list = this.listEl;
 		if (!list) return;
 		const now = Date.now();
-		const files = this.app.vault.getFiles().filter(file => !this.isHidden(file));
-		const entries = recentEntries(files, now, this.limit);
+		// One extra entry tells whether "Show more" has anything left to show.
+		const entries = recentEntries(this.app.vault.getFiles(), now, this.limit + 1, file => !this.isHidden(file));
+		const more = entries.length > this.limit;
+		if (more) entries.pop();
 		const scroll = this.contentEl.scrollTop;
 		list.empty();
 		this.rows.clear();
@@ -102,9 +101,9 @@ export class RecentFilesView extends ItemView {
 				group = entry.group;
 				list.createDiv({ cls: "vault-code-recent-group", text: t(GROUP_LABELS[group]) });
 			}
-			this.renderRow(list, entry);
+			this.renderRow(list, entry, now);
 		}
-		if (files.length > entries.length) {
+		if (more) {
 			const more = list.createEl("button", { cls: "vault-code-recent-more", text: t("recentShowMore") });
 			more.addEventListener("click", () => { this.limit += PAGE; this.render(); });
 		}
@@ -112,18 +111,14 @@ export class RecentFilesView extends ItemView {
 		this.contentEl.scrollTop = scroll;
 	}
 
-	private renderRow(list: HTMLElement, entry: RecentEntry<TFile>): void {
+	private renderRow(list: HTMLElement, entry: RecentEntry<TFile>, now: number): void {
 		const { file } = entry;
-		const when = moment(entry.time);
 		// Like the file explorer's tooltip, plus the folder, which the one-line row leaves out.
-		const tooltip = [file.path, t("recentModifiedAt", moment(file.stat.mtime).format(FULL_FORMAT)), t("recentCreatedAt", moment(file.stat.ctime).format(FULL_FORMAT))].join("\n");
+		const tooltip = [file.path, t("recentModifiedAt", fullStamp(file.stat.mtime)), t("recentCreatedAt", fullStamp(file.stat.ctime))].join("\n");
 		const row = list.createDiv({ cls: "tree-item-self is-clickable vault-code-recent-item", attr: { draggable: "true", "data-path": file.path, "aria-label": tooltip, "data-tooltip-position": "right", "data-tooltip-delay": "600" } });
 		setIcon(row.createSpan({ cls: "vault-code-recent-icon" }), fileIcon(file));
 		row.createSpan({ cls: "vault-code-recent-name", text: file.extension.toLowerCase() === "md" ? file.basename : file.name });
-		row.createSpan({
-			cls: "vault-code-recent-time",
-			text: when.format(entry.group === "today" || entry.group === "yesterday" ? "HH:mm" : when.isSame(moment(), "year") ? "MM-DD" : "YYYY-MM-DD"),
-		});
+		row.createSpan({ cls: "vault-code-recent-time", text: shortStamp(entry.time, entry.group, now) });
 
 		row.addEventListener("click", event => {
 			void this.app.workspace.getLeaf(Keymap.isModEvent(event)).openFile(file);

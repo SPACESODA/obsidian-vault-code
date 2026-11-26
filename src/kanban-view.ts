@@ -4,12 +4,10 @@ import { createCustomMenu } from "./custom-menu";
 import { nameWithoutTooltip } from "./dom-label";
 import { cardCover, cardExcerpt, cardExcerptLines, cardInline, replaceCardExcerpt, type CardExcerptLine, type CardInline } from "./kanban-excerpt";
 import { KANBAN_FILENAME, boardRelativePath, readKanbanFile, readKanbanUnsorted, writeKanbanFile, writeKanbanUnsorted, type KanbanOrder, type KanbanOrders, type KanbanUnsorted } from "./kanban-file";
-
 import { onIconizeLoaded, pathIcon, prependPathIcon, renderIconShortcodes } from "./iconize";
 import { IMAGE_EXTENSIONS } from "./unlinked-media-modal";
 
 export const KANBAN_VIEW = "vault-code-kanban";
-
 
 function childPath(folder: TFolder, name: string): string {
 	return folder.isRoot() ? name : folder.path + "/" + name;
@@ -100,6 +98,8 @@ export class KanbanView extends ItemView {
 	private query = "";
 	private searchText = new Map<TFile, string>();
 	private searchLoad?: object;
+	// The Escape scope of a focused search field; released if the field goes away without a blur.
+	private searchScope?: Scope;
 	// Tag filter (lower-case tags with "#"): a card shows when it has any selected tag, like Trello labels.
 	private tagFilter = new Set<string>();
 	private filterEl?: HTMLElement;
@@ -194,6 +194,7 @@ export class KanbanView extends ItemView {
 
 	async onClose(): Promise<void> {
 		this.closed = true;
+		this.releaseSearchScope();
 		this.inlineEditor?.blur();
 		await this.inlineSave;
 		this.stopDrag?.();
@@ -235,7 +236,8 @@ export class KanbanView extends ItemView {
 		const left = this.rail?.scrollLeft ?? 0;
 		if (!reuse) {
 			this.observer?.disconnect();
-		this.headerSizes?.disconnect();
+			this.headerSizes?.disconnect();
+			this.releaseSearchScope();
 			this.rail = undefined;
 			this.addColumn = undefined;
 			this.columnElements.clear();
@@ -543,11 +545,20 @@ export class KanbanView extends ItemView {
 			event.stopPropagation();
 			close();
 		});
-		input.addEventListener("focus", () => this.app.keymap.pushScope(scope));
+		input.addEventListener("focus", () => {
+			this.releaseSearchScope();
+			this.searchScope = scope;
+			this.app.keymap.pushScope(scope);
+		});
 		input.addEventListener("blur", () => {
-			this.app.keymap.popScope(scope);
+			this.releaseSearchScope();
 			if (!input.value.trim()) open(false);
 		});
+	}
+
+	private releaseSearchScope(): void {
+		if (this.searchScope) this.app.keymap.popScope(this.searchScope);
+		this.searchScope = undefined;
 	}
 
 	private search(value: string): void {
