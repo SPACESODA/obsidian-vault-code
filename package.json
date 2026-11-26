@@ -1,6 +1,6 @@
 {
   "name": "obsidian-vault-code",
-  "version": "2.3.5",
+  "version": "2.3.6",
   "description": "Turn your vault into a workspace for notes, code, and files. Plan on Kanban boards, view hidden files, edit code, preview HTML, SVG and data, review Git diffs, and chat with AI agents in one place.",
   "main": "main.js",
   "type": "module",
