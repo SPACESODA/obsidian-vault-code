@@ -562,4 +562,12 @@ export const ja: TranslationSchema = {
 	recentWeek: "過去 7 日間",
 	recentMonth: "過去 30 日間",
 	recentEarlier: "それ以前",
+	fileSearchTitle: "ファイル内を検索",
+	fileSearchPlaceholder: "すべてのファイル内のテキストを検索...",
+	fileSearchClear: "検索をクリア",
+	fileSearchSearching: "検索中...",
+	fileSearchSummary: "{1} 個のファイルに {0} 件",
+	fileSearchSummaryOne: "{0} 件",
+	fileSearchSummaryOneFile: "1 個のファイルに {0} 件",
+	fileSearchLimited: "最初の {0} 件を表示",
 };

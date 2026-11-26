@@ -145,6 +145,7 @@ import { HtmlPreviewSelection } from "./html-preview-selection";
 import { createCustomMenu } from "./custom-menu";
 import { observeExplorerIgnore, filterExplorerRows } from "./explorer-ignore";
 import { RECENT_FILES_VIEW, RecentFilesView } from "./recent-files-view";
+import { FILE_SEARCH_VIEW, FileSearchView } from "./file-search-view";
 import { IgnoreMatcher, parseGitignore, type IgnoreRule, EMPTY_IGNORE_RULES } from "./ignore-rules";
 import { guardIgnoredTraversal, CoalescedScan, scanFolderTree } from "./vault-scan";
 import { UnlinkedMediaModal } from "./unlinked-media-modal";
@@ -650,6 +651,7 @@ interface VaultCodeSettings {
 	kanbanOrders: KanbanOrders;
 	/** Recent files is added to the left sidebar once; after that the user decides where it lives. */
 	recentFilesPlaced: boolean;
+	fileSearchPlaced: boolean;
 	showAllFileTypes: boolean;
 	showHiddenFiles: boolean;
 	allowEditDotfiles: boolean;
@@ -704,6 +706,7 @@ agent-chats/
 const DEFAULT_SETTINGS: VaultCodeSettings = {
 	kanbanOrders: {},
 	recentFilesPlaced: false,
+	fileSearchPlaced: false,
 	showAllFileTypes: true,
 	showHiddenFiles: true,
 	allowEditDotfiles: true,
@@ -2654,6 +2657,8 @@ export class DotfileView extends TextFileView {
 	private diffToolbarEl: HTMLElement | null = null;
 	private initialDiffRequested = false;
 	private isDiffModePending = false;
+	private pendingMatch: { file: TFile; from: number; to: number } | null = null;
+	private centerSelection = false;
 
 	constructor(leaf: WorkspaceLeaf, plugin: VaultCodePlugin) {
 		super(leaf);
@@ -2825,6 +2830,37 @@ export class DotfileView extends TextFileView {
 				searchInput.select();
 			}
 		}
+	}
+
+	/** "Find in files" opens a file with the match to select and scroll to. */
+	override setEphemeralState(state: unknown): void {
+		super.setEphemeralState(state);
+		const match = (state as { vaultCodeMatch?: { from?: unknown; to?: unknown } } | null)?.vaultCodeMatch;
+		if (typeof match?.from === "number" && typeof match.to === "number") this.revealMatch(match.from, match.to);
+	}
+
+	private revealMatch(from: number, to: number): void {
+		// The match is in the source, so leave a preview or compiled view for the code.
+		if (this.isCompiledMode || this.isPreviewMode) this.toggleViewMode();
+		if (!this.file) return;
+		this.pendingMatch = { file: this.file, from, to };
+		// If the text is still loading, setViewData's scroll restore applies the match once it arrives.
+		this.applyPendingMatch();
+	}
+
+	/** Selects and centers a match "Find in files" asked for, once the text is there. */
+	private applyPendingMatch(): boolean {
+		const match = this.pendingMatch;
+		const editor = this.editor;
+		if (!match || !editor || match.file !== this.file || this.isPreviewMode) return false;
+		if (editor.state.doc.length < match.to) return false;
+		this.pendingMatch = null;
+		// Until the user leaves this file, restoring its scroll position keeps the match in view instead.
+		this.cancelScrollRestore();
+		this.centerSelection = true;
+		editor.dispatch({ selection: EditorSelection.range(match.from, match.to), effects: EditorView.scrollIntoView(match.from, { y: "center" }) });
+		editor.focus();
+		return true;
 	}
 
 	openReplace(): void {
@@ -3927,7 +3963,9 @@ export class DotfileView extends TextFileView {
 	}
 
 	override async onUnloadFile(file: TFile): Promise<void> {
+		this.pendingMatch = null;
 		this.rememberFileView();
+		this.centerSelection = false;
 		this.cancelScrollRestore();
 		this.previewGeneration++;
 		this.previewEl?.empty();
@@ -4032,6 +4070,7 @@ export class DotfileView extends TextFileView {
 
 	private rememberFileView(): void {
 		if (!this.positionFile || this.positionFile !== this.file || this.scrollRestoreFrame !== null) return;
+		this.centerSelection = false;
 		if (!this.isCompiledMode) {
 			this.viewPosition.preview = this.isPreviewMode;
 			if (this.isPreviewMode) this.capturePreviewScroll();
@@ -4049,6 +4088,11 @@ export class DotfileView extends TextFileView {
 			this.scrollRestoreFrame = null;
 			if (this.file !== file || this.isPreviewMode !== preview || this.isCompiledMode) return;
 			if (!preview && this.editor) {
+				if (this.applyPendingMatch()) return;
+				if (this.centerSelection) {
+					this.editor.dispatch({ effects: EditorView.scrollIntoView(this.editor.state.selection.main.from, { y: "center" }) });
+					return;
+				}
 				this.editor.scrollDOM.scrollTo({ top: this.viewPosition.code.top, left: this.viewPosition.code.left, behavior: "instant" });
 			} else if (this.previewEl) {
 				this.previewEl.scrollTo({ top: this.viewPosition.page.top, left: this.viewPosition.page.left, behavior: "instant" });
@@ -5321,6 +5365,7 @@ export default class VaultCodePlugin extends Plugin {
 		this.registerView(KANBAN_VIEW, leaf => new KanbanView(leaf, view => this.updateLeafHeaderActions(leaf, view)));
 		this.registerView(RECENT_FILES_VIEW, leaf => new RecentFilesView(leaf, file => this.isPathIgnored(file.path, false)));
 		this.registerHoverLinkSource(RECENT_FILES_VIEW, { display: t("recentTitle"), defaultMod: true });
+		this.registerView(FILE_SEARCH_VIEW, leaf => new FileSearchView(leaf, file => this.isPathIgnored(file.path, false), file => BINARY_EXTENSIONS.has(file.extension.toLowerCase())));
 
 		if (Platform.isDesktop) {
 			this.statusBarGitEl = this.addStatusBarItem();
@@ -5443,6 +5488,11 @@ export default class VaultCodePlugin extends Plugin {
 			if (!this.settings.recentFilesPlaced && !this.unloading) {
 				if (!this.app.workspace.getLeavesOfType(RECENT_FILES_VIEW).length) await this.app.workspace.getLeftLeaf(false)?.setViewState({ type: RECENT_FILES_VIEW, active: false });
 				this.settings.recentFilesPlaced = true;
+				await this.saveSettings();
+			}
+			if (!this.settings.fileSearchPlaced && !this.unloading) {
+				if (!this.app.workspace.getLeavesOfType(FILE_SEARCH_VIEW).length) await this.app.workspace.getLeftLeaf(false)?.setViewState({ type: FILE_SEARCH_VIEW, active: false });
+				this.settings.fileSearchPlaced = true;
 				await this.saveSettings();
 			}
 			this.loadRecentFilesTabs();
@@ -5677,6 +5727,12 @@ export default class VaultCodePlugin extends Plugin {
 			id: "show-recent-files",
 			name: t("recentShow"),
 			callback: () => void this.showRecentFiles(),
+		});
+
+		this.addCommand({
+			id: "search-in-files",
+			name: t("fileSearchTitle"),
+			callback: () => void this.showFileSearch(),
 		});
 
 		this.addCommand({
@@ -7612,26 +7668,47 @@ export default class VaultCodePlugin extends Plugin {
 		for (const leaf of this.app.workspace.getLeavesOfType(RECENT_FILES_VIEW)) {
 			if (leaf.view instanceof RecentFilesView) leaf.view.scheduleRefresh();
 		}
+		for (const leaf of this.app.workspace.getLeavesOfType(FILE_SEARCH_VIEW)) {
+			if (leaf.view instanceof FileSearchView) leaf.view.refresh();
+		}
 	}
 
 	/** A sidebar tab that was never shown, or was reloaded with the plugin, stays deferred and shows a placeholder icon. Load it so its own icon appears. */
 	private loadRecentFilesTabs(): void {
-		for (const leaf of this.app.workspace.getLeavesOfType(RECENT_FILES_VIEW)) {
+		for (const leaf of [...this.app.workspace.getLeavesOfType(RECENT_FILES_VIEW), ...this.app.workspace.getLeavesOfType(FILE_SEARCH_VIEW)]) {
 			// Feature-checked: Obsidian before 1.7.2 has no deferred tabs, so there is nothing to load.
 			void (leaf as unknown as { loadIfDeferred?: () => Promise<void> }).loadIfDeferred?.();
 		}
 	}
 
 	private async showRecentFiles(): Promise<void> {
-		const leaf = this.app.workspace.getLeavesOfType(RECENT_FILES_VIEW)[0] ?? this.app.workspace.getLeftLeaf(false);
-		if (!leaf) return;
-		if (!(leaf.view instanceof RecentFilesView)) await leaf.setViewState({ type: RECENT_FILES_VIEW, active: true });
+		await this.showSidebarView(RECENT_FILES_VIEW);
+	}
+
+	/** Opens "Find in files" and starts it with the selected text, like Obsidian's own search. */
+	private async showFileSearch(): Promise<void> {
+		const selection = this.activeSelection();
+		const leaf = await this.showSidebarView(FILE_SEARCH_VIEW);
+		if (leaf?.view instanceof FileSearchView) leaf.view.focusSearch(selection);
+	}
+
+	private activeSelection(): string {
+		const code = this.app.workspace.getActiveViewOfType(DotfileView)?.editor;
+		if (code) return code.state.sliceDoc(code.state.selection.main.from, code.state.selection.main.to);
+		return this.app.workspace.activeEditor?.editor?.getSelection() ?? "";
+	}
+
+	private async showSidebarView(type: string): Promise<WorkspaceLeaf | null> {
+		const leaf = this.app.workspace.getLeavesOfType(type)[0] ?? this.app.workspace.getLeftLeaf(false);
+		if (!leaf) return null;
+		if (leaf.view.getViewType() !== type) await leaf.setViewState({ type, active: true });
 		// revealLeaf needs Obsidian 1.7.2, so open the sidebar that holds the view and focus it directly.
 		const { leftSplit, rightSplit } = this.app.workspace;
 		const root = leaf.getRoot();
 		if (root === leftSplit) leftSplit.expand();
 		else if (root === rightSplit) rightSplit.expand();
 		this.app.workspace.setActiveLeaf(leaf, { focus: true });
+		return leaf;
 	}
 
 	private patchAdapter() {

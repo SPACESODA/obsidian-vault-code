@@ -5617,3 +5617,135 @@ body:not(.native-scrollbars) .vault-code-kanban-menu-list::-webkit-scrollbar-thu
 .is-mobile .vault-code-recent .vault-code-recent-item.tree-item-self {
 	padding-block: 10px;
 }
+
+/* ===== Search in files ===== */
+.workspace-leaf-content[data-type="vault-code-file-search"] .view-content.vault-code-file-search {
+	display: flex;
+	flex-direction: column;
+	padding: 0;
+	overflow: hidden;
+}
+.vault-code-file-search-header {
+	display: flex;
+	flex-direction: column;
+	gap: var(--size-4-1);
+	padding: var(--size-4-3) var(--size-4-3) var(--size-4-1);
+}
+.vault-code-file-search-header .search-input-container {
+	width: 100%;
+	margin: 0;
+}
+.vault-code-file-search-bar {
+	display: flex;
+	align-items: center;
+	gap: var(--size-4-2);
+	min-height: 28px;
+}
+.vault-code-file-search-status {
+	flex: 1;
+	min-width: 0;
+	padding-inline-start: var(--size-2-1);
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.vault-code-file-search-status.is-error {
+	color: var(--text-error);
+	white-space: normal;
+}
+.vault-code-file-search-toggles {
+	display: flex;
+	flex: none;
+	gap: var(--size-2-1);
+	margin-inline-start: auto;
+}
+.vault-code-file-search .vault-code-file-search-toggle {
+	padding: var(--size-2-2);
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-smaller);
+}
+.vault-code-file-search .vault-code-file-search-toggle.is-active {
+	background-color: hsla(var(--interactive-accent-hsl), 0.18);
+	color: var(--text-accent);
+}
+.vault-code-file-search-results {
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
+	padding: var(--size-4-1) var(--size-4-2) var(--size-4-4);
+}
+.vault-code-file-search-file + .vault-code-file-search-file { margin-top: var(--size-4-3); }
+.vault-code-file-search-file .tree-item-inner {
+	display: flex;
+	align-items: baseline;
+	gap: var(--size-4-2);
+	min-width: 0;
+}
+.vault-code-file-search-name {
+	flex: none;
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.vault-code-file-search-folder {
+	min-width: 0;
+	overflow: hidden;
+	color: var(--text-faint);
+	font-size: var(--font-ui-smaller);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.vault-code-file-search-file .collapse-icon.is-collapsed svg { transform: rotate(-90deg); }
+.vault-code-file-search .search-result-file-matches.vault-code-file-search-matches {
+	margin: 0;
+	padding: var(--size-2-2) 0 0;
+	border: none;
+	background: none;
+	box-shadow: none;
+}
+.vault-code-file-search .vault-code-file-search-match {
+	display: flex;
+	align-items: baseline;
+	gap: var(--size-4-2);
+	margin: 0 0 var(--size-2-1);
+	padding: var(--size-4-1) var(--size-4-2) var(--size-4-1) var(--size-4-6);
+	border: none;
+	border-radius: var(--radius-s);
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	line-height: 1.5;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	cursor: var(--cursor);
+}
+.vault-code-file-search .vault-code-file-search-match:hover {
+	background-color: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+.vault-code-file-search-line {
+	flex: none;
+	width: calc(var(--vault-code-line-digits, 3) * 1ch);
+	color: var(--text-faint);
+	font-family: var(--font-monospace);
+	font-size: 0.9em;
+	text-align: end;
+	font-variant-numeric: tabular-nums;
+}
+.vault-code-file-search-text {
+	display: -webkit-box;
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+}
+.vault-code-file-search .search-result-file-matched-text {
+	padding: 0 1px;
+	border-radius: var(--radius-s);
+	background-color: hsla(var(--interactive-accent-hsl), 0.28);
+	color: var(--text-normal);
+	font-weight: var(--font-semibold);
+}

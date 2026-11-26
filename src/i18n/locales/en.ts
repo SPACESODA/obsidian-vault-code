@@ -560,6 +560,14 @@ export const en = {
 	recentWeek: "Previous 7 days",
 	recentMonth: "Previous 30 days",
 	recentEarlier: "Earlier",
+	fileSearchTitle: "Find in files",
+	fileSearchPlaceholder: "Find text in any file...",
+	fileSearchClear: "Clear search",
+	fileSearchSearching: "Searching...",
+	fileSearchSummary: "{0} results in {1} files",
+	fileSearchSummaryOne: "{0} result",
+	fileSearchSummaryOneFile: "{0} results in 1 file",
+	fileSearchLimited: "showing the first {0}",
 };
 
 export type TranslationSchema = typeof en;

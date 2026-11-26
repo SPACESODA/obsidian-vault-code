@@ -19,6 +19,7 @@
 * **Ignore rules**: Keep the explorer tidy with `.obsidianignore` and `.gitignore`.
 * **Unlinked media**: Find images, audio, and video no note links to, and move them to trash.
 * **Recent files**: A sidebar tab of everything you touched lately, newest first.
+* **Find in files**: Search the text of every file, code and dotfiles included, and jump straight to the match.
 
 **Kanban**
 * **Folder boards**: Any folder becomes a board: subfolders are columns, notes are cards.
@@ -93,6 +94,8 @@ Right-click a file or folder in the explorer:
 * **Show unlinked media**: Find images, audio, and video no note or canvas links to, and trash them in bulk.
 
 Lost track of what you just worked on? The **Recent files** sidebar tab lists files of any type by last edit or addition, grouped into Today, Yesterday, and earlier. Outside changes show up too; files your ignore rules hide stay hidden.
+
+Need that one line in a config file? **Find in files** (left sidebar, or the *Find in files* command) looks through the text of every visible file, not just notes, with case, whole-word, and regex toggles. Click a result to open the file at that line; select text first and the command searches for it.
 
 ### 🌿 Review changes with Git (Desktop)
 

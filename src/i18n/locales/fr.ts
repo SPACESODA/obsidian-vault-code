@@ -562,4 +562,12 @@ export const fr: TranslationSchema = {
 	recentWeek: "7 derniers jours",
 	recentMonth: "30 derniers jours",
 	recentEarlier: "Plus ancien",
+	fileSearchTitle: "Trouver dans les fichiers",
+	fileSearchPlaceholder: "Trouver du texte dans tous les fichiers...",
+	fileSearchClear: "Effacer la recherche",
+	fileSearchSearching: "Recherche...",
+	fileSearchSummary: "{0} résultats dans {1} fichiers",
+	fileSearchSummaryOne: "{0} résultat",
+	fileSearchSummaryOneFile: "{0} résultats dans 1 fichier",
+	fileSearchLimited: "{0} premiers affichés",
 };

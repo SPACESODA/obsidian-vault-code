@@ -562,4 +562,12 @@ export const ru: TranslationSchema = {
 	recentWeek: "Последние 7 дней",
 	recentMonth: "Последние 30 дней",
 	recentEarlier: "Ранее",
+	fileSearchTitle: "Найти в файлах",
+	fileSearchPlaceholder: "Найти текст во всех файлах...",
+	fileSearchClear: "Очистить поиск",
+	fileSearchSearching: "Поиск...",
+	fileSearchSummary: "Найдено: {0} в файлах: {1}",
+	fileSearchSummaryOne: "{0} совпадение",
+	fileSearchSummaryOneFile: "Найдено: {0} в 1 файле",
+	fileSearchLimited: "показаны первые {0}",
 };

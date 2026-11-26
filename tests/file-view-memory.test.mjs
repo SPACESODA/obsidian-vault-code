@@ -34,7 +34,7 @@ const {default:ts}=await import('typescript');
 const source=readFileSync('src/main.ts','utf8');
 const ast=ts.createSourceFile('src/main.ts',source,ts.ScriptTarget.Latest,true);
 const view=ast.statements.find(n=>ts.isClassDeclaration(n)&&n.name?.text==='DotfileView');
-const methods=['updateViewModeUI','restoreFileScroll','cancelScrollRestore','rememberFileView','capturePreviewScroll','updateGitStatus'].map(name=>view.members.find(n=>ts.isMethodDeclaration(n)&&n.name.getText(ast)===name).getText(ast));
+const methods=['updateViewModeUI','restoreFileScroll','applyPendingMatch','cancelScrollRestore','rememberFileView','capturePreviewScroll','updateGitStatus'].map(name=>view.members.find(n=>ts.isMethodDeclaration(n)&&n.name.getText(ast)===name).getText(ast));
 const output=ts.transpileModule(`class Subject {${methods.join('\n')}}`,{compilerOptions:{target:ts.ScriptTarget.ES2021}}).outputText;
 const Subject=new Function('t',`${output};return Subject;`)(key=>key);
 test('ordinary code files restore both scroll axes through the actual mode update, without edits',()=>{

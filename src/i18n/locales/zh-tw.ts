@@ -562,4 +562,12 @@ export const zhTw: TranslationSchema = {
 	recentWeek: "過去 7 天",
 	recentMonth: "過去 30 天",
 	recentEarlier: "更早",
+	fileSearchTitle: "在檔案中尋找",
+	fileSearchPlaceholder: "在所有檔案中尋找文字...",
+	fileSearchClear: "清除搜尋",
+	fileSearchSearching: "正在搜尋...",
+	fileSearchSummary: "{1} 個檔案中有 {0} 個結果",
+	fileSearchSummaryOne: "{0} 個結果",
+	fileSearchSummaryOneFile: "1 個檔案中有 {0} 個結果",
+	fileSearchLimited: "僅顯示前 {0} 個",
 };

@@ -562,4 +562,12 @@ export const ko: TranslationSchema = {
 	recentWeek: "지난 7일",
 	recentMonth: "지난 30일",
 	recentEarlier: "이전",
+	fileSearchTitle: "파일에서 찾기",
+	fileSearchPlaceholder: "모든 파일에서 텍스트 찾기...",
+	fileSearchClear: "검색 지우기",
+	fileSearchSearching: "검색 중...",
+	fileSearchSummary: "{1}개 파일에서 {0}개 결과",
+	fileSearchSummaryOne: "{0}개 결과",
+	fileSearchSummaryOneFile: "1개 파일에서 {0}개 결과",
+	fileSearchLimited: "처음 {0}개 표시",
 };

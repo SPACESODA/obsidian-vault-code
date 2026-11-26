@@ -9,7 +9,7 @@ const plugin=ast.statements.find(node=>ts.isClassDeclaration(node)&&node.name?.t
 const onload=plugin.members.find(node=>ts.isMethodDeclaration(node)&&node.name.getText(ast)==='onload');
 const statements=[];
 for(const statement of onload.body.statements){if(ts.isIfStatement(statement)&&statement.getText(ast).includes("this.statusBarGitEl"))break;statements.push(statement.getText(ast));}
-const start=new Function('Platform','AIService','AIStorage','VIEW_TYPE_DOTFILE','VIEW_TYPE_AI_CHAT','DotfileView','AIChatView','KANBAN_VIEW','KanbanView','RECENT_FILES_VIEW','RecentFilesView','t',`return async function(){${statements.join('\n')}};`)({isDesktop:false},class{},class{},'code','chat',class{constructor(_leaf,plugin){assert.equal(plugin.ready,true);}},class{constructor(_leaf,plugin){assert.equal(plugin.ready,true);}},'kanban',class{},'recent',class{},key=>key);
+const start=new Function('Platform','AIService','AIStorage','VIEW_TYPE_DOTFILE','VIEW_TYPE_AI_CHAT','DotfileView','AIChatView','KANBAN_VIEW','KanbanView','RECENT_FILES_VIEW','RecentFilesView','FILE_SEARCH_VIEW','FileSearchView','BINARY_EXTENSIONS','t',`return async function(){${statements.join('\n')}};`)({isDesktop:false},class{},class{},'code','chat',class{constructor(_leaf,plugin){assert.equal(plugin.ready,true);}},class{constructor(_leaf,plugin){assert.equal(plugin.ready,true);}},'kanban',class{},'recent',class{},'search',class{},new Set(),key=>key);
 
 test('settings and ignore initialization finish before restored views can open',async()=>{
   let finish;
@@ -18,7 +18,7 @@ test('settings and ignore initialization finish before restored views can open',
   const pending=start.call(owner);
   assert.deepEqual(opened,[]);
   finish();await pending;
-  assert.deepEqual(opened,['code','chat','kanban','recent']);
+  assert.deepEqual(opened,['code','chat','kanban','recent','search']);
 });
 
 test('chat Enter confirms IME composition without sending a message',()=>{
@@ -45,10 +45,10 @@ test('ready layouts restore code editors once, and delayed callbacks stop after 
     const text=statement.getText(ast);
     return text.startsWith('this.app.workspace.onLayoutReady(')||text.startsWith('if (this.app.workspace.layoutReady)');
   });
-  const setup=new Function('Platform','VIEW_TYPE_AI_CHAT','RECENT_FILES_VIEW',`return function(){${layoutStatements.map(statement=>statement.getText(ast)).join('\n')}};`)({isDesktop:false},'chat','recent');
+  const setup=new Function('Platform','VIEW_TYPE_AI_CHAT','RECENT_FILES_VIEW','FILE_SEARCH_VIEW',`return function(){${layoutStatements.map(statement=>statement.getText(ast)).join('\n')}};`)({isDesktop:false},'chat','recent','search');
   for(const ready of [true,false]){
     let callback;let restores=0;
-    const owner={unloading:false,settings:{showHiddenFiles:false,recentFilesPlaced:true},app:{workspace:{layoutReady:ready,detachLeavesOfType(){},onLayoutReady(fn){if(ready)void fn();else callback=fn;}}},patchFileExplorer(){},loadRecentFilesTabs(){},updateAllLeafHeaderActions(){},async reloadCodeEditorLeaves(){restores++;}};
+    const owner={unloading:false,settings:{showHiddenFiles:false,recentFilesPlaced:true,fileSearchPlaced:true},app:{workspace:{layoutReady:ready,detachLeavesOfType(){},onLayoutReady(fn){if(ready)void fn();else callback=fn;}}},patchFileExplorer(){},loadRecentFilesTabs(){},updateAllLeafHeaderActions(){},async reloadCodeEditorLeaves(){restores++;}};
     setup.call(owner);
     await new Promise(resolve=>setImmediate(resolve));
     assert.equal(restores,ready?1:0);
